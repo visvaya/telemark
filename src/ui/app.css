@@ -1456,7 +1456,6 @@ h2 {
 
   /* These controls show the focus by a change of colour, which a contrast theme replaces with its own. */
   .pixel-button:focus-visible,
-  .pixel-select:focus-visible,
   .file-label:focus-within,
   .hill-item:focus-visible,
   .pause-button:focus-visible {
@@ -1481,6 +1480,15 @@ h2 {
 .pixel-select:focus-visible {
   outline: none;
   border-color: var(--accent);
+}
+
+/* A contrast theme replaces the border's colour with its own: the focus shows as an outline instead. This comes
+   after the rule above, which takes the outline away, so it wins in such a theme. */
+@media (forced-colors: active) {
+  .pixel-select:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
 }
 
 /* The places of the players, side by side where there is room. */
