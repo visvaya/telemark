@@ -4,8 +4,8 @@ import { expect, type DeviceTraits } from "./fixtures";
 import { JUMP_TIMING } from "./jump-timing";
 
 const STARTED = "Skok rozpoczęty.";
-/** The last sentence of the announcement made once the jumper has stopped. */
-const RESULT = /jeszcze raz\.$/;
+/** The last sentence of the announcement made once the jumper has stopped: in a competition the press goes on. */
+const RESULT = /(jeszcze raz|dalej)\.$/;
 
 const { TAKEOFF_AFTER_START_MS, LANDING_AFTER_TAKEOFF_MS, TELEMARK_AFTER_LANDING_MS, PRESS_HOLD_MS } = JUMP_TIMING;
 /** A tap on the left zone starts the jump only once the gate opens, about a second in; until then it is repeated. */

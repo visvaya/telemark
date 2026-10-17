@@ -48,8 +48,8 @@ interface FrameView {
 }
 
 /** Who jumps in the picture and how the hill looks: a replay's own jumper and look, or the player's. */
-const lookOf = (runs: Pick<RunSwitch, "jumperName" | "scenery">) => ({
-  playerName: runs.jumperName() ?? UI_TEXT.hud.playerName,
+const lookOf = (runs: Pick<RunSwitch, "jumperName" | "scenery">, live: LiveProps) => ({
+  playerName: runs.jumperName() ?? live.jumperName ?? UI_TEXT.hud.playerName,
   scenery: runs.scenery(),
 });
 
@@ -75,7 +75,8 @@ function drawFrame(picture: JumpPicture, hill: HillChoice, live: LiveProps, v: F
     windDriftM: v.jump.windDriftM,
     ...(best === undefined ? {} : { recordM: best.distanceM }),
     ...(v.ghost === null ? {} : { ghost: v.ghost }),
-    ...(v.replay === null
+    // A computer jumper's competition jump plays as a replay, but the picture shows it as a jump.
+    ...(v.replay === null || live.contestCpu
       ? {}
       : {
           replay: {
@@ -207,7 +208,7 @@ export function useJumpLoop(options: JumpLoopOptions) {
       const { jump, newRecord, ghost } = current.now();
       sounds.play(jump.state, clock, newRecord, paused || document.hidden);
       meter?.drawBegin();
-      const v = { jump, newRecord, ghost, over, clock, title, replay: view, ...lookOf(runs) };
+      const v = { jump, newRecord, ghost, over, clock, title, replay: view, ...lookOf(runs, live) };
       drawFrame(picture, hill, live, v);
       ctx.putImageData(picture.image, 0, 0);
       meter?.frameEnd(now, plan, paused);

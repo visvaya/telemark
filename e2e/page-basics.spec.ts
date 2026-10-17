@@ -12,6 +12,8 @@ const TITLES: Readonly<Record<string, string>> = {
   replays: "Powtórki · Telemark",
   "hill list": "Wybór skoczni · Telemark",
   jump: "Skok: Ćwiczebna K90 · Telemark",
+  "competition setup": "Konkurs · Telemark",
+  "competition board": "Konkurs: Ćwiczebna K90 · Telemark",
   // Opening the controls of the jump screen does not change where the player is.
   "jump with the controls open": "Skok: Ćwiczebna K90 · Telemark",
 };
@@ -42,8 +44,10 @@ test("each screen has its own title and the page background is set on the root e
       titles.get("settings"),
       titles.get("hill list"),
       titles.get("jump"),
+      titles.get("competition setup"),
+      titles.get("competition board"),
     ]).size,
-  ).toBe(8);
+  ).toBe(10);
 });
 
 // A window too short for the menu and for the hill list, so that both scroll on every device profile. The hill

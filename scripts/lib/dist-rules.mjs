@@ -20,8 +20,11 @@
 // JavaScript measured again on 2026-10-16: 145996 bytes on master (0.15.0), after the night light on the hill, the
 // moon and the props kept in place, and the check and install of a new release; the budget keeps a margin of
 // about 4%, as before.
+// JavaScript measured again on 2026-10-17: 156959 bytes with the single competition (its setup, board and results,
+// the computer jumpers' pilot, which the game did not load before, and the competition's state); the budget keeps a
+// margin of about 4%.
 export const DIST_BUDGETS = {
-  JS_GZIP_BUDGET_BYTES: 152_000,
+  JS_GZIP_BUDGET_BYTES: 163_000,
   CSS_GZIP_BUDGET_BYTES: 25_800,
   // Measured on 2026-10-13: the service worker 3890 bytes gzip (3160 before it kept the release before for the
   // pages that still need it), the four icons 9682 bytes.

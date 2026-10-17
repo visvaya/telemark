@@ -14,11 +14,15 @@ describe("page title of a screen", () => {
     expect(screenTitle({ kind: "settings" })).toBe("Ustawienia · Telemark");
     expect(screenTitle({ kind: "outfit" })).toBe("Strój · Telemark");
     expect(screenTitle({ kind: "replays" })).toBe("Powtórki · Telemark");
+    expect(screenTitle({ kind: "contest-setup" })).toBe("Konkurs · Telemark");
   });
 
   it("names the hill of a jump with its K point", () => {
     expect(screenTitle({ kind: "jump", hill: { name: "Ćwiczebna", kPointM: 90 } })).toBe(
       "Skok: Ćwiczebna K90 · Telemark",
+    );
+    expect(screenTitle({ kind: "contest", hill: { name: "Ćwiczebna", kPointM: 90 } })).toBe(
+      "Konkurs: Ćwiczebna K90 · Telemark",
     );
   });
 });

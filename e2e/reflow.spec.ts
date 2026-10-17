@@ -15,7 +15,7 @@ const TEXT_SPACING_CSS = `
   * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
   p { margin-bottom: 2em !important; }
 `;
-const SCREEN_COUNT = 8;
+const SCREEN_COUNT = 10;
 
 test.skip(({ traits }) => !PROJECTS.includes(traits.project), `reflow is checked on ${PROJECTS.join(", ")}`);
 

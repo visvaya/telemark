@@ -41,6 +41,15 @@ export interface LiveProps {
   replay: ReplayView | null;
   /** The replay of the hill's record, played as a ghost beside each training jump; null for none. */
   ghost: ReplaySource | null;
+  /**
+   * In a competition: what moves on to the next jumper once this jump is over, in place of a new training jump;
+   * null in training.
+   */
+  contestNext: (() => void) | null;
+  /** The name the picture gives the jumper, when it is not the player's own (a competitor's). */
+  jumperName: string | null;
+  /** Whether the replay played is a computer jumper's competition jump, shown as a jump rather than a replay. */
+  contestCpu: boolean;
 }
 
 /** What the runs need from the screen. */
@@ -183,7 +192,8 @@ function createTrainingRun(
     last = { recording, result };
     c().live.onFinished(result, recording);
     c().onReplayAvailable(true);
-    c().announce(resultAnnouncement(jump.state.logic, { newRecord, controls: c().live.controls }));
+    const contest = c().live.contestNext !== null;
+    c().announce(resultAnnouncement(jump.state.logic, { newRecord, controls: c().live.controls, contest }));
   };
   /** The input of the next simulation frame; the rules of the touch zones belong to finger steering. */
   const takeFrame = (logic: JumpLogicState) => {
@@ -216,7 +226,9 @@ function createTrainingRun(
       const clock = presentationFrame(jump);
       if (leftDown && !leftWasDown && nextJumpAllowed(jump.state.logic, clock)) {
         if (!finished) finish();
-        restart();
+        const contestNext = c().live.contestNext;
+        if (contestNext) contestNext();
+        else restart();
       }
       leftWasDown = leftDown;
       return { over, clock };
@@ -293,7 +305,8 @@ function createReplayRun(hill: HillChoice, source: ReplaySource, c: () => RunCon
       // Told once the press that ends the replay works: the notes are up then, as in the jump.
       if (!toldOver && ended()) {
         toldOver = true;
-        c().announce(replayOverAnnouncement(jump.state.logic, newRecord, source.origin));
+        const origin = c().live.contestNext === null ? source.origin : "contest";
+        c().announce(replayOverAnnouncement(jump.state.logic, newRecord, origin));
       }
       return { over: isJumpOver(jump), clock: presentationFrame(jump) };
     },
@@ -376,6 +389,12 @@ export function createRunSwitch(
   const current = (): JumpRun => replay ?? training;
   const endReplay = () => {
     if (!replay) return;
+    // In a competition the jump after the replay is the next jumper's.
+    const contestNext = c().live.contestNext;
+    if (contestNext) {
+      contestNext();
+      return;
+    }
     replay = null;
     jumperName = null;
     replayScenery = null;
@@ -406,6 +425,8 @@ export function createRunSwitch(
     scenery: () => (replayScenery !== null && !c().live.sceneryChosen ? replayScenery : c().live.scenery),
     controls: {
       restart() {
+        // A competition jump is not jumped again; its replay may start again.
+        if (!replay && c().live.contestNext) return;
         current().restart();
         // A replay started again plays, even if it was paused.
         if (replay) c().onReplayChange((view) => view && { ...view, paused: false });

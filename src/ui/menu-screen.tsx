@@ -29,11 +29,23 @@ interface Props {
   /** Whether the game can start without a network, and the means to check for and install a new release. */
   offline: OfflineSupportView;
   /** Opens another screen of the game. */
-  onOpen: (screen: "hills" | "replays" | "outfit" | "settings" | "howto" | "install" | "about") => void;
+  onOpen: (
+    screen: "hills" | "contest-setup" | "replays" | "outfit" | "settings" | "howto" | "install" | "about",
+  ) => void;
   onOriginalHills: (hills: HillChoice[]) => void;
   /** Whether the heading takes the keyboard focus when the screen appears. */
   focusOnEntry: boolean;
 }
+
+/** The choices at the top of the menu, in order, with what each opens. */
+const FIRST_CHOICES = [
+  ["hills", UI_TEXT.menu.training],
+  ["contest-setup", UI_TEXT.menu.competition],
+  ["replays", UI_TEXT.menu.replays],
+  ["outfit", UI_TEXT.menu.outfit],
+  ["settings", UI_TEXT.menu.settings],
+  ["howto", UI_TEXT.menu.howTo],
+] as const;
 
 async function bytesOf(files: FileList, name: string): Promise<Uint8Array | undefined> {
   const file = Array.from(files).find((f) => f.name.toLowerCase() === name);
@@ -124,21 +136,11 @@ export function MenuScreen({
       <hr className="rule" />
       <nav className="menu" aria-label={UI_TEXT.menu.navigation}>
         <h2>{UI_TEXT.menu.navigation}</h2>
-        <button type="button" className="pixel-button" onClick={() => onOpen("hills")}>
-          {UI_TEXT.menu.training}
-        </button>
-        <button type="button" className="pixel-button" onClick={() => onOpen("replays")}>
-          {UI_TEXT.menu.replays}
-        </button>
-        <button type="button" className="pixel-button" onClick={() => onOpen("outfit")}>
-          {UI_TEXT.menu.outfit}
-        </button>
-        <button type="button" className="pixel-button" onClick={() => onOpen("settings")}>
-          {UI_TEXT.menu.settings}
-        </button>
-        <button type="button" className="pixel-button" onClick={() => onOpen("howto")}>
-          {UI_TEXT.menu.howTo}
-        </button>
+        {FIRST_CHOICES.map(([kind, label]) => (
+          <button key={kind} type="button" className="pixel-button" onClick={() => onOpen(kind)}>
+            {label}
+          </button>
+        ))}
         {!installed && (
           <button type="button" className="pixel-button" onClick={() => onOpen("install")}>
             {UI_TEXT.menu.install}

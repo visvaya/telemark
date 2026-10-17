@@ -65,6 +65,15 @@ describe("jump announcements", () => {
     );
   });
 
+  it("tells in a competition that a press goes on to the next jumper", () => {
+    expect(resultAnnouncement(clean, { ...mouse, contest: true })).toBe(
+      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Skok obejrzysz klawiszem P i zachowasz klawiszem S. Lewy przycisk: dalej.",
+    );
+    expect(replayOverAnnouncement(clean, false, "contest")).toBe(
+      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Kliknięcie lub dotknięcie obrazu: dalej.",
+    );
+  });
+
   it("leaves the notes out of a disqualification", () => {
     expect(resultAnnouncement({ ...clean, distanceM: 0, points: -120 }, mouse)).toBe(
       "Dyskwalifikacja. Wynik: -120,0 punktu. Skok obejrzysz klawiszem P i zachowasz klawiszem S. Lewy przycisk lub R: jeszcze raz.",

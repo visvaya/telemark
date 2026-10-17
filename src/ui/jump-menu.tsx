@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import type { HillChoice } from "../game/hill-choice";
 import { versionLabel } from "../game/version";
 import type { OfflineState } from "../pwa/offline-state";
@@ -41,6 +41,10 @@ interface Props {
   /** The question's yes, which takes the focus when the question opens the menu. */
   tiltYesRef: RefObject<HTMLButtonElement | null>;
   onExit: () => void;
+  /** A competition jump: no new jump and no other hill from the menu. */
+  contest: boolean;
+  /** The question before a competition is left, in place of the exit button while it is asked. */
+  abandonQuestion: ReactNode;
   /** How the replay is being watched; null while jumping. */
   replay: ReplayView | null;
   /** Whether a finished jump can be watched again. */
@@ -117,14 +121,16 @@ type ReplayButtonsProps = Pick<
 
 /** While jumping: a new jump, the last one again, the instructions and another hill. */
 function TrainingButtons(
-  p: Pick<Props, "touch" | "onAgain" | "replayAvailable" | "onWatchReplay" | "onKeepLast" | "onPanel">,
+  p: Pick<Props, "touch" | "onAgain" | "replayAvailable" | "onWatchReplay" | "onKeepLast" | "onPanel" | "contest">,
 ) {
   return (
     <>
-      <button type="button" className="pixel-button" onClick={p.onAgain}>
-        {JUMP_TEXT.again}
-        {p.touch ? "" : JUMP_TEXT.againKey}
-      </button>
+      {!p.contest && (
+        <button type="button" className="pixel-button" onClick={p.onAgain}>
+          {JUMP_TEXT.again}
+          {p.touch ? "" : JUMP_TEXT.againKey}
+        </button>
+      )}
       {/* Unavailable rather than disabled, so the keyboard and a screen reader still find it. */}
       <button
         type="button"
@@ -148,9 +154,11 @@ function TrainingButtons(
       <button type="button" className="pixel-button" onClick={() => p.onPanel("help")}>
         {UI_TEXT.menu.howTo}
       </button>
-      <button type="button" className="pixel-button" onClick={() => p.onPanel("hills")}>
-        {JUMP_TEXT.changeHill}
-      </button>
+      {!p.contest && (
+        <button type="button" className="pixel-button" onClick={() => p.onPanel("hills")}>
+          {JUMP_TEXT.changeHill}
+        </button>
+      )}
     </>
   );
 }
@@ -231,10 +239,14 @@ export function JumpMenu({ headingRef, resumeRef, ...p }: Props) {
         onToggleTilt={p.onToggleTilt}
       />
       {/* The ghost runs beside training jumps only, so a replay's menu leaves it out. */}
-      {p.replay === null && <RecordGhostToggle recordGhost={p.settings.recordGhost} onSettings={p.onSettings} />}
-      <button type="button" className="pixel-button" onClick={p.onExit}>
-        {JUMP_TEXT.exit}
-      </button>
+      {p.replay === null && !p.contest && (
+        <RecordGhostToggle recordGhost={p.settings.recordGhost} onSettings={p.onSettings} />
+      )}
+      {p.abandonQuestion ?? (
+        <button type="button" className="pixel-button" onClick={p.onExit}>
+          {JUMP_TEXT.exit}
+        </button>
+      )}
       {p.keepNote !== "" && (
         <p className="note" role="status">
           {p.keepNote}

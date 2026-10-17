@@ -120,7 +120,7 @@ Telemark is made by Maciej Budzyński.
 
 ## Legal
 
-This is an independent project, not affiliated with or endorsed by the authors or publishers of Deluxe Ski Jump.
+This is an independent project, not affiliated with the authors or publishers of Deluxe Ski Jump.
 Deluxe Ski Jump is a name of its respective owner and is used here only to describe compatibility. The repository
 contains no files from the original game; the game reads them from the player's own copy, locally.
 

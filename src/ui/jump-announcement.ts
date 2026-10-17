@@ -15,6 +15,8 @@ interface ResultContext {
   newRecord: boolean;
   /** How the game is played: it decides what starts the next jump. */
   controls: "mouse" | "touch" | "tilt";
+  /** A competition jump: a press goes on to the next jumper rather than jumping again. */
+  contest?: boolean;
 }
 
 /** A jump without a distance is a disqualification: the start time ran out, or the jumper never left the inrun. */
@@ -42,12 +44,11 @@ function resultParts(jump: ScoredJump, newRecord: boolean): string[] {
 
 /** Said once the jumper has stopped: the result, and how to jump again. */
 export function resultAnnouncement(jump: ScoredJump, context: ResultContext): string {
-  return [...resultParts(jump, context.newRecord), T.replayReady[context.controls], T.nextJump[context.controls]].join(
-    " ",
-  );
+  const next = context.contest === true ? T.contestNext : T.nextJump;
+  return [...resultParts(jump, context.newRecord), T.replayReady[context.controls], next[context.controls]].join(" ");
 }
 
 /** Said once a replay is over: the result as the jump had it, and what a press of the picture does now. */
-export function replayOverAnnouncement(jump: ScoredJump, newRecord: boolean, origin: ReplayOrigin): string {
-  return [...resultParts(jump, newRecord), T.replayOver[origin]].join(" ");
+export function replayOverAnnouncement(jump: ScoredJump, newRecord: boolean, origin: ReplayOrigin | "contest"): string {
+  return [...resultParts(jump, newRecord), origin === "contest" ? T.contestOver : T.replayOver[origin]].join(" ");
 }

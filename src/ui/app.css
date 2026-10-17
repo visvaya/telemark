@@ -1463,3 +1463,129 @@ h2 {
     outline-offset: 2px;
   }
 }
+
+/* A list to choose from (the hill and the levels of a competition), framed like the fields of the settings. */
+.pixel-select {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--screen-item-px);
+  color: var(--text);
+  background: var(--bg);
+  border: 3px solid var(--line);
+  border-radius: 0;
+}
+
+.pixel-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* A contrast theme replaces the border's colour with its own: the focus shows as an outline instead. This comes
+   after the rule above, which takes the outline away, so it wins in such a theme. */
+@media (forced-colors: active) {
+  .pixel-select:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/* The places of the players, side by side where there is room. */
+.contest-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
+  gap: 0 16px;
+}
+
+/* The computer jumpers: each with a box and a level, the level under the name where the screen is narrow. */
+.contest-rivals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contest-rival {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+/* With room for both, the levels line up in one column after the longest name. */
+@media (min-width: 600px) {
+  .contest-rivals {
+    display: grid;
+    grid-template-columns: max-content max-content;
+  }
+
+  .contest-rival {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+  }
+}
+
+.contest-rival .settings-check span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contest-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contest-log,
+.contest-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: clamp(13px, 3.6vw, 16px);
+  line-height: 1.6;
+}
+
+/* A place of the classification: place, name and total on a line, the jumps of the rounds under them. */
+.contest-row {
+  display: grid;
+  grid-template-columns: 3ch 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+}
+
+.contest-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contest-total {
+  color: var(--accent);
+}
+
+.contest-jumps {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-direction: column;
+  color: var(--muted);
+}
+
+/* Skips a watched computer jump: at the right edge of the picture, clear of its bars and of the jumper's way. */
+.skip-button.pixel-button {
+  position: absolute;
+  right: var(--overlay-gap);
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 16px;
+  background: var(--overlay-bg);
+}

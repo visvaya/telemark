@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactElement } from "react";
 import { OWN_HILLS, originalHillChoices, type HillChoice } from "../game/hill-choice";
 import { MARK_FIRST_SCREEN, markOnce } from "../game/performance-marks";
 import { tiltSupported } from "../game/tilt-input";
@@ -23,6 +23,9 @@ import { InstallScreen } from "./install-screen";
 import type { JumpResult } from "./jump-round";
 import { JumpScreen } from "./jump-screen";
 import type { JumpRecording, ReplaySource } from "./jump-replay";
+import type { FinishedJump } from "./jump-runs";
+import type { OfflineState } from "../pwa/offline-state";
+import type { KeepOutcome } from "./use-replay-shelf";
 import { MenuScreen } from "./menu-screen";
 import { OutfitScreen } from "./outfit-screen";
 import { ReplaysScreen } from "./replays-screen";
@@ -31,6 +34,9 @@ import { SettingsScreen } from "./settings-screen";
 import { useOfflineState } from "./use-offline-state";
 import { saveSync } from "./save-sync";
 import { useRecordGhost, useReplayShelf } from "./use-replay-shelf";
+import { useCompetition } from "./use-competition";
+import { CompetitionSetupScreen } from "./competition-setup-screen";
+import { CompetitionScreen } from "./competition-screen";
 
 type Screen =
   | { kind: "menu" }
@@ -42,7 +48,12 @@ type Screen =
   | { kind: "settings" }
   | { kind: "replays" }
   /** A jump screen; with a replay of the original, it plays that first. */
-  | { kind: "jump"; hill: HillChoice; replay?: ReplaySource };
+  | { kind: "jump"; hill: HillChoice; replay?: ReplaySource }
+  | { kind: "contest-setup" }
+  /** The board of the competition between its jumps. */
+  | { kind: "contest"; hill: HillChoice }
+  /** A jump of the competition. */
+  | { kind: "contest-jump"; hill: HillChoice };
 
 interface SideProps {
   kind: "howto" | "install" | "about" | "settings";
@@ -85,7 +96,7 @@ function useScreens(): { screen: Screen; navigated: boolean; show: (next: Screen
   // page would otherwise keep the scroll position of the screen before it, so a screen opened from the end of a
   // long one would show its middle. Before the paint, so the old position never shows.
   useLayoutEffect(() => {
-    document.title = screenTitle(screen);
+    document.title = screenTitle(screen.kind === "contest-jump" ? { kind: "jump", hill: screen.hill } : screen);
     window.scrollTo(0, 0);
   }, [screen]);
   return { screen, navigated, show };
@@ -180,6 +191,79 @@ function useStoredSave() {
   return { save, persistent: backend.name !== "memory" && !saveFailed, update };
 }
 
+interface ContestContext {
+  contest: ReturnType<typeof useCompetition>;
+  save: SaveData;
+  onSettings: (change: Partial<Settings>) => void;
+  onFinished: (hill: HillChoice, result: JumpResult, recording: JumpRecording) => void;
+  keepJump: (hill: HillChoice, jump: FinishedJump) => KeepOutcome;
+  hills: readonly HillChoice[];
+  navigated: boolean;
+  diagnostics: boolean;
+  offline: OfflineState | null;
+  show: (next: Screen) => void;
+}
+
+/** The screens of a competition: its setup, the board between its jumps, and its jumps; null for other screens. */
+function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
+  if (screen.kind === "contest-jump" && c.contest.jump) {
+    const hill = screen.hill;
+    return (
+      <JumpScreen
+        key={c.contest.jump.key}
+        hill={hill}
+        record={c.save.records[hill.id]}
+        settings={c.save.settings}
+        onSettings={c.onSettings}
+        onFinished={(result, recording) => {
+          // A player's competition jump counts for the hill record as a training jump does; a computer's never.
+          if (c.contest.jump?.contest.cpu !== null) return;
+          c.contest.onPlayerResult(result);
+          c.onFinished(hill, result, recording);
+        }}
+        onKeepJump={(jump) => c.keepJump(hill, jump)}
+        hills={c.hills}
+        records={c.save.records}
+        onPickHill={() => undefined}
+        onExit={c.contest.abandon}
+        onOpenReplays={() => undefined}
+        focusOnEntry={c.navigated}
+        diagnostics={c.diagnostics}
+        openingReplay={null}
+        recordGhost={null}
+        offline={c.offline}
+        contest={c.contest.jump.contest}
+      />
+    );
+  }
+  if (screen.kind === "contest" && c.contest.run) {
+    return (
+      <CompetitionScreen
+        key={`${c.contest.run.state.round}-${c.contest.run.state.position}-${c.contest.run.log.length}`}
+        run={c.contest.run}
+        onNext={c.contest.next}
+        onAgain={c.contest.again}
+        onMenu={c.contest.abandon}
+        focusOnEntry={c.navigated}
+      />
+    );
+  }
+  if (screen.kind === "contest-setup") {
+    return (
+      <CompetitionSetupScreen
+        hills={c.hills}
+        settings={c.save.settings.competition}
+        onChange={(competition) => c.onSettings({ competition })}
+        onStart={(hill) => c.contest.start(hill, c.save.settings.competition)}
+        onBack={() => c.show({ kind: "menu" })}
+        focusOnEntry={c.navigated}
+      />
+    );
+  }
+
+  return null;
+}
+
 interface AppProps {
   /** Whether the address of the page asked for the diagnostics of the jump loop. */
   diagnostics: boolean;
@@ -201,7 +285,22 @@ export function App({ diagnostics }: AppProps) {
   const onSettings = (change: Partial<Settings>) => {
     update((prev) => withSettings(prev, change));
   };
+  const allHills = [...OWN_HILLS, ...originalHills];
+  const contest = useCompetition(show, save.settings.outfit);
 
+  const contestShown = contestScreen(screen, {
+    contest,
+    save,
+    onSettings,
+    onFinished,
+    keepJump: replays.keepJump,
+    hills: allHills,
+    navigated,
+    diagnostics,
+    offline: offline.state,
+    show,
+  });
+  if (contestShown) return contestShown;
   if (screen.kind === "jump") {
     const hill = screen.hill;
     return (

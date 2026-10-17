@@ -5,6 +5,11 @@ import { expect, type DeviceTraits } from "./fixtures";
 export const TEXT = {
   menuHeading: "Główne menu",
   training: "Trening",
+  competition: "Konkurs",
+  contestStart: "Rozpocznij konkurs",
+  contestNext: /^Dalej: skacze /,
+  contestAbandon: "Przerwij konkurs",
+  contestAbandonYes: "Tak, przerwij",
   replays: "Powtórki",
   outfit: "Strój",
   howTo: "Jak skakać",
@@ -120,6 +125,12 @@ export async function leaveJumpForHills(page: Page, traits: DeviceTraits): Promi
   await expect(page.getByRole("heading", { name: TEXT.hillListTitle })).toBeVisible();
 }
 
+/** From the menu to the setup of a competition. */
+export async function openCompetitionSetup(page: Page, traits: DeviceTraits): Promise<void> {
+  await press(page.getByRole("button", { name: TEXT.competition, exact: true }), traits);
+  await expect(page.getByRole("heading", { name: TEXT.competition, exact: true })).toBeVisible();
+}
+
 /** The save as stored, or null before the first write. */
 export async function storedSave(page: Page): Promise<unknown> {
   const json = await page.evaluate((key) => localStorage.getItem(key), SAVE_KEY);
@@ -130,7 +141,7 @@ type ScreenCheck = (screen: string) => Promise<void>;
 
 /**
  * Opens the menu, the outfit screen, the two screens of instructions, the one about the game, the settings, the
- * replays and the hill list
+ * replays, the setup and the board of a competition, and the hill list
  * in turn and runs `check` on each; ends on the hill list.
  */
 export async function onEachMenuScreen(page: Page, traits: DeviceTraits, check: ScreenCheck): Promise<void> {
@@ -159,6 +170,14 @@ export async function onEachMenuScreen(page: Page, traits: DeviceTraits, check: 
   await expect(page.getByRole("heading", { name: TEXT.replays })).toBeVisible();
   await check("replays");
   await press(button(page, TEXT.back), traits);
+  await openCompetitionSetup(page, traits);
+  await check("competition setup");
+  await press(button(page, TEXT.contestStart), traits);
+  await expect(button(page, TEXT.contestNext)).toBeVisible();
+  await check("competition board");
+  await press(button(page, TEXT.contestAbandon), traits);
+  await press(button(page, TEXT.contestAbandonYes), traits);
+  await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
   await openHillList(page, traits);
   await check("hill list");
 }

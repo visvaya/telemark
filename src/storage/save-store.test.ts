@@ -60,6 +60,12 @@ describe("save data", () => {
       hillHints: false,
       replays: { recentCount: 10, maxAgeDays: 30, maxSizeKb: 2000, slider: false },
       recordGhost: false,
+      competition: {
+        hillId: "own-3",
+        players: [true, true, false, false, false, false, false, true],
+        cpus: DEFAULT_SETTINGS.competition.cpus.map((_c, i) => ({ on: i % 2 === 0, level: 5 })),
+        watchCpu: true,
+      },
     };
     const save = withSettings(emptySave(), chosen);
     expect(parseSave(JSON.stringify(save)).settings).toEqual(chosen);
@@ -68,6 +74,7 @@ describe("save data", () => {
     expect(parseSave(JSON.stringify(older)).settings.sensitivity).toEqual({ mouse: 5, drag: 5, tilt: 5 });
     expect(parseSave(JSON.stringify(older)).settings.hillHints).toBe(true);
     expect(parseSave(JSON.stringify(older)).settings.weather).toBe("varied");
+    expect(parseSave(JSON.stringify(older)).settings.competition).toEqual(DEFAULT_SETTINGS.competition);
     // The choice stored under the setting's first name is kept.
     const renamed = { ...save, settings: { flightHints: false } };
     expect(parseSave(JSON.stringify(renamed)).settings.hillHints).toBe(false);
@@ -82,6 +89,7 @@ describe("save data", () => {
         sound: "loud",
         replays: { recentCount: 7, maxAgeDays: 0, maxSizeKb: 1e9, slider: "yes" },
         recordGhost: 1,
+        competition: { hillId: 3, players: "all", cpus: [{ on: "yes", level: 7 }], watchCpu: 0 },
       },
     };
     expect(parseSave(JSON.stringify(broken)).settings).toEqual(DEFAULT_SETTINGS);

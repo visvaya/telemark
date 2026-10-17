@@ -10,7 +10,7 @@ export interface CpuJumpState {
 }
 
 /** The pilot's view of the jump at the entry of read_input. */
-function pilotView(frame: number, at: InputContext) {
+export function pilotView(frame: number, at: InputContext) {
   const j = at.jumper;
   return {
     frame,

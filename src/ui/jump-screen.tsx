@@ -3,9 +3,11 @@ import type { HillChoice } from "../game/hill-choice";
 import { pickScenery } from "../game/scenery";
 import { newSeed } from "../game/training-session";
 import type { OfflineState } from "../pwa/offline-state";
+import type { Outfit } from "../game/outfit";
 import type { HillRecord, Settings } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { typeset } from "./typeset";
+import { AbandonQuestion } from "./abandon-question";
 import { JumpMenu } from "./jump-menu";
 import { ReplayBar } from "./replay-bar";
 import { nextReplaySpeed, type JumpRecording, type ReplaySource, type ReplayView } from "./jump-replay";
@@ -48,6 +50,111 @@ interface Props {
   recordGhost: ReplaySource | null;
   /** Whether a newer release waits, told in the menu next to the version. */
   offline: OfflineState | null;
+  /** A jump of a competition, in place of the training; absent in training. */
+  contest?: ContestJump;
+}
+
+/** A jump of a competition: who jumps, in which colours, and what happens after it. */
+export interface ContestJump {
+  /** The name for the bar of the picture, with the round. */
+  hudName: string;
+  outfit: Outfit;
+  /** A computer jumper's jump, played from its inputs; null for a player's jump. */
+  cpu: ReplaySource | null;
+  /** Goes on to the next jumper, once; false while the jump has no result to go on with. */
+  onNext: () => boolean;
+  /** Leaves the competition, after the player said yes. */
+  onAbandon: () => void;
+}
+
+/** The competition's way on, which acts once however many presses or keys ask for it. */
+function useContestNext(contest: ContestJump | undefined): (() => void) | null {
+  const done = useRef(false);
+  const latest = useRef(contest);
+  useEffect(() => {
+    latest.current = contest;
+  });
+  const [next] = useState(() => () => {
+    if (done.current) return;
+    // Latched only once the competition took the jump on; a press before its result is known does nothing.
+    done.current = latest.current?.onNext() ?? false;
+  });
+  return contest ? next : null;
+}
+
+/** One touch zone of the screen, a half of it for each hand. */
+function Zone(p: {
+  side: "left" | "right";
+  steering: ReturnType<typeof useSteering>;
+  inert: boolean;
+  replaying: boolean;
+}) {
+  const { side, steering } = p;
+  return (
+    <TouchPad
+      side={side}
+      inert={p.inert || p.replaying}
+      // A replay takes no hands: the zones keep their place, so the picture does not move, and a touch goes
+      // through to the picture, which pauses the replay.
+      idle={p.replaying}
+      hints={steering.tiltOn ? [] : JUMP_TEXT[side === "left" ? "leftPadHints" : "rightPadHints"]}
+      label={steering.tiltOn ? JUMP_TEXT[`${side}PadTilt`] : JUMP_TEXT[`${side}Pad`]}
+      onPress={(down) => steering.pressZone(side, down)}
+      onDrag={side === "left" ? steering.dragZone : () => undefined}
+    />
+  );
+}
+
+/** The button that skips a watched computer jump: the jump is computed already, so it only moves on. */
+function SkipButton({ onSkip, touch }: { onSkip: () => void; touch: boolean }) {
+  return (
+    <button type="button" className="pixel-button skip-button" onClick={onSkip}>
+      {UI_TEXT.competition.skip}
+      {touch ? "" : UI_TEXT.competition.skipKey}
+    </button>
+  );
+}
+
+/**
+ * What a competition changes on the jump screen: the competitor's colours, the way on after the jump, Enter to
+ * skip a computer jumper's jump, and a question before the exit. In training all of it stays as it was.
+ */
+function useContestJump(props: Props) {
+  const { contest } = props;
+  // A competitor jumps in colours of their own; a computer jumper needs no hints on what to press.
+  const settings = contest
+    ? { ...props.settings, outfit: contest.outfit, hillHints: props.settings.hillHints && contest.cpu === null }
+    : props.settings;
+  const contestNext = useContestNext(contest);
+  const cpu = contest?.cpu ?? null;
+  useSkipKey(cpu ? contestNext : null);
+  const [abandonAsked, setAbandonAsked] = useState(false);
+  const menuProps = {
+    onExit: contest ? () => setAbandonAsked(true) : props.onExit,
+    contest: contest !== undefined,
+    abandonQuestion:
+      abandonAsked && contest ? (
+        <AbandonQuestion onAnswer={(yes) => (yes ? contest.onAbandon() : setAbandonAsked(false))} />
+      ) : null,
+  };
+  const live = { contestNext, jumperName: contest?.hudName ?? null, contestCpu: cpu !== null };
+  return { settings, contestNext, cpu, menuProps, live };
+}
+
+/** Enter skips a watched computer jump, unless it is meant for a button or a field that has the focus. */
+function useSkipKey(skip: (() => void) | null): void {
+  useEffect(() => {
+    if (!skip) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Enter" && e.code !== "NumpadEnter") return;
+      const target = e.target;
+      if (target instanceof HTMLElement && target.closest("button, input, select, a")) return;
+      e.preventDefault();
+      skip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [skip]);
 }
 
 /** What the player is told after asking to keep the last jump. */
@@ -173,7 +280,8 @@ function gameClass(c: { touch: boolean; controls: string; menuOpen: boolean; rep
 
 /** The training on one hill: the picture of the jump, the touch zones on a phone, and the menu. */
 export function JumpScreen(props: Props) {
-  const { hill, settings, onSettings } = props;
+  const { hill, onSettings } = props;
+  const { settings, contestNext, cpu, menuProps, live: contestLive } = useContestJump(props);
   const [announcement, setAnnouncement] = useState("");
   /** How the replay is being watched; null while jumping. */
   const [replay, setReplay] = useState<ReplayView | null>(null);
@@ -192,7 +300,16 @@ export function JumpScreen(props: Props) {
     controls: loop,
   } = useJumpLoop({
     hill,
-    live: { onFinished: props.onFinished, record: props.record, settings, controls, ...look, replay, ghost },
+    live: {
+      onFinished: props.onFinished,
+      record: props.record,
+      settings,
+      controls,
+      ...look,
+      replay,
+      ghost,
+      ...contestLive,
+    },
     inputRef: steering.inputRef,
     tiltRef: steering.tiltRef,
     resetHands: steering.resetHands,
@@ -206,27 +323,14 @@ export function JumpScreen(props: Props) {
     announce: setAnnouncement,
     onReplayAvailable: setReplayAvailable,
     onReplayChange: setReplay,
-    initialReplay: props.openingReplay,
+    initialReplay: cpu ?? props.openingReplay,
   });
   useEntryFocus(canvasRef, props.focusOnEntry);
   useNowPlaying(UI_TEXT.hillLabel(hill.name, hill.kPointM));
   const keepLast = useKeepLastJump(loop, props.onKeepJump);
-  const bar = replay !== null && settings.replays.slider;
+  // A computer jumper's competition jump is shown as a jump, without the slider of a replay.
+  const bar = replay !== null && settings.replays.slider && cpu === null;
   const tiltAsk = useAskAboutTilt(steering, replay === null, menu);
-  const pad = (side: "left" | "right") => (
-    <TouchPad
-      side={side}
-      inert={menu.menuOpen || replay !== null}
-      // A replay takes no hands: the zones keep their place, so the picture does not move, and a touch goes
-      // through to the picture, which pauses the replay.
-      idle={replay !== null}
-      hints={tiltOn ? [] : JUMP_TEXT[side === "left" ? "leftPadHints" : "rightPadHints"]}
-      label={tiltOn ? JUMP_TEXT[`${side}PadTilt`] : JUMP_TEXT[`${side}Pad`]}
-      onPress={(down) => steering.pressZone(side, down)}
-      onDrag={side === "left" ? steering.dragZone : () => undefined}
-    />
-  );
-
   return (
     <div className={gameClass({ touch, controls, menuOpen: menu.menuOpen, replaying: replay !== null, bar })}>
       <button
@@ -245,9 +349,10 @@ export function JumpScreen(props: Props) {
           ref={canvasRef}
           tabIndex={-1}
           role="img"
-          aria-label={JUMP_TEXT.canvas(UI_TEXT.hillLabel(hill.name, hill.kPointM))}
+          aria-label={JUMP_TEXT.canvas(UI_TEXT.hillLabel(hill.name, hill.kPointM), props.contest !== undefined)}
         />
         {!menu.menuOpen && <KeepNote text={keepLast.keepNote} />}
+        {cpu && contestNext && !menu.menuOpen && <SkipButton onSkip={contestNext} touch={touch} />}
         {props.diagnostics && <pre className="jump-diagnostics" aria-hidden="true" ref={diagnosticsRef} />}
       </div>
       {bar && <ReplayBar position={loop.replayPosition} onSeek={loop.seekReplay} />}
@@ -283,13 +388,13 @@ export function JumpScreen(props: Props) {
           onToggleTilt={steering.toggleTilt}
           tiltNote={steering.tiltNote}
           {...tiltAsk}
-          onExit={props.onExit}
+          {...menuProps}
           offline={props.offline}
           onOtherReplay={props.onOpenReplays}
         />
       </div>
-      {touch && pad("left")}
-      {touch && pad("right")}
+      {touch && <Zone side="left" steering={steering} inert={menu.menuOpen} replaying={replay !== null} />}
+      {touch && <Zone side="right" steering={steering} inert={menu.menuOpen} replaying={replay !== null} />}
       <ScreenNote touch={touch} jumping={replay === null} tiltNote={steering.tiltNote} hidden={menu.menuOpen} />
       <p className="sr-only" aria-live="polite">
         {announcement}

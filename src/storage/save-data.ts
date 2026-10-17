@@ -1,3 +1,4 @@
+import { DEFAULT_COMPETITION_SETTINGS, parseCompetitionSettings, type CompetitionSettings } from "../game/competition";
 import { DEFAULT_OUTFIT, parseOutfit, type Outfit } from "../game/outfit";
 import { DEFAULT_SENSITIVITY, parseSensitivity, type Sensitivity } from "../game/sensitivity";
 
@@ -41,6 +42,8 @@ export interface Settings {
   replays: ReplaySettings;
   /** Whether the record of the hill runs beside each training jump as a ghost (added after version 2 too; on). */
   recordGhost: boolean;
+  /** The last setup of a competition: hill, participants, watching (added after version 2 too). */
+  competition: CompetitionSettings;
 }
 
 /** The replays the game keeps besides the hill records, and the clean-up the player asked for. */
@@ -77,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hillHints: true,
   replays: DEFAULT_REPLAY_SETTINGS,
   recordGhost: true,
+  competition: DEFAULT_COMPETITION_SETTINGS,
 };
 
 export interface SaveData {
@@ -155,6 +159,7 @@ function parseSettings(v: unknown): Settings {
     hillHints: typeof hillHints === "boolean" ? hillHints : DEFAULT_SETTINGS.hillHints,
     replays: parseReplaySettings(field(v, "replays")),
     recordGhost: typeof recordGhost === "boolean" ? recordGhost : DEFAULT_SETTINGS.recordGhost,
+    competition: parseCompetitionSettings(field(v, "competition")),
   };
 }
 

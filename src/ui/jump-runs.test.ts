@@ -91,6 +91,9 @@ function setUp() {
       sceneryChosen: false,
       replay: null,
       ghost: null,
+      contestNext: null,
+      jumperName: null,
+      contestCpu: false,
     },
     inputRef: { current: scriptedInput() },
     resetHands: () => context.inputRef.current.reset(),
@@ -138,12 +141,32 @@ function setUp() {
     setScenery: (scenery: Scenery, sceneryChosen: boolean) => {
       context.live = { ...context.live, scenery, sceneryChosen };
     },
+    /** A competition jump: what moves on to the next jumper. */
+    setContestNext: (contestNext: () => void) => {
+      context.live = { ...context.live, contestNext };
+    },
     /** The ghost the screen hands the loop: the replay of the hill's record, or none. */
     setGhost: (ghost: ReplaySource | null) => {
       context.live = { ...context.live, ghost };
     },
   };
 }
+
+describe("a competition jump", () => {
+  it("is not jumped again, and its replay ends in the next jumper's turn", () => {
+    const t = setUp();
+    let next = 0;
+    t.setContestNext(() => next++);
+    const jumped = t.playOut();
+    t.runs.controls.restart();
+    expect(t.runs.current().now().jump).toBe(jumped);
+    t.runs.controls.watchReplay();
+    expect(t.replay()).not.toBeNull();
+    t.runs.controls.endReplay();
+    expect(next).toBe(1);
+    expect(t.finished).toHaveLength(1);
+  });
+});
 
 describe("training and its replay", () => {
   beforeEach(() => {

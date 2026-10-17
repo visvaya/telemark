@@ -39,7 +39,15 @@ export function startRecordedJump(hill: HillChoice, start: RecordedStart): Train
   return jumpFrom(hill, start, start.randomSeed >>> 0);
 }
 
-function jumpFrom(hill: HillChoice, start: RecordedStart, seed: number): TrainingJump {
+/**
+ * A jump the original computes without drawing (a computer jumper's, not watched): the same start, but the
+ * simulation skips what the original does only while it draws.
+ */
+export function startComputedJump(hill: HillChoice, start: RecordedStart): TrainingJump {
+  return jumpFrom(hill, start, start.randomSeed >>> 0, false);
+}
+
+function jumpFrom(hill: HillChoice, start: RecordedStart, seed: number, presentation = true): TrainingJump {
   const setup: JumpSetup = {
     hill: hill.profile,
     kPointM: hill.kPointM,
@@ -47,7 +55,7 @@ function jumpFrom(hill: HillChoice, start: RecordedStart, seed: number): Trainin
     wind: start.wind,
     randomSeed: start.randomSeed,
     points: 0,
-    presentation: true,
+    presentation,
   };
   return { hill, setup, state: createJump(setup), seed, framesAfterEnd: 0, windDriftM: { x: 0, y: 0 } };
 }

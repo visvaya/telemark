@@ -21,6 +21,8 @@ export const UI_TEXT = {
     about: "O grze",
     settings: "Ustawienia",
     replays: "Powtórki",
+    competitionSetup: "Konkurs",
+    competition: (hillLabel: string) => `Konkurs: ${hillLabel}`,
     jump: (hillLabel: string) => `Skok: ${hillLabel}`,
     /** The screen first, the name of the game after it. */
     withApp: (screen: string, app: string) => `${screen} · ${app}`,
@@ -33,6 +35,7 @@ export const UI_TEXT = {
     homage: "Nawiązuje do Deluxe Ski Jump 2 (Mediamond, Jussi Koskela)",
     navigation: "Główne menu",
     training: "Trening",
+    competition: "Konkurs",
     replays: "Powtórki",
     outfit: "Strój",
     settings: "Ustawienia",
@@ -54,6 +57,48 @@ export const UI_TEXT = {
     forgetFiles: "Zapomnij pliki",
     notPersistent: "Przeglądarka nie pozwala zapisywać danych: rekordy znikną po zamknięciu strony.",
     replaysNotStored: "Nie udało się zapisać powtórek: nowe mogą zniknąć po zamknięciu strony.",
+  },
+
+  /** A single competition: its setup, the board between jumps and the results. */
+  competition: {
+    setupTitle: "Konkurs",
+    hill: "Skocznia",
+    players: "Gracze",
+    playerName: (number: number) => `Gracz ${number}`,
+    cpus: "Rywale komputerowi",
+    /** The levels of the computer jumpers, as the original names them, and its random one last. */
+    levels: ["najsłabszy", "słaby", "średni", "dobry", "super", "losowo"],
+    levelLabel: (name: string) => `Poziom: ${name}`,
+    takesPart: (name: string) => `${name} startuje`,
+    watchCpu: "Oglądaj skoki rywali",
+    start: "Rozpocznij konkurs",
+    nobody: "Włącz co najmniej jednego zawodnika.",
+    boardTitle: "Konkurs",
+    round: (round: number) => `${round}. seria`,
+    lastJumps: "Ostatnie skoki",
+    afterRound: (round: number) => `Wyniki po ${round}. serii`,
+    finalTitle: "Klasyfikacja końcowa",
+    next: (name: string) => `Dalej: skacze ${name}`,
+    nextRound: (round: number) => `Rozpocznij ${round}. serię`,
+    again: "Jeszcze raz",
+    menu: "Menu",
+    abandon: "Przerwij konkurs",
+    abandonQuestion: "Przerwać konkurs? Wyniki tego konkursu przepadną.",
+    abandonYes: "Tak, przerwij",
+    abandonNo: "Nie, wróć",
+    columns: { place: "Miejsce", name: "Zawodnik", jump: (round: number) => `${round}. seria`, total: "Razem" },
+    /** One jump in a table: distance and points. */
+    jump: (distance: string, points: string) => `${distance} m, ${points} pkt`,
+    fell: "upadek",
+    place: (place: number) => `${place}.`,
+    noJump: "-",
+    total: (points: string) => `${points} pkt`,
+    /** One line of the last jumps: who, how far, how many points and the place after it. */
+    jumpLine: (name: string, jump: string, place: number) => `${name}: ${jump}, miejsce ${place}.`,
+    /** The bar of the jump view: the jumper and the round, in the picture's capitals. */
+    hudName: (name: string, round: number) => `${name.toUpperCase()} · ${round}. SERIA`,
+    skip: "Pomiń",
+    skipKey: " (Enter)",
   },
 
   /** What the phone shows of the game's sound outside the page (lock screen, control centre). */
@@ -394,8 +439,9 @@ export const UI_TEXT = {
   jumpScreen: {
     pause: "Pauza i ustawienia",
     pauseKey: "ESC: MENU",
-    canvas: (hillLabel: string) =>
-      `Skok na skoczni ${hillLabel}. Lewy przycisk myszy lub Z: start, oba przyciski lub Z i X: wybicie, mysz lub strzałki: pochylenie, przycisk tuż nad ziemią: telemark, drugi przycisk zaraz po pierwszym daje wąski telemark, a później szerszy, oba naraz: lądowanie na dwie nogi, po skoku lewy przycisk: jeszcze raz, P: powtórka, S: zachowanie skoku, Esc: menu z ustawieniami i instrukcją.`,
+    /** `contest`: in a competition the press after the jump goes on to the next jumper. */
+    canvas: (hillLabel: string, contest = false) =>
+      `Skok na skoczni ${hillLabel}. Lewy przycisk myszy lub Z: start, oba przyciski lub Z i X: wybicie, mysz lub strzałki: pochylenie, przycisk tuż nad ziemią: telemark, drugi przycisk zaraz po pierwszym daje wąski telemark, a później szerszy, oba naraz: lądowanie na dwie nogi, po skoku lewy przycisk: ${contest ? "dalej" : "jeszcze raz"}, P: powtórka, S: zachowanie skoku, Esc: menu z ustawieniami i instrukcją.`,
     resume: "Wróć do gry",
     resumeKey: " (Esc)",
     again: "Skocz jeszcze raz",
@@ -459,6 +505,14 @@ export const UI_TEXT = {
       touch: "Pole L: jeszcze raz.",
       tilt: "Dotknięcie ekranu: jeszcze raz.",
     },
+    /** In a competition: what moves on to the next jumper once the jump is over. */
+    contestNext: {
+      mouse: "Lewy przycisk: dalej.",
+      touch: "Pole L: dalej.",
+      tilt: "Dotknięcie ekranu: dalej.",
+    },
+    /** Once a competition jump shown again, or a computer jumper's watched jump, is over. */
+    contestOver: "Kliknięcie lub dotknięcie obrazu: dalej.",
     record: "Nowy rekord skoczni.",
     disqualified: "Dyskwalifikacja",
     distance: (distance: string) => `${distance} metra`,
