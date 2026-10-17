@@ -6,6 +6,7 @@ import {
   generateHill,
   GENERATOR_TARGETS,
   HillGenerationError,
+  lookOf,
   type HillCharacter,
 } from "./hill-generator";
 import { geometryProblems, hillGeometry, kFromSteepestMaxM } from "./hill-geometry";
@@ -94,6 +95,39 @@ describe("hill generator", () => {
       "bestPastKM",
     ]);
     expect(caught(() => generateHill({ ...first, gateXM: 40 })).problems[0]?.rule).toBe("generator.character");
+  });
+
+  it("rests the end of every inrun on a support and keeps the deck behind the gate to its share of K", () => {
+    const [character] = GENERATED_HILL_CHARACTERS;
+    if (character === undefined) throw new Error("no character");
+    const inrun = {
+      startXM: 7,
+      flatEndXM: 6.2,
+      lineEndXM: 12,
+      takeoffXM: 30,
+      lineSlope: -1,
+      lineInterceptM: 230,
+      curveA: 0.03,
+    };
+    // A short inrun leaves no room between the support under the platform and the one under the end.
+    const short = { ...inrun, lineEndXM: 9, takeoffXM: 14 };
+    for (const shape of [inrun, short]) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const look = lookOf(character, shape, 120, seed);
+        const ends = look.supports.map((s) => s.toXM);
+        const gap = shape.takeoffXM - Math.max(...ends);
+        expect(gap).toBeGreaterThanOrEqual(0.1 - 1e-9);
+        expect(gap).toBeLessThanOrEqual(0.8 + 1e-9);
+        // In order along the inrun, none overlapping the next.
+        for (let i = 1; i < look.supports.length; i++) {
+          expect(look.supports[i]?.fromXM ?? 0).toBeGreaterThan(look.supports[i - 1]?.toXM ?? Infinity);
+        }
+        expect(look.supports.length).toBeLessThanOrEqual(shape === short ? 2 : 5);
+        const deckM = shape.startXM - look.inrun.platformStartXM;
+        expect(deckM / character.kPointM).toBeGreaterThanOrEqual(0.035 - 1e-9);
+        expect(deckM / character.kPointM).toBeLessThanOrEqual(0.09 + 0.01);
+      }
+    }
   });
 
   it("gives the same character the same id, and another character another id", () => {

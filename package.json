@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/visvaya/telemark.git"
   },
-  "version": "0.16.3",
+  "version": "0.16.4",
   "type": "module",
   "scripts": {
     "dev": "vite",

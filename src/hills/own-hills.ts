@@ -1,3 +1,4 @@
+import { DEFAULT_HILL_LOOK } from "../render/hill-look";
 import type { HillSpec } from "./hill-spec";
 
 /**
@@ -33,18 +34,8 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
         knollBlend: 0.3,
       },
     },
-    look: {
-      skyRgb6: [30, 50, 63],
-      terrain: { seed: 4321, amplitudeM: 50, baseOverOutrunM: 3 },
-      trees: { firstCount: 70, secondCount: 30, fromXM: 50, toXM: 200, seed: 5150, hidden: [] },
-      supports: [
-        { fromXM: 7, toXM: 9.5, colour: 13, frontColour: 25 },
-        { fromXM: 20, toXM: 21, colour: 13, frontColour: 17 },
-        { fromXM: 33, toXM: 40, colour: 13, frontColour: 25 },
-      ],
-      inrun: { platformStartXM: 6, nearWallUpPx: 12, nearWallDownPx: 11, wallColour: 228, gateColour: 163 },
-      marks: { firstMarkM: 75, markCount: 3, fenceColour: 192, fenceStartM: 0 },
-    },
+    // The training hill looks the way the game draws a hill that says nothing else (DEFAULT_HILL_LOOK).
+    look: DEFAULT_HILL_LOOK,
   },
   // From here on, hills made by the generator (hill-generator.ts), each of its own character, and kept as data: a
   // later change of the generator leaves them as they are. Earlier ones with the same names, own-4 to own-13, had
@@ -76,13 +67,14 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 52, 58],
-      terrain: { seed: 15838, amplitudeM: 55, baseOverOutrunM: 3 },
-      trees: { firstCount: 59, secondCount: 41, fromXM: 31.56, toXM: 157.5, seed: 12850, hidden: [] },
+      terrain: { seed: 15838, amplitudeM: 76, baseOverOutrunM: 3 },
+      trees: { firstCount: 55, secondCount: 13, fromXM: 31.56, toXM: 157.5, seed: 12850, hidden: [] },
       supports: [
         { fromXM: 2.5, toXM: 5.8, colour: 12, frontColour: 25 },
-        { fromXM: 20.1, toXM: 20.9, colour: 12, frontColour: 17 },
+        { fromXM: 12.45, toXM: 13.45, colour: 12, frontColour: 17 },
+        { fromXM: 22.85, toXM: 31.46, colour: 12, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 2.5, nearWallUpPx: 10, nearWallDownPx: 5, wallColour: 68, gateColour: 115 },
+      inrun: { platformStartXM: 3.72, nearWallUpPx: 11, nearWallDownPx: 11, wallColour: 68, gateColour: 115 },
       marks: { firstMarkM: 35, markCount: 3, fenceColour: 96, fenceStartM: 2 },
     },
   },
@@ -113,17 +105,14 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [30, 50, 63],
-      terrain: { seed: 23757, amplitudeM: 49, baseOverOutrunM: 3 },
-      trees: { firstCount: 81, secondCount: 45, fromXM: 44.44, toXM: 179.76, seed: 52043, hidden: [] },
+      terrain: { seed: 23757, amplitudeM: 71, baseOverOutrunM: 3 },
+      trees: { firstCount: 66, secondCount: 48, fromXM: 44.44, toXM: 179.76, seed: 52043, hidden: [] },
       supports: [
         { fromXM: 14.2, toXM: 17.5, colour: 12, frontColour: 25 },
-        { fromXM: 21.97, toXM: 22.77, colour: 12, frontColour: 17 },
-        { fromXM: 26.43, toXM: 31.43, colour: 12, frontColour: 25 },
-        { fromXM: 33.01, toXM: 35.75, colour: 12, frontColour: 25 },
-        { fromXM: 40.04, toXM: 40.84, colour: 12, frontColour: 17 },
+        { fromXM: 40.73, toXM: 43.64, colour: 12, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 9.2, nearWallUpPx: 11, nearWallDownPx: 11, wallColour: 84, gateColour: 99 },
-      marks: { firstMarkM: 45, markCount: 3, fenceColour: 112, fenceStartM: 0 },
+      inrun: { platformStartXM: 13.72, nearWallUpPx: 13, nearWallDownPx: 5, wallColour: 84, gateColour: 99 },
+      marks: { firstMarkM: 45, markCount: 3, fenceColour: 112, fenceStartM: -3 },
     },
   },
   {
@@ -153,16 +142,15 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 30, 36],
-      terrain: { seed: 31676, amplitudeM: 83, baseOverOutrunM: 3 },
-      trees: { firstCount: 64, secondCount: 21, fromXM: 47.09, toXM: 193.12, seed: 25700, hidden: [] },
+      terrain: { seed: 31676, amplitudeM: 47, baseOverOutrunM: 3 },
+      trees: { firstCount: 47, secondCount: 50, fromXM: 47.09, toXM: 193.12, seed: 25700, hidden: [] },
       supports: [
         { fromXM: 5, toXM: 6.3, colour: 13, frontColour: 25 },
-        { fromXM: 14.25, toXM: 15.05, colour: 13, frontColour: 17 },
-        { fromXM: 24.98, toXM: 25.98, colour: 13, frontColour: 17 },
-        { fromXM: 37.77, toXM: 39.17, colour: 13, frontColour: 17 },
+        { fromXM: 20.72, toXM: 21.52, colour: 13, frontColour: 17 },
+        { fromXM: 39.85, toXM: 46.59, colour: 13, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 1, nearWallUpPx: 12, nearWallDownPx: 11, wallColour: 164, gateColour: 195 },
-      marks: { firstMarkM: 55, markCount: 3, fenceColour: 160, fenceStartM: -2 },
+      inrun: { platformStartXM: 5.5, nearWallUpPx: 15, nearWallDownPx: 18, wallColour: 164, gateColour: 195 },
+      marks: { firstMarkM: 55, markCount: 3, fenceColour: 160, fenceStartM: -1 },
     },
   },
   {
@@ -193,15 +181,13 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     look: {
       skyRgb6: [44, 52, 58],
       terrain: { seed: 39595, amplitudeM: 74, baseOverOutrunM: 3 },
-      trees: { firstCount: 67, secondCount: 30, fromXM: 49.08, toXM: 201.77, seed: 64893, hidden: [] },
+      trees: { firstCount: 52, secondCount: 10, fromXM: 49.08, toXM: 201.77, seed: 64893, hidden: [] },
       supports: [
         { fromXM: 17.5, toXM: 18.8, colour: 12, frontColour: 25 },
-        { fromXM: 26.22, toXM: 27.02, colour: 12, frontColour: 17 },
-        { fromXM: 34.57, toXM: 35.37, colour: 12, frontColour: 17 },
-        { fromXM: 41.65, toXM: 42.45, colour: 12, frontColour: 17 },
+        { fromXM: 39.52, toXM: 48.58, colour: 12, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 12.5, nearWallUpPx: 14, nearWallDownPx: 11, wallColour: 212, gateColour: 83 },
-      marks: { firstMarkM: 60, markCount: 3, fenceColour: 128, fenceStartM: -1 },
+      inrun: { platformStartXM: 16.47, nearWallUpPx: 12, nearWallDownPx: 11, wallColour: 212, gateColour: 83 },
+      marks: { firstMarkM: 60, markCount: 3, fenceColour: 128, fenceStartM: -4 },
     },
   },
   {
@@ -231,14 +217,14 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [30, 50, 63],
-      terrain: { seed: 47514, amplitudeM: 83, baseOverOutrunM: 3 },
-      trees: { firstCount: 66, secondCount: 46, fromXM: 39.94, toXM: 195.32, seed: 38550, hidden: [] },
+      terrain: { seed: 47514, amplitudeM: 31, baseOverOutrunM: 3 },
+      trees: { firstCount: 85, secondCount: 31, fromXM: 39.94, toXM: 195.32, seed: 38550, hidden: [] },
       supports: [
         { fromXM: 1, toXM: 3.3, colour: 10, frontColour: 25 },
-        { fromXM: 17.32, toXM: 18.32, colour: 10, frontColour: 17 },
+        { fromXM: 36.51, toXM: 39.74, colour: 10, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 2, nearWallUpPx: 15, nearWallDownPx: 5, wallColour: 132, gateColour: 163 },
-      marks: { firstMarkM: 70, markCount: 3, fenceColour: 176, fenceStartM: 1 },
+      inrun: { platformStartXM: 1.82, nearWallUpPx: 10, nearWallDownPx: 18, wallColour: 132, gateColour: 163 },
+      marks: { firstMarkM: 70, markCount: 3, fenceColour: 176, fenceStartM: 2 },
     },
   },
   {
@@ -268,14 +254,17 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 30, 36],
-      terrain: { seed: 55433, amplitudeM: 87, baseOverOutrunM: 3 },
-      trees: { firstCount: 44, secondCount: 41, fromXM: 59.82, toXM: 231.16, seed: 12207, hidden: [] },
+      terrain: { seed: 55433, amplitudeM: 67, baseOverOutrunM: 3 },
+      trees: { firstCount: 40, secondCount: 31, fromXM: 59.82, toXM: 231.16, seed: 12207, hidden: [] },
       supports: [
         { fromXM: 9, toXM: 12.3, colour: 13, frontColour: 25 },
-        { fromXM: 32.98, toXM: 39.84, colour: 13, frontColour: 25 },
+        { fromXM: 17.01, toXM: 24.12, colour: 13, frontColour: 25 },
+        { fromXM: 29.43, toXM: 33.02, colour: 13, frontColour: 25 },
+        { fromXM: 42.71, toXM: 49.82, colour: 13, frontColour: 25 },
+        { fromXM: 52.53, toXM: 59.72, colour: 13, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 9, nearWallUpPx: 15, nearWallDownPx: 26, wallColour: 228, gateColour: 67 },
-      marks: { firstMarkM: 80, markCount: 3, fenceColour: 208, fenceStartM: 1 },
+      inrun: { platformStartXM: 10.68, nearWallUpPx: 12, nearWallDownPx: 5, wallColour: 228, gateColour: 67 },
+      marks: { firstMarkM: 80, markCount: 3, fenceColour: 208, fenceStartM: 0 },
     },
   },
   {
@@ -305,16 +294,17 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 52, 58],
-      terrain: { seed: 63352, amplitudeM: 29, baseOverOutrunM: 3 },
-      trees: { firstCount: 66, secondCount: 33, fromXM: 69.31, toXM: 246.99, seed: 51400, hidden: [] },
+      terrain: { seed: 63352, amplitudeM: 62, baseOverOutrunM: 3 },
+      trees: { firstCount: 47, secondCount: 14, fromXM: 69.31, toXM: 246.99, seed: 51400, hidden: [] },
       supports: [
         { fromXM: 23.5, toXM: 24.8, colour: 11, frontColour: 25 },
-        { fromXM: 31.87, toXM: 38.52, colour: 11, frontColour: 25 },
-        { fromXM: 42.62, toXM: 49.27, colour: 11, frontColour: 25 },
-        { fromXM: 55.55, toXM: 65.53, colour: 11, frontColour: 25 },
+        { fromXM: 31.98, toXM: 33.18, colour: 11, frontColour: 17 },
+        { fromXM: 41.45, toXM: 42.85, colour: 11, frontColour: 17 },
+        { fromXM: 51.81, toXM: 52.61, colour: 11, frontColour: 17 },
+        { fromXM: 58.23, toXM: 68.71, colour: 11, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 22.5, nearWallUpPx: 10, nearWallDownPx: 11, wallColour: 100, gateColour: 115 },
-      marks: { firstMarkM: 85, markCount: 3, fenceColour: 192, fenceStartM: -1 },
+      inrun: { platformStartXM: 21.53, nearWallUpPx: 12, nearWallDownPx: 18, wallColour: 100, gateColour: 115 },
+      marks: { firstMarkM: 85, markCount: 3, fenceColour: 192, fenceStartM: -2 },
     },
   },
   {
@@ -344,16 +334,16 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [30, 50, 63],
-      terrain: { seed: 5735, amplitudeM: 87, baseOverOutrunM: 3 },
-      trees: { firstCount: 69, secondCount: 42, fromXM: 47.73, toXM: 223.07, seed: 25057, hidden: [] },
+      terrain: { seed: 5735, amplitudeM: 42, baseOverOutrunM: 3 },
+      trees: { firstCount: 88, secondCount: 33, fromXM: 47.73, toXM: 223.07, seed: 25057, hidden: [] },
       supports: [
         { fromXM: 5, toXM: 6.3, colour: 10, frontColour: 25 },
-        { fromXM: 10.8, toXM: 17.24, colour: 10, frontColour: 25 },
-        { fromXM: 26.98, toXM: 30.2, colour: 10, frontColour: 25 },
-        { fromXM: 38.3, toXM: 39.7, colour: 10, frontColour: 17 },
+        { fromXM: 14.31, toXM: 21.09, colour: 10, frontColour: 25 },
+        { fromXM: 31.42, toXM: 32.22, colour: 10, frontColour: 17 },
+        { fromXM: 43.84, toXM: 47.23, colour: 10, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 3, nearWallUpPx: 12, nearWallDownPx: 11, wallColour: 68, gateColour: 99 },
-      marks: { firstMarkM: 90, markCount: 3, fenceColour: 64, fenceStartM: 0 },
+      inrun: { platformStartXM: 0, nearWallUpPx: 12, nearWallDownPx: 34, wallColour: 68, gateColour: 99 },
+      marks: { firstMarkM: 90, markCount: 3, fenceColour: 64, fenceStartM: -2 },
     },
   },
   {
@@ -383,14 +373,17 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 30, 36],
-      terrain: { seed: 13654, amplitudeM: 45, baseOverOutrunM: 3 },
-      trees: { firstCount: 73, secondCount: 10, fromXM: 70.3, toXM: 267.17, seed: 64250, hidden: [] },
+      terrain: { seed: 13654, amplitudeM: 71, baseOverOutrunM: 3 },
+      trees: { firstCount: 63, secondCount: 49, fromXM: 70.3, toXM: 267.17, seed: 64250, hidden: [] },
       supports: [
         { fromXM: 13.5, toXM: 15.8, colour: 11, frontColour: 25 },
-        { fromXM: 37.41, toXM: 48.39, colour: 11, frontColour: 25 },
+        { fromXM: 26.25, toXM: 27.25, colour: 11, frontColour: 17 },
+        { fromXM: 39.57, toXM: 40.77, colour: 11, frontColour: 17 },
+        { fromXM: 50.33, toXM: 57.98, colour: 11, frontColour: 25 },
+        { fromXM: 62.45, toXM: 70.1, colour: 11, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 9.5, nearWallUpPx: 13, nearWallDownPx: 5, wallColour: 84, gateColour: 195 },
-      marks: { firstMarkM: 100, markCount: 3, fenceColour: 96, fenceStartM: 0 },
+      inrun: { platformStartXM: 15, nearWallUpPx: 10, nearWallDownPx: 5, wallColour: 84, gateColour: 195 },
+      marks: { firstMarkM: 100, markCount: 3, fenceColour: 96, fenceStartM: -4 },
     },
   },
   {
@@ -420,14 +413,16 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
     },
     look: {
       skyRgb6: [44, 52, 58],
-      terrain: { seed: 21573, amplitudeM: 49, baseOverOutrunM: 3 },
-      trees: { firstCount: 51, secondCount: 46, fromXM: 62.69, toXM: 260.49, seed: 37907, hidden: [] },
+      terrain: { seed: 21573, amplitudeM: 72, baseOverOutrunM: 3 },
+      trees: { firstCount: 67, secondCount: 13, fromXM: 62.69, toXM: 260.49, seed: 37907, hidden: [] },
       supports: [
         { fromXM: 6.2, toXM: 9.5, colour: 11, frontColour: 25 },
-        { fromXM: 36.84, toXM: 47.69, colour: 11, frontColour: 25 },
+        { fromXM: 19.13, toXM: 26.7, colour: 11, frontColour: 25 },
+        { fromXM: 32.7, toXM: 43.78, colour: 11, frontColour: 25 },
+        { fromXM: 51.14, toXM: 62.49, colour: 11, frontColour: 25 },
       ],
-      inrun: { platformStartXM: 1.2, nearWallUpPx: 14, nearWallDownPx: 34, wallColour: 164, gateColour: 83 },
-      marks: { firstMarkM: 105, markCount: 3, fenceColour: 112, fenceStartM: 1 },
+      inrun: { platformStartXM: 1.6, nearWallUpPx: 13, nearWallDownPx: 26, wallColour: 164, gateColour: 83 },
+      marks: { firstMarkM: 105, markCount: 3, fenceColour: 112, fenceStartM: -3 },
     },
   },
 ];

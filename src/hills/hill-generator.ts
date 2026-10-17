@@ -452,16 +452,28 @@ const SEED_RANGE = 65_536;
  * terrain of 15 to 120 m. Supports: one under the start platform, then up to four along the inrun, each thin or wide.
  */
 const LOOK_RANGES = {
-  /** Behind the flat part, in metres. */
-  platformBehindM: { min: 1, max: 8 },
+  /**
+   * The deck behind the gate (the flat part and the platform behind it) as a share of K: the original's hills use
+   * from about 0.02 to 0.14 of K, most of them 0.04 to 0.07; a longer deck looks like a pier on a small hill.
+   */
+  deckShareOfK: { min: 0.035, max: 0.09 },
+  /** The platform behind the flat part at least, in metres. */
+  platformMinM: 0.5,
   nearWallUpPx: { min: 10, max: 15 },
   nearWallDownPx: [5, 11, 18, 26, 34],
-  /** Supports past the one under the platform. */
-  inrunSupports: { min: 1, max: 4 },
+  /**
+   * Supports between the one under the platform and the one under the end of the inrun. The original's hills leave
+   * long spans in between (a quarter to two thirds of the inrun), but their last support always reaches the
+   * takeoff: it ends 0 to 3.5 m before the edge, mostly within 1 m, so the table never hangs in the air.
+   */
+  middleSupports: { min: 0, max: 3 },
+  /** Length of the inrun each support between the two ends takes at least, in metres. */
+  middleStretchMinM: 3,
+  /** How far before the takeoff edge the last support ends, in metres. */
+  endBeforeTakeoffM: { min: 0.1, max: 0.8 },
   /** A thin support's half width, and a wide one's at a 60 m long inrun (wider on longer inruns), in metres. */
   thinHalfM: { min: 0.4, max: 0.7 },
   wideHalfM: { min: 1, max: 3 },
-  /** A support's centre moves this share of its stretch of the inrun either way. */
   supportJitterShare: 0.15,
   supportColour: { min: 10, max: 13 },
   terrainAmplitudeM: { min: 25, max: 90 },
@@ -481,30 +493,50 @@ function drawFrom(rng: BorlandRandom, r: { readonly min: number; readonly max: n
 /** A length of the look rounded as the spec's lengths are. */
 const at = (x: number): number => round(x, G.decimals.lengthM);
 
-/** The supports of the inrun: one under the platform, then thin and wide ones along the inrun to before the takeoff. */
+/**
+ * The supports of the inrun: one under the platform, a wide one under the end of the inrun reaching almost to the
+ * takeoff edge, and thin or wide ones in between.
+ */
 function supportsOf(inrun: InrunSpec, rng: BorlandRandom): HillLook["supports"] {
   const L = LOOK_RANGES;
   const colour = drawFrom(rng, L.supportColour);
+  const lengthM = inrun.takeoffXM - inrun.flatEndXM;
+  const widen = 1 + lengthM / 60;
   const under = {
     fromXM: at(Math.max(0, inrun.flatEndXM - drawFrom(rng, { min: 1, max: 3 }))),
     toXM: at(inrun.flatEndXM + 0.3),
   };
+  const endToXM = inrun.takeoffXM - drawFrom(rng, L.endBeforeTakeoffM);
+  const endFromXM = endToXM - 2 * drawFrom(rng, L.wideHalfM) * widen;
   const from = inrun.flatEndXM + 3;
-  const to = inrun.takeoffXM - 2;
-  const count = drawFrom(rng, L.inrunSupports);
-  const stretchM = (to - from) / count;
-  const along = Array.from({ length: count }, (_, i) => {
+  const to = endFromXM - 2;
+  // Each support in between takes a stretch of at least `middleStretchMinM`, so a short inrun gets fewer or none.
+  const count = Math.min(drawFrom(rng, L.middleSupports), Math.floor(Math.max(0, to - from) / L.middleStretchMinM));
+  const stretchM = (to - from) / Math.max(1, count);
+  const middle = Array.from({ length: count }, (_, i) => {
     const jitter = (rng.below(31) / 15 - 1) * L.supportJitterShare;
     const centre = from + stretchM * (i + 0.5 + jitter);
     const wide = rng.below(2) === 1;
-    const half = wide ? drawFrom(rng, L.wideHalfM) * (1 + (to - from) / 60) : drawFrom(rng, L.thinHalfM);
-    const halfM = Math.min(half, 0.45 * stretchM);
+    const half = wide ? drawFrom(rng, L.wideHalfM) * widen : drawFrom(rng, L.thinHalfM);
+    // With the centre moved up to `supportJitterShare` of the stretch, 0.3 of it each way keeps neighbours apart.
+    const halfM = Math.min(half, 0.3 * stretchM);
     return { fromXM: at(centre - halfM), toXM: at(Math.min(to, centre + halfM)), wide };
   });
   return [
     { ...under, colour, frontColour: 25 },
-    ...along.map(({ fromXM, toXM, wide }) => ({ fromXM, toXM, colour, frontColour: wide ? 25 : 17 })),
+    ...middle.map(({ fromXM, toXM, wide }) => ({ fromXM, toXM, colour, frontColour: wide ? 25 : 17 })),
+    { fromXM: at(Math.max(under.toXM + 1, endFromXM)), toXM: at(endToXM), colour, frontColour: 25 },
   ];
+}
+
+/**
+ * The platform behind the flat part: so long that the deck behind the gate (the flat part and the platform) takes a
+ * share of K in `deckShareOfK`, and at least `platformMinM`.
+ */
+function platformBehindM(c: HillCharacter, inrun: InrunSpec, rng: BorlandRandom): number {
+  const L = LOOK_RANGES;
+  const share = L.deckShareOfK.min + (rng.below(101) / 100) * (L.deckShareOfK.max - L.deckShareOfK.min);
+  return Math.max(L.platformMinM, share * c.kPointM - (inrun.startXM - inrun.flatEndXM));
 }
 
 /**
@@ -514,7 +546,7 @@ function supportsOf(inrun: InrunSpec, rng: BorlandRandom): HillLook["supports"] 
  * fences, and draws the rest from `LOOK_RANGES`: the supports, the walls, the platform, the terrain, the trees and
  * where the fences start.
  */
-function lookOf(c: HillCharacter, inrun: InrunSpec, lowestXM: number, seed: number): HillLook {
+export function lookOf(c: HillCharacter, inrun: InrunSpec, lowestXM: number, seed: number): HillLook {
   const L = LOOK_RANGES;
   const rng = new BorlandRandom((seed * LOOK_SEED_MULTIPLIERS.shape) % SEED_RANGE);
   const supports = supportsOf(inrun, rng);
@@ -536,7 +568,7 @@ function lookOf(c: HillCharacter, inrun: InrunSpec, lowestXM: number, seed: numb
     },
     supports,
     inrun: {
-      platformStartXM: at(Math.max(0, inrun.flatEndXM - drawFrom(rng, L.platformBehindM))),
+      platformStartXM: at(Math.max(0, inrun.flatEndXM - platformBehindM(c, inrun, rng))),
       nearWallUpPx: drawFrom(rng, L.nearWallUpPx),
       nearWallDownPx,
       wallColour: colourOf(LOOK_COLOURS.wall, seed),

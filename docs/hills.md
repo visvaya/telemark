@@ -485,9 +485,10 @@ na urządzeniu).
   bo pełny zapis przekroczyłby 40 znaków formatu; charaktery bez nich zachowują dotychczasowy zapis.
 
 `seed` ustala kolory (ściany najazdu z 7 ramp palety sceny, belka startowa z 6, bandy z 8; `LOOK_COLOURS`, listy
-różnej długości dają sąsiednim ziarnom różne zestawienia), losuje z `LOOK_RANGES` podpory (jedna pod pomostem
-i od jednej do czterech wzdłuż rozbiegu, cienkie albo szerokie), wysokości ścian nad torem i pod nim, długość
-pomostu, wysokość terenu, liczbę drzew i początek band, a także końcówkę identyfikatora; profil zależy tylko od charakteru. Identyfikator
+różnej długości dają sąsiednim ziarnom różne zestawienia), losuje z `LOOK_RANGES` podpory (jedna pod pomostem,
+szeroka pod końcem rozbiegu, kończąca się 0,1 do 0,8 m przed progiem, jak na każdej skoczni oryginału, i do trzech
+cienkich albo szerokich między nimi), wysokości ścian nad torem i pod nim, długość pomostu (pomost z płaską częścią
+zajmuje 3,5 do 9% K; dłuższy na małej skoczni wygląda jak molo), wysokość terenu, liczbę drzew i początek band, a także końcówkę identyfikatora; profil zależy tylko od charakteru. Identyfikator
 (`generatedHillId`) jest zapisem charakteru, więc ten sam charakter daje ten sam identyfikator.
 
 ### Konstrukcja

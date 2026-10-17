@@ -51,9 +51,10 @@ export interface InrunSupport {
 }
 
 /**
- * The look of this project's own hill, and of an original hill whose definition lacks the scenery calls: a
- * neutral blue sky, a grey inrun with three supports, gold fences and three marks before the K point (values
- * chosen for this project in the ranges the original's hills use).
+ * The look of this project's training hill, and of an original hill whose definition lacks the scenery calls: a
+ * neutral blue sky, a grey inrun with four supports (the last under the end of the inrun, by the takeoff, as on
+ * every hill of the original), gold fences and three marks before the K point (values chosen for this project in
+ * the ranges the original's hills use).
  */
 export const DEFAULT_HILL_LOOK: HillLook = {
   skyRgb6: [30, 50, 63],
@@ -63,6 +64,7 @@ export const DEFAULT_HILL_LOOK: HillLook = {
     { fromXM: 7, toXM: 9.5, colour: 13, frontColour: 25 },
     { fromXM: 20, toXM: 21, colour: 13, frontColour: 17 },
     { fromXM: 33, toXM: 40, colour: 13, frontColour: 25 },
+    { fromXM: 42.5, toXM: 45.7, colour: 13, frontColour: 25 },
   ],
   inrun: { platformStartXM: 6, nearWallUpPx: 12, nearWallDownPx: 11, wallColour: 228, gateColour: 163 },
   marks: { firstMarkM: 75, markCount: 3, fenceColour: 192, fenceStartM: 0 },
