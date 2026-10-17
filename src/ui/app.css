@@ -1456,6 +1456,7 @@ h2 {
 
   /* These controls show the focus by a change of colour, which a contrast theme replaces with its own. */
   .pixel-button:focus-visible,
+  .pixel-select:focus-visible,
   .file-label:focus-within,
   .hill-item:focus-visible,
   .pause-button:focus-visible {
