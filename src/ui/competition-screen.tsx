@@ -11,6 +11,8 @@ import { formatDecimal } from "./number-text";
 import { useEntryFocus } from "./use-entry-focus";
 
 const T = UI_TEXT.competition;
+/** From this many competitors places take two digits, and their column is wider. */
+const MANY_COMPETITORS = 10;
 
 interface Props {
   run: CompetitionRun;
@@ -120,7 +122,7 @@ function Board({ run }: { run: CompetitionRun }) {
   const rows = boardRows(state);
   const fresh = freshCompetitors(rows, new Set(run.log.map((j) => j.competitor)));
   return (
-    <table className="contest-table">
+    <table className={state.competitors.length >= MANY_COMPETITORS ? "contest-table contest-many" : "contest-table"}>
       <caption>{captionOf(run)}</caption>
       <thead>
         <tr>

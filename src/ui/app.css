@@ -1595,8 +1595,8 @@ h2 {
 .contest-table {
   --cell-pad-start: 8px;
   --cell-pad-end: 8px;
-  /* "M." and "9." */
-  --place-w: 1.25em;
+  /* "M." and "9." take 1.25 em; the rest leaves room for a reader's wider letter spacing. */
+  --place-w: 1.5em;
   /* The points under a distance, "-156,0 pkt" at 0.8 em; "999,5 m" and "2. seria" take 4.9 em. */
   --jump-w: 5.3em;
   /* "263,5 pkt" */
@@ -1605,6 +1605,11 @@ h2 {
   border-collapse: collapse;
   font-size: clamp(11px, 3vw, 16px);
   line-height: 1.45;
+}
+
+/* Ten competitors or more: places of two digits ("16." takes 2 em). */
+.contest-table.contest-many {
+  --place-w: 2.4em;
 }
 
 /* What the table is, as the screens' section labels look, so it does not run into the column headers under it. */
