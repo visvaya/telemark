@@ -143,11 +143,7 @@ function Board({ run }: { run: CompetitionRun }) {
         {rows.map((row) => {
           const c = state.competitors[row.competitor];
           const mark = row.competitor === next ? "next" : fresh.has(row.competitor) ? "new" : null;
-          const classes = [
-            "contest-row",
-            c?.kind === "cpu" ? "contest-cpu" : "contest-player",
-            mark === "next" && "contest-next",
-          ];
+          const classes = ["contest-row", c?.kind === "player" && "contest-player", mark === "next" && "contest-next"];
           return (
             <tr key={row.competitor} className={classes.filter(Boolean).join(" ")}>
               <td className="contest-place">{row.place === null ? "" : T.place(row.place)}</td>

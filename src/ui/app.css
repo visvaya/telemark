@@ -18,6 +18,8 @@
   --tone-violet: #c8a8ff;
   /* A result just in: a jump made since the competition's board was last shown. */
   --tone-green: #7ce08a;
+  /* A player's name in the competition's table, as the original colours its human jumpers. */
+  --tone-cyan: #40e8ec;
   --tone-grey: #a0a8c0;
   /* Sizes of the screens' font, whole multiples of its 8 pixels to the em: choices, screen titles, the game's title. */
   --screen-item-px: 16px;
@@ -1654,15 +1656,21 @@ h2 {
   border-bottom: 1px solid var(--line);
 }
 
-/* Players and computer jumpers in two colours, as the original sets them apart. */
-.contest-player {
+/*
+ * Colour tells only who is who, in the name: players in cyan, as the original sets its human jumpers apart, the
+ * computer jumpers in the plain white of the numbers. Numbers look the same in every row, so a column reads as one;
+ * the place stands back in grey, and the points of a jump under its distance too.
+ */
+.contest-row {
   color: var(--tone-white);
-  font-palette: --tone-white;
 }
 
-.contest-cpu {
-  color: var(--tone-yellow);
-  font-palette: --tone-yellow;
+.contest-row .contest-place {
+  color: var(--muted);
+}
+
+.contest-player .contest-who {
+  color: var(--tone-cyan);
 }
 
 /* The next jumper's row stands on the panel's colour; its mark and a new jump's each have a colour of their own. */
