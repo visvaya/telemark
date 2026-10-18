@@ -109,6 +109,9 @@ export const UI_TEXT = {
     /** Marks of a row: a jump made since the board was last shown, and the competitor who jumps next. */
     newJump: "nowy skok",
     nextJumper: "skacze teraz",
+    /** The marks where the table has least room (below 350 px). */
+    newJumpShort: "nowy",
+    nextJumperShort: "skacze",
     /** The hill record under the table, with its holder when the record keeps one. */
     hillRecord: (distance: string, holder: string | undefined) =>
       `Rekord skoczni: ${distance} m${holder === undefined ? "" : ` · ${holder}`}`,

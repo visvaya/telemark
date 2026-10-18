@@ -1693,6 +1693,10 @@ h2 {
   color: var(--tone-green);
 }
 
+.contest-mark-short {
+  display: none;
+}
+
 .contest-mark-next {
   color: var(--tone-violet);
 }
@@ -1752,6 +1756,22 @@ h2 {
     display: none;
   }
 
+  /*
+   * The name keeps one line, the mark the second: a name with no room ends in an ellipsis rather than breaking.
+   * The columns take their widths from the headers alone, whatever the results, and the name the rest; the rare
+   * wider total ("-156,0 p", 0.5 em more) stays within the last cell's room.
+   */
+  .contest-table {
+    table-layout: fixed;
+  }
+
+  .contest-who {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   .contest-long {
     position: absolute;
     width: 1px;
@@ -1761,6 +1781,21 @@ h2 {
   }
 
   .contest-short {
+    display: inline;
+  }
+}
+
+/* The least room (a phone of 320 px): the marks shrink to a word. */
+@media (max-width: 349px) {
+  .contest-mark-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .contest-mark-short {
     display: inline;
   }
 }

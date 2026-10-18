@@ -35,6 +35,18 @@ function Fitted({ long, short }: { long: string; short: string }) {
   );
 }
 
+/** A row's mark under the name, in its colour; a shorter word where the table has least room. */
+function Mark({ kind, long, short }: { kind: "new" | "next"; long: string; short: string }) {
+  return (
+    <span className={`contest-mark contest-mark-${kind}`}>
+      <span className="contest-mark-long">{long}</span>
+      <span className="contest-mark-short" aria-hidden="true">
+        {short}
+      </span>
+    </span>
+  );
+}
+
 /** Points with their unit, kept on one line. */
 function Points({ points }: { points: number }) {
   return (
@@ -77,12 +89,13 @@ function NameCell({ competitor, mark }: { competitor: Competitor | undefined; ma
   const short = competitorShortName(competitor);
   return (
     <th scope="row" className="contest-name">
-      <span className="contest-who">
+      {/* Narrow, the name may end in an ellipsis; its full form stays in the row's name for screen readers. */}
+      <span className="contest-who" data-ellipsis="">
         {competitor?.kind === "cpu" && <FlagIcon country={competitorCountry(competitor)} />}
         {short === full ? <span>{full}</span> : <Fitted long={full} short={short} />}
       </span>
-      {mark === "new" && <span className="contest-mark contest-mark-new">{T.newJump}</span>}
-      {mark === "next" && <span className="contest-mark contest-mark-next">{T.nextJumper}</span>}
+      {mark === "new" && <Mark kind="new" long={T.newJump} short={T.newJumpShort} />}
+      {mark === "next" && <Mark kind="next" long={T.nextJumper} short={T.nextJumperShort} />}
     </th>
   );
 }
