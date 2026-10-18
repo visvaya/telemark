@@ -1,7 +1,8 @@
 import { DEFAULT_OUTFIT, type Outfit } from "../game/outfit";
 import { nextJumpAllowed } from "../game/training-session";
 import type { HillProfile } from "../sim/hill-profile";
-import { notesShownBy } from "../sim/jump-logic";
+import { PHASE, notesShownBy } from "../sim/jump-logic";
+import { formatDecimal } from "../text/decimal";
 import type { JumpSimState } from "../sim/jump-sim";
 import { FrameBuffer } from "./frame-buffer";
 import { drawSnowfall } from "./jump-view-snowfall";
@@ -113,6 +114,23 @@ export function drawJumperPreview(
   }
 }
 
+/**
+ * In a competition, while the jumper waits on the gate and its countdown runs, the points that would equal the
+ * leader and the distance they take, as the original writes them (0baf:56D8) in its yellow (0xCD). The original
+ * writes them where the hill's name stands here, so they go under the wind box, clear of it and the start light.
+ */
+const NEEDED_INK = 0xcd;
+export const NEEDED_TOP_PX = 33;
+
+function drawNeededToLead(fb: FrameBuffer, m: JumpViewModel): void {
+  const needed = m.contest?.neededPoints ?? null;
+  const distance = m.contest?.neededDistanceM ?? null;
+  const L = m.state.logic;
+  if (needed === null || distance === null || L.phase !== PHASE.gate || L.startCountdown <= 0) return;
+  const text = UI_TEXT.hud.neededToLead(formatDecimal(needed, 1), String(distance));
+  drawText(fb, Math.max(TITLE_AT_PX.x, m.titleInsetPx ?? 0), NEEDED_TOP_PX, text, { ramp: NEEDED_INK });
+}
+
 /** Draws one frame of the jump at the logical resolution. */
 export function drawJumpView(fb: FrameBuffer, m: JumpViewModel): void {
   const scenery = m.scenery ?? DAY_SCENERY;
@@ -127,6 +145,7 @@ function drawScene(fb: FrameBuffer, m: JumpViewModel, scenery: Scenery): void {
   const h = m.profile;
   const groundBottom = fb.height - BAR_HEIGHT_PX;
   const lightsOn = scenery.lighting !== "day";
+  const targetM = m.contest?.neededDistanceM ?? null;
   drawHillScene(
     fb,
     {
@@ -136,6 +155,7 @@ function drawScene(fb: FrameBuffer, m: JumpViewModel, scenery: Scenery): void {
       state: s,
       outfit: m.outfit ?? DEFAULT_OUTFIT,
       recordM: m.recordM ?? 0,
+      ...(targetM === null ? {} : { targetM }),
       pixelWidth: SQUARE_PIXEL_WIDTH,
       ...(scenery.lighting === "day" ? {} : { floodlights: scenery.lighting }),
       ...(m.ghost === undefined ? {} : { ghost: m.ghost, drawGhost: (f, g, a) => drawGhost(f, h, g, a) }),
@@ -173,6 +193,7 @@ function drawScene(fb: FrameBuffer, m: JumpViewModel, scenery: Scenery): void {
   );
   drawWindBox(fb, s);
   drawStartLight(fb, s);
+  drawNeededToLead(fb, m);
   const finished = s.logic.finished;
   const notesShown = notesShownBy(s.logic, m.frame);
   const lines = prompt(m, nextJumpAllowed(s.logic, m.frame));

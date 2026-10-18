@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { currentJumper, type CompetitionSettings, type JumpScore } from "../game/competition";
+import { contestJumpHud } from "../game/competition-board";
 import { cpuCompetitionJump, type CpuJumpOutcome } from "../game/competition-jump";
 import {
   roundJustEnded,
@@ -84,6 +85,7 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
         cpu: outcome ? cpuSource(outcome, hudName) : null,
         onNext: () => afterJump(outcome ? outcome.score : playerScore.current),
         onAbandon: abandon,
+        hud: contestJumpHud(current.state, index, current.hill.kPointM),
       },
     });
     show({ kind: "contest-jump", hill: current.hill });

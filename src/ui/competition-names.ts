@@ -1,9 +1,8 @@
-import type { Competitor, JumpScore } from "../game/competition";
+import type { Competitor } from "../game/competition";
 import { PLAYER_OUTFITS, RIVALS } from "../game/competition-rivals";
 import { DEFAULT_OUTFIT, type Outfit } from "../game/outfit";
 import type { CountryCode } from "../render/flags";
 import { UI_TEXT } from "../text/ui-text";
-import { formatDecimal } from "./number-text";
 
 const T = UI_TEXT.competition;
 
@@ -23,11 +22,4 @@ export function competitorOutfit(c: Competitor | undefined, own: Outfit): Outfit
   if (c === undefined) return own;
   if (c.kind === "cpu") return RIVALS[c.slot]?.outfit ?? DEFAULT_OUTFIT;
   return c.slot === 0 ? own : (PLAYER_OUTFITS[c.slot - 1] ?? DEFAULT_OUTFIT);
-}
-
-/** A jump as the tables write it: distance and points, and a fall when there was one. */
-export function jumpText(s: JumpScore | null): string {
-  if (s === null) return T.noJump;
-  const text = T.jump(formatDecimal(s.distanceM, 1), formatDecimal(s.points, 1));
-  return s.fell ? `${text}, ${T.fell}` : text;
 }

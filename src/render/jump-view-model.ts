@@ -1,3 +1,4 @@
+import type { ContestJumpHud } from "../game/competition-board";
 import type { Outfit } from "../game/outfit";
 import type { HillProfile } from "../sim/hill-profile";
 import type { JumpSimState } from "../sim/jump-sim";
@@ -55,4 +56,9 @@ export interface JumpViewModel {
    * it is over opens the menu (a replay of the original) rather than starting a jump.
    */
   replay?: { speedLabel: string; paused: boolean; menuAtEnd: boolean };
+  /**
+   * In a competition jump (not in a replay of it): what leads, which the gate shows and the landing hill marks as a
+   * line, and what the bar needs for the total and the place after the jump.
+   */
+  contest?: ContestJumpHud;
 }

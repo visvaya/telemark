@@ -56,6 +56,8 @@ export interface HillSceneModel {
   state: JumpSimState;
   outfit: Outfit;
   recordM: number;
+  /** In a competition, the distance that would lead, drawn as a line of its own; absent otherwise. */
+  targetM?: number;
   /** Width of one picture column in the original's columns: 6/5 for square pixels, 1 for the original's screen. */
   pixelWidth: number;
   /**
@@ -148,7 +150,7 @@ export function drawHillScene(fb: FrameBuffer, m: HillSceneModel, lastRow: numbe
   hooks.afterBackground?.(view);
   drawLandingHill(c, h, view, near);
   if (nightLight !== undefined) relightLandingHill(c, h, view, nightLight);
-  drawDistanceLines(c, h, view, distanceLines(marksOf(m), m.recordM), near);
+  drawDistanceLines(c, h, view, distanceLines(marksOf(m), m.recordM, m.targetM), near);
   drawFarFence(c, h, view, marksOf(m), near);
   hooks.afterFarFence?.(view);
   drawInrunSupports(c, h, m.look, view, near);

@@ -101,6 +101,15 @@ describe("a competition", () => {
     expect(currentJumper(s)).toBe(first[0]);
   });
 
+  it("keeps a jump's distance in the half metres it is scored in", () => {
+    const s = startCompetition(settings, 3);
+    const jumper = currentJumper(s) ?? -1;
+    const next = competitionReducer(s, { type: "scored", score: score(80, 111.99) });
+    expect(next.scores[0]?.[jumper]?.distanceM).toBe(111.5);
+    const disqualified = competitionReducer(s, { type: "scored", score: score(-129, 0) });
+    expect(disqualified.scores[0]?.[jumper]?.distanceM).toBe(0);
+  });
+
   it("ends after the second round with the total of both jumps", () => {
     let s = startCompetition(settings, 3);
     for (let i = 0; i < 12; i++) s = scored(s, 50.1);

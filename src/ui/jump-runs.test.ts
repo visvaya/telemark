@@ -94,6 +94,7 @@ function setUp() {
       contestNext: null,
       jumperName: null,
       contestCpu: false,
+      contestHud: null,
     },
     inputRef: { current: scriptedInput() },
     resetHands: () => context.inputRef.current.reset(),

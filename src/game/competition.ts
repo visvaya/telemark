@@ -74,6 +74,7 @@ export function participantCount(s: CompetitionSettings): number {
 export type Competitor = { kind: "player"; slot: number } | { kind: "cpu"; slot: number; record: CpuJumperRecord };
 
 export interface JumpScore {
+  /** In the half metres the jump is scored in, as the simulation's `distanceHalfM` and the original's tables. */
   distanceM: number;
   points: number;
   fell: boolean;
@@ -144,7 +145,10 @@ export function currentJumper(state: CompetitionState): number | null {
 }
 
 /** Total points kept to a tenth, so sums of the simulation's single-precision points compare as shown. */
-const tenths = (points: number): number => Math.round(points * 10);
+export const tenths = (points: number): number => Math.round(points * 10);
+
+/** A distance cut to the half metres it is scored in, the way the simulation turns `distanceM` into `distanceHalfM`. */
+const halfMetres = (distanceM: number): number => Math.trunc(distanceM * 2) / 2;
 
 export interface StandingRow {
   competitor: number;
@@ -190,8 +194,9 @@ export function competitionReducer(state: CompetitionState, action: CompetitionA
   const jumper = currentJumper(state);
   if (jumper === null) return state;
   const roundIndex = state.round - 1;
+  const score = { ...action.score, distanceM: halfMetres(action.score.distanceM) };
   const scores = state.scores.map((round, i) =>
-    i === roundIndex ? round.map((s, c) => (c === jumper ? action.score : s)) : round,
+    i === roundIndex ? round.map((s, c) => (c === jumper ? score : s)) : round,
   );
   const next = { ...state, scores, position: state.position + 1 };
   if (next.position < next.order.length) return next;
