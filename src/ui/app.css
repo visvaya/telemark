@@ -1611,10 +1611,13 @@ h2 {
   font-weight: 400;
 }
 
+/*
+ * Names break only where there is no room at all (320 px, wider text spacing); the headers of the numbers stay on
+ * one line where the screen is wide and may take two below 600 px.
+ */
 .contest-table thead th {
   padding-block: 2px 6px;
   color: var(--muted);
-  white-space: nowrap;
   border-bottom: 2px solid var(--line);
 }
 
@@ -1626,6 +1629,12 @@ h2 {
 .contest-place {
   width: 3ch;
   white-space: nowrap;
+}
+
+@media (min-width: 600px) {
+  .contest-table thead th {
+    white-space: nowrap;
+  }
 }
 
 .contest-row {
@@ -1654,7 +1663,6 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .contest-name-short {
@@ -1705,6 +1713,12 @@ h2 {
   .contest-table th,
   .contest-table td {
     padding: 6px;
+  }
+
+  /* The numbers take only the width they need (their headers may break), so the names keep the rest. */
+  .contest-table .contest-jump,
+  .contest-table .contest-total {
+    width: 1%;
   }
 
   .contest-table .flag-icon,
