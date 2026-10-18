@@ -75,6 +75,7 @@ describe("save data", () => {
         players: [true, true, false, false, false, false, false, true],
         cpus: DEFAULT_SETTINGS.competition.cpus.map((_c, i) => ({ on: i % 2 === 0, level: 5 })),
         watchCpu: true,
+        disqualification: "fis",
       },
     };
     const save = withSettings(emptySave(), chosen);

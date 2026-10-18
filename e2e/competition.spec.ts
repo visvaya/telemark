@@ -61,6 +61,10 @@ test("the setup of a competition is remembered after the page is loaded again", 
   await openCompetitionSetup(page, traits);
   await setUp(page, traits, { "Gracz 2": true, "Aatu Lehtovaara": false, "Oglądaj skoki rywali": true });
   await page.getByRole("combobox", { name: "Poziom: Lars Hovden" }).selectOption({ label: "losowo" });
+  // The rule of a disqualification: the original's by default, the one of real competitions to choose.
+  const rule = page.getByRole("combobox", { name: "Dyskwalifikacja" });
+  await expect(rule).toHaveValue("original");
+  await rule.selectOption({ label: "jak w zawodach: odpada" });
 
   await openMenu(page);
   await openCompetitionSetup(page, traits);
@@ -68,6 +72,7 @@ test("the setup of a competition is remembered after the page is loaded again", 
   await expect(box(page, "Aatu Lehtovaara")).not.toBeChecked();
   await expect(box(page, "Oglądaj skoki rywali")).toBeChecked();
   await expect(page.getByRole("combobox", { name: "Poziom: Lars Hovden" })).toHaveValue("5");
+  await expect(page.getByRole("combobox", { name: "Dyskwalifikacja" })).toHaveValue("fis");
   expect(JSON.stringify(await storedSave(page))).toContain('"watchCpu":true');
 
   // Nobody taking part: the competition cannot start, and says why.

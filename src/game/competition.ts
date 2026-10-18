@@ -15,6 +15,14 @@ export const CPU_LEVEL_SETTINGS = [0, 1, 2, 3, 4, CPU_LEVEL_RANDOM] as const;
 export type CpuLevelSetting = (typeof CPU_LEVEL_SETTINGS)[number];
 const ROUND_COUNT = 2;
 
+/**
+ * What a disqualified jump costs. "original": as in DSJ2, the jump scores its penalty points (60 less the K point
+ * times the points per metre), counted in the total, and the jumper stays in the competition. "fis": as in real
+ * competitions, no points and out of the competition (no second round, no place).
+ */
+export const DISQUALIFICATION_RULES = ["original", "fis"] as const;
+export type DisqualificationRule = (typeof DISQUALIFICATION_RULES)[number];
+
 interface CpuSlotSetting {
   on: boolean;
   level: CpuLevelSetting;
@@ -28,6 +36,7 @@ export interface CompetitionSettings {
   cpus: readonly CpuSlotSetting[];
   /** Whether the computer jumpers' jumps are shown (the original's "watch the opponents' jumps"). */
   watchCpu: boolean;
+  disqualification: DisqualificationRule;
 }
 
 const DEFAULT_CPU_LEVELS: readonly CpuLevelSetting[] = [2, 3, 1, 4, 2, 2, 2, 2];
@@ -37,6 +46,7 @@ export const DEFAULT_COMPETITION_SETTINGS: CompetitionSettings = {
   players: Array.from({ length: COMPETITION_SLOT_COUNT }, (_v, i) => i === 0),
   cpus: DEFAULT_CPU_LEVELS.map((level, i) => ({ on: i < 4, level })),
   watchCpu: false,
+  disqualification: "original",
 };
 
 const fieldOf = (v: unknown, key: string): unknown =>
@@ -51,6 +61,7 @@ export function parseCompetitionSettings(v: unknown): CompetitionSettings {
   const players = fieldOf(v, "players");
   const cpus = fieldOf(v, "cpus");
   const watchCpu = fieldOf(v, "watchCpu");
+  const disqualification = DISQUALIFICATION_RULES.find((rule) => rule === fieldOf(v, "disqualification"));
   const parsed: CompetitionSettings = {
     hillId: typeof hillId === "string" ? hillId : null,
     players: D.players.map((dflt, i) => {
@@ -63,6 +74,7 @@ export function parseCompetitionSettings(v: unknown): CompetitionSettings {
       return { on: typeof on === "boolean" ? on : dflt.on, level: levelOf(fieldOf(slot, "level")) ?? dflt.level };
     }),
     watchCpu: typeof watchCpu === "boolean" ? watchCpu : D.watchCpu,
+    disqualification: disqualification ?? D.disqualification,
   };
   return participantCount(parsed) > 0 ? parsed : { ...parsed, players: D.players };
 }
@@ -92,7 +104,20 @@ export interface CompetitionState {
   scores: readonly (readonly (JumpScore | null)[])[];
   /** The order of the first round, which also settles the order of tied competitors. */
   startOrder: readonly number[];
+  disqualification: DisqualificationRule;
   finished: boolean;
+}
+
+/** A jump with no distance: the jumper did not leave the gate in time or landed before the takeoff. */
+export const isDisqualified = (s: JumpScore): boolean => s.distanceM === 0;
+
+/** Whether a competitor is out of the competition: disqualified under the rule of real competitions. */
+export function isOut(state: CompetitionState, competitor: number): boolean {
+  if (state.disqualification !== "fis") return false;
+  return state.scores.some((round) => {
+    const s = round[competitor] ?? null;
+    return s !== null && isDisqualified(s);
+  });
 }
 
 /** Fisher-Yates over 0..count-1 with the original's generator. */
@@ -135,6 +160,7 @@ export function startCompetition(settings: CompetitionSettings, seed: number): C
     position: 0,
     scores: Array.from({ length: ROUND_COUNT }, () => noScores),
     startOrder: order,
+    disqualification: settings.disqualification,
     finished: competitors.length === 0,
   };
 }
@@ -160,7 +186,8 @@ export interface StandingRow {
 
 /**
  * The classification after the jumps made so far: by total points, the higher first; competitors on the same
- * points share a place and keep the order of the first round's start list. Only competitors with a jump appear.
+ * points share a place and keep the order of the first round's start list. Only competitors with a jump appear,
+ * and none who is out of the competition.
  */
 export function standings(state: CompetitionState): StandingRow[] {
   const startRank = new Map(state.startOrder.map((c, i) => [c, i]));
@@ -170,7 +197,7 @@ export function standings(state: CompetitionState): StandingRow[] {
       const total = scores.reduce((sum, s) => sum + (s === null ? 0 : tenths(s.points)), 0);
       return { competitor, scores, total, jumped: scores.some((s) => s !== null) };
     })
-    .filter((r) => r.jumped)
+    .filter((r) => r.jumped && !isOut(state, r.competitor))
     .toSorted((a, b) => b.total - a.total || (startRank.get(a.competitor) ?? 0) - (startRank.get(b.competitor) ?? 0));
   return rows.map((r) => ({
     competitor: r.competitor,
@@ -201,7 +228,10 @@ export function competitionReducer(state: CompetitionState, action: CompetitionA
   const next = { ...state, scores, position: state.position + 1 };
   if (next.position < next.order.length) return next;
   if (state.round < ROUND_COUNT) {
-    return { ...next, round: state.round + 1, order: secondRoundOrder(next), position: 0 };
+    const order = secondRoundOrder(next);
+    // Everybody out of the competition: nobody is left for the second round.
+    if (order.length === 0) return { ...next, finished: true };
+    return { ...next, round: state.round + 1, order, position: 0 };
   }
   return { ...next, finished: true };
 }

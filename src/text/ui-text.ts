@@ -71,6 +71,12 @@ export const UI_TEXT = {
     levelLabel: (name: string) => `Poziom: ${name}`,
     takesPart: (name: string) => `${name} startuje`,
     watchCpu: "Oglądaj skoki rywali",
+    /** The rule for a disqualified jump, chosen in the setup; the original's first, as the default. */
+    disqualificationRule: "Dyskwalifikacja",
+    disqualificationRules: {
+      original: "jak w DSJ2: punkty karne",
+      fis: "jak w zawodach: odpada",
+    },
     start: "Rozpocznij konkurs",
     nobody: "Włącz co najmniej jednego zawodnika.",
     boardTitle: "Konkurs",

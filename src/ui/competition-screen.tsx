@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { currentJumper, placeOf, type Competitor, type JumpScore } from "../game/competition";
+import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
 import { boardRows, freshCompetitors } from "../game/competition-board";
 import { roundJustEnded, type CompetitionRun } from "../game/competition-run";
 import type { HillRecord } from "../storage/save-data";
@@ -59,29 +59,39 @@ function Points({ points }: { points: number }) {
   );
 }
 
+/** A disqualification where a value would stand: a short word in red, read out in full. */
+function Disqualified() {
+  return (
+    <span className="contest-distance contest-dq-word">
+      <span aria-hidden="true">{T.disqualifiedShort}</span>
+      <span className="sr-only">{T.disqualified}</span>
+    </span>
+  );
+}
+
 /**
  * A jump in its round's cell: the distance over the points, two lines. A fall sets the distance in slanted letters
  * and is read out as a word; a disqualified jump (no distance) says so in place of the distance, in the red the jump
- * view writes it in, over the points it costs (the original adds them to the total).
+ * view writes it in, over the points it costs where they count (the original's rule) and alone where it puts the
+ * jumper out.
  */
-function JumpCell({ score }: { score: JumpScore | null }) {
+function JumpCell({ score, penalty }: { score: JumpScore | null; penalty: boolean }) {
   if (score === null) return <td className="contest-jump">{T.noJump}</td>;
-  const disqualified = score.distanceM === 0;
+  const disqualified = isDisqualified(score);
   const fell = score.fell && !disqualified;
   return (
-    <td className={`contest-jump${fell ? " contest-fell" : ""}${disqualified ? " contest-dq" : ""}`}>
+    <td className={fell ? "contest-jump contest-fell" : "contest-jump"}>
       {disqualified ? (
-        <span className="contest-distance">
-          <span aria-hidden="true">{T.disqualifiedShort}</span>
-          <span className="sr-only">{T.disqualified}</span>
-        </span>
+        <Disqualified />
       ) : (
         <span className="contest-distance">{T.distance(formatDecimal(score.distanceM, 1))}</span>
       )}
-      <span className="contest-points">
-        <Points points={score.points} />
-        {fell && <span className="sr-only">{`, ${T.fell}`}</span>}
-      </span>
+      {(!disqualified || penalty) && (
+        <span className="contest-points">
+          <Points points={score.points} />
+          {fell && <span className="sr-only">{`, ${T.fell}`}</span>}
+        </span>
+      )}
     </td>
   );
 }
@@ -153,10 +163,10 @@ function Board({ run }: { run: CompetitionRun }) {
               <NameCell competitor={c} mark={mark} />
               {row.scores.map((s, i) => (
                 // oxlint-disable-next-line react/no-array-index-key -- one cell per round, in round order
-                <JumpCell key={i} score={s} />
+                <JumpCell key={i} score={s} penalty={state.disqualification === "original"} />
               ))}
               <td className="contest-total">
-                {row.totalPoints === null ? T.noJump : <Points points={row.totalPoints} />}
+                {row.out ? <Disqualified /> : row.totalPoints === null ? T.noJump : <Points points={row.totalPoints} />}
               </td>
             </tr>
           );

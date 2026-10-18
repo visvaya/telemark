@@ -1,9 +1,11 @@
 import { useRef, type ReactNode } from "react";
 import {
   CPU_LEVEL_SETTINGS,
+  DISQUALIFICATION_RULES,
   participantCount,
   type CompetitionSettings,
   type CpuLevelSetting,
+  type DisqualificationRule,
 } from "../game/competition";
 import { RIVALS } from "../game/competition-rivals";
 import type { HillChoice } from "../game/hill-choice";
@@ -36,6 +38,38 @@ function Check({ label, checked, onChange }: { label: ReactNode; checked: boolea
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} />
       <span>{label}</span>
     </label>
+  );
+}
+
+/** The rule for a disqualified jump: the original's penalty points, or out of the competition. */
+function DisqualificationChoice({
+  value,
+  onChange,
+}: {
+  value: DisqualificationRule;
+  onChange: (rule: DisqualificationRule) => void;
+}) {
+  return (
+    <section className="settings-group" aria-labelledby="contest-dq">
+      <h2 className="hill-section-title" id="contest-dq">
+        {T.disqualificationRule}
+      </h2>
+      <select
+        className="pixel-select"
+        aria-labelledby="contest-dq"
+        value={value}
+        onChange={(e) => {
+          const rule = DISQUALIFICATION_RULES.find((r) => r === e.currentTarget.value);
+          if (rule !== undefined) onChange(rule);
+        }}
+      >
+        {DISQUALIFICATION_RULES.map((rule) => (
+          <option key={rule} value={rule}>
+            {T.disqualificationRules[rule]}
+          </option>
+        ))}
+      </select>
+    </section>
   );
 }
 
@@ -130,6 +164,10 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
           onChange={(watchCpu) => onChange({ ...settings, watchCpu })}
         />
       </section>
+      <DisqualificationChoice
+        value={settings.disqualification}
+        onChange={(disqualification) => onChange({ ...settings, disqualification })}
+      />
       <div className="menu">
         <button type="button" className="pixel-button" aria-disabled={!ready} onClick={start}>
           {T.start}
