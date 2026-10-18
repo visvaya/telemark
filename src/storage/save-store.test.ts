@@ -39,6 +39,16 @@ describe("save data", () => {
     expect(parseSave(JSON.stringify({ schemaVersion: 1, records: { a: { distanceM: "x" } } }))).toEqual(emptySave());
   });
 
+  it("keeps who holds a record, and reads a record without one or with a broken one", () => {
+    const save = withJump(emptySave(), "own-1", { distanceM: 80, points: 100, fell: false }, NOW, "Gracz 2");
+    expect(save.records["own-1"]?.holder).toBe("Gracz 2");
+    expect(parseSave(JSON.stringify(save))).toEqual(save);
+    const old = { distanceM: 80, points: 100, dateIso: NOW.toISOString() };
+    const broken = { ...old, holder: 7 };
+    const read = parseSave(JSON.stringify({ schemaVersion: 2, records: { a: old, b: broken } }));
+    expect(read.records).toEqual({ a: old, b: old });
+  });
+
   it("migrates version 1 saves and keeps their records", () => {
     const v1 = { schemaVersion: 1, records: { "own-1": { distanceM: 80, points: 100, dateIso: NOW.toISOString() } } };
     const save = parseSave(JSON.stringify(v1));
