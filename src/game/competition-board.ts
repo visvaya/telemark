@@ -1,29 +1,34 @@
-import { standings, tenths, type CompetitionState, type JumpScore } from "./competition";
+import { isOut, standings, tenths, type CompetitionState, type JumpScore } from "./competition";
 
-/** One row of the board: a place once the competitor has jumped, null before. */
+/** One row of the board: a place once the competitor has jumped, null before and once out of the competition. */
 export interface BoardRow {
   competitor: number;
   place: number | null;
   totalPoints: number | null;
   scores: readonly (JumpScore | null)[];
+  /** Disqualified under the rule of real competitions: out, with no place and no total. */
+  out: boolean;
 }
 
 /**
  * Every competitor, as the board lists them: those who have jumped by the classification, the others below in
- * the order of the first round's start list, without a place (as the original's table does).
+ * the order of the first round's start list, without a place (as the original's table does), and those out of
+ * the competition last, in the same order.
  */
 export function boardRows(state: CompetitionState): BoardRow[] {
-  const ranked: BoardRow[] = standings(state);
+  const ranked: BoardRow[] = standings(state).map((r) => ({ ...r, out: false }));
   const shown = new Set(ranked.map((r) => r.competitor));
-  const waiting = state.startOrder
-    .filter((c) => !shown.has(c))
-    .map((competitor) => ({
-      competitor,
-      place: null,
-      totalPoints: null,
-      scores: state.scores.map((round) => round[competitor] ?? null),
-    }));
-  return [...ranked, ...waiting];
+  const unranked = (out: boolean): BoardRow[] =>
+    state.startOrder
+      .filter((c) => !shown.has(c) && isOut(state, c) === out)
+      .map((competitor) => ({
+        competitor,
+        place: null,
+        totalPoints: null,
+        scores: state.scores.map((round) => round[competitor] ?? null),
+        out,
+      }));
+  return [...ranked, ...unranked(false), ...unranked(true)];
 }
 
 /**

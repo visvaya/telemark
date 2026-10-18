@@ -30,6 +30,7 @@ describe("competition settings", () => {
     expect(d.cpus.map((c) => c.on)).toEqual([true, true, true, true, false, false, false, false]);
     expect(d.cpus.slice(0, 4).map((c) => c.level)).toEqual([2, 3, 1, 4]);
     expect(d.watchCpu).toBe(false);
+    expect(d.disqualification).toBe("original");
     expect(participantCount(d)).toBe(5);
   });
 
@@ -46,6 +47,9 @@ describe("competition settings", () => {
     expect(s.cpus[0]).toEqual({ on: false, level: 5 });
     expect(s.cpus[1]).toEqual({ on: true, level: 3 });
     expect(s.watchCpu).toBe(true);
+    expect(s.disqualification).toBe("original");
+    expect(parseCompetitionSettings({ disqualification: "fis" }).disqualification).toBe("fis");
+    expect(parseCompetitionSettings({ disqualification: "x" }).disqualification).toBe("original");
     expect(parseCompetitionSettings(undefined)).toEqual(DEFAULT_COMPETITION_SETTINGS);
   });
 
@@ -140,6 +144,43 @@ describe("a competition", () => {
     s = scored(s, Math.fround(120.3));
     s = scored(s, 120.3);
     expect(standings(s).map((r) => r.place)).toEqual([1, 1]);
+  });
+
+  it("counts a disqualification's penalty points and keeps the jumper in, as the original does", () => {
+    let s = startCompetition(settings, 5);
+    const [a, b] = s.order;
+    s = competitionReducer(s, { type: "scored", score: { distanceM: 0, points: -120, fell: true } });
+    for (let i = 1; i < 6; i++) s = scored(s, 100);
+    expect(standings(s).at(-1)).toMatchObject({ competitor: a, totalPoints: -120, place: 6 });
+    expect(s.order).toHaveLength(6);
+    expect(s.order[0]).toBe(a);
+    expect(placeOf(s, b ?? -1)).toBe(1);
+  });
+
+  it("puts a disqualified jumper out of the competition under the rule of real competitions", () => {
+    let s = startCompetition({ ...settings, disqualification: "fis" }, 5);
+    const [a] = s.order;
+    s = competitionReducer(s, { type: "scored", score: { distanceM: 0, points: -120, fell: true } });
+    expect(standings(s)).toEqual([]);
+    expect(placeOf(s, a ?? -1)).toBeNull();
+    for (let i = 1; i < 6; i++) s = scored(s, 100);
+    expect(standings(s)).toHaveLength(5);
+    // The second round goes on without the disqualified jumper.
+    expect(s.round).toBe(2);
+    expect(s.order).toHaveLength(5);
+    expect(s.order).not.toContain(a);
+    // Out in the second round too: the first round's result no longer counts.
+    s = competitionReducer(s, { type: "scored", score: { distanceM: 0, points: -120, fell: true } });
+    expect(standings(s)).toHaveLength(4);
+  });
+
+  it("ends after the first round when every jumper is out", () => {
+    let s = startCompetition({ ...settings, disqualification: "fis" }, 5);
+    for (let i = 0; i < 6; i++) {
+      s = competitionReducer(s, { type: "scored", score: { distanceM: 0, points: -120, fell: true } });
+    }
+    expect(s.finished).toBe(true);
+    expect(currentJumper(s)).toBeNull();
   });
 
   it("does not change the state it was given", () => {

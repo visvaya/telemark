@@ -46,6 +46,17 @@ describe("the board's rows", () => {
     expect(rows[3]?.scores).toEqual([null, null]);
   });
 
+  it("list those out of the competition last, without a place", () => {
+    let s = startCompetition({ ...settings, disqualification: "fis" }, 7);
+    const [first] = s.startOrder;
+    s = competitionReducer(s, { type: "scored", score: { distanceM: 0, points: -120, fell: true } });
+    s = scored(s, 80);
+    const rows = boardRows(s);
+    expect(rows.at(-1)).toMatchObject({ competitor: first, place: null, totalPoints: null, out: true });
+    expect(rows[0]).toMatchObject({ competitor: s.startOrder[1], place: 1, out: false });
+    expect(rows.slice(1, -1).every((r) => r.place === null && !r.out)).toBe(true);
+  });
+
   it("mark new jumps only beside older results", () => {
     let s = fresh();
     s = scored(s, 50);
