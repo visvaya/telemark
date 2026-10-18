@@ -20,6 +20,8 @@
   --tone-green: #7ce08a;
   /* A player's name in the competition's table, as the original colours its human jumpers. */
   --tone-cyan: #40e8ec;
+  /* A disqualification in the competition's table; light enough to read on black and on the panel. */
+  --tone-red: #ff6a5a;
   --tone-grey: #a0a8c0;
   /* Sizes of the screens' font, whole multiples of its 8 pixels to the em: choices, screen titles, the game's title. */
   --screen-item-px: 16px;
@@ -1726,9 +1728,14 @@ h2 {
   color: var(--muted);
 }
 
-/* A fall: the whole jump in slanted letters (and said in words to a screen reader). */
-.contest-fell {
+/* A fall: the distance in slanted letters (and said in words to a screen reader). */
+.contest-fell .contest-distance {
   font-style: italic;
+}
+
+/* A disqualification, in place of the distance: in red, as the jump view writes it. */
+.contest-dq .contest-distance {
+  color: var(--tone-red);
 }
 
 .contest-record {

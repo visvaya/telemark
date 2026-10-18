@@ -58,15 +58,16 @@ function Points({ points }: { points: number }) {
 }
 
 /**
- * A jump in its round's cell: the distance over the points, two lines. A fall is set in slanted letters and read
- * out as a word; a disqualified jump (no distance) says so in place of the distance.
+ * A jump in its round's cell: the distance over the points, two lines. A fall sets the distance in slanted letters
+ * and is read out as a word; a disqualified jump (no distance) says so in place of the distance, in the red the jump
+ * view writes it in, over the points it costs (the original adds them to the total).
  */
 function JumpCell({ score }: { score: JumpScore | null }) {
   if (score === null) return <td className="contest-jump">{T.noJump}</td>;
   const disqualified = score.distanceM === 0;
   const fell = score.fell && !disqualified;
   return (
-    <td className={fell ? "contest-jump contest-fell" : "contest-jump"}>
+    <td className={`contest-jump${fell ? " contest-fell" : ""}${disqualified ? " contest-dq" : ""}`}>
       {disqualified ? (
         <span className="contest-distance">
           <span aria-hidden="true">{T.disqualifiedShort}</span>
