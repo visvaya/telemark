@@ -1746,8 +1746,8 @@ h2 {
   font-style: italic;
 }
 
-/* A disqualification, in place of the distance: in red, as the jump view writes it. */
-.contest-dq .contest-distance {
+/* A disqualification, in place of a distance or a total: in red, as the jump view writes it. */
+.contest-dq-word {
   color: var(--tone-red);
 }
 
