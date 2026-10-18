@@ -94,7 +94,7 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
             const rival = RIVALS[i];
             if (!rival) return null;
             return (
-              <li key={rival.name} className="contest-rival">
+              <li key={rival.name} className={cpu.on ? "contest-rival" : "contest-rival contest-rival-off"}>
                 <Check
                   label={
                     <>

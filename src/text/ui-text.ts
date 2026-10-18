@@ -96,14 +96,21 @@ export const UI_TEXT = {
       total: "Razem",
     },
     distance: (distance: string) => `${distance} m`,
-    points: (points: string) => `${points} pkt`,
+    /** The unit after a jump's points, left out where the table is narrow. */
+    pointsUnit: " pkt",
+    /** Read out for a fall: the table shows a fall by its slanted letters. */
     fell: "upadek",
+    /** A disqualified jump in the table, short, and as it is read out. */
+    disqualifiedShort: "dyskw.",
+    disqualified: "dyskwalifikacja",
     place: (place: number) => `${place}.`,
     noJump: "-",
     /** Marks of a row: a jump made since the board was last shown, and the competitor who jumps next. */
     newJump: "nowy skok",
     nextJumper: "skacze teraz",
-    hillRecord: (distance: string) => `Rekord skoczni: ${distance} m`,
+    /** The hill record under the table, with its holder when the record keeps one. */
+    hillRecord: (distance: string, holder: string | undefined) =>
+      `Rekord skoczni: ${distance} m${holder === undefined ? "" : ` · ${holder}`}`,
     noHillRecord: "Rekord skoczni: -",
     /** The next jumper in the second round, with the place after the first. */
     nextWithPlace: (name: string, place: number) => `Dalej: skacze ${name} (${place}.)`,
