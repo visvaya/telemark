@@ -10,6 +10,8 @@ export interface HillRecord {
   points: number;
   /** ISO 8601 time of the jump. */
   dateIso: string;
+  /** Who jumped it, as the board writes the name ("Gracz 2"); absent in records kept before it was stored. */
+  holder?: string;
 }
 
 type LeanControl = "drag" | "tilt";
@@ -106,7 +108,8 @@ function asRecord(v: unknown): HillRecord | null {
   if (typeof distanceM !== "number" || !Number.isFinite(distanceM)) return null;
   if (typeof points !== "number" || !Number.isFinite(points)) return null;
   if (typeof dateIso !== "string") return null;
-  return { distanceM, points, dateIso };
+  const holder = field(v, "holder");
+  return { distanceM, points, dateIso, ...(typeof holder === "string" ? { holder } : {}) };
 }
 
 /** Reads stored JSON; anything unreadable or from an unknown version yields an empty save. */
@@ -195,14 +198,13 @@ export function withJump(
   hillId: string,
   jump: { distanceM: number; points: number; fell: boolean },
   now: Date,
+  holder?: string,
 ): SaveData {
   if (!beatsRecord(jump, save.records[hillId])) return save;
+  const record = { distanceM: jump.distanceM, points: jump.points, dateIso: now.toISOString() };
   return {
     ...save,
-    records: {
-      ...save.records,
-      [hillId]: { distanceM: jump.distanceM, points: jump.points, dateIso: now.toISOString() },
-    },
+    records: { ...save.records, [hillId]: holder === undefined ? record : { ...record, holder } },
   };
 }
 

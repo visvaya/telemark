@@ -68,6 +68,8 @@ export interface ContestJump {
   onAbandon: () => void;
   /** What the picture shows of the competition: the points needed to lead, the total and the place after it. */
   hud: ContestJumpHud;
+  /** The jumper's name as a hill record keeps it. */
+  holder: string;
 }
 
 /** The competition's way on, which acts once however many presses or keys ask for it. */

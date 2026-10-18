@@ -16,6 +16,12 @@
   --tone-yellow-quiet: #a8a85a;
   --tone-white: #e8e8f0;
   --tone-violet: #c8a8ff;
+  /* A result just in: a jump made since the competition's board was last shown. */
+  --tone-green: #7ce08a;
+  /* A player's name in the competition's table, as the original colours its human jumpers. */
+  --tone-cyan: #40e8ec;
+  /* A disqualification in the competition's table; light enough to read on black and on the panel. */
+  --tone-red: #ff6a5a;
   --tone-grey: #a0a8c0;
   /* Sizes of the screens' font, whole multiples of its 8 pixels to the em: choices, screen titles, the game's title. */
   --screen-item-px: 16px;
@@ -1491,18 +1497,28 @@ h2 {
   }
 }
 
-/* The places of the players, side by side where there is room. */
+/*
+ * The places of the players side by side, as many columns as fit (two on a phone held upright): the grid stands at
+ * the choices' indent, and a column holds the box and a name of seven characters with a character to spare.
+ */
 .contest-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
-  gap: 0 16px;
+  grid-template-columns: repeat(auto-fill, minmax(calc(36px + 8 * var(--screen-char)), 1fr));
+  margin-left: var(--item-column);
 }
 
-/* The computer jumpers: each with a box and a level, the level under the name where the screen is narrow. */
+.screen .contest-slots .settings-check {
+  margin-left: 0;
+}
+
+/*
+ * The computer jumpers: each a box with the flag and the name, and its level. Where the screen is narrow the level
+ * stands under the name, lined up with its text and close to it, with more room before the next jumper.
+ */
 .contest-rivals {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1510,9 +1526,23 @@ h2 {
 
 .contest-rival {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 16px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.contest-rival .pixel-select {
+  margin-left: calc(var(--item-column) + 36px);
+  min-width: 10em;
+}
+
+/* The choice of watching them belongs to all of them: it stands apart from the last jumper's level. */
+.contest-rivals + .settings-check {
+  margin-top: 8px;
+}
+
+/* A jumper who does not take part keeps the level, quieter. */
+.contest-rival-off .pixel-select {
+  color: var(--muted);
 }
 
 /* With room for both, the levels line up in one column after the longest name. */
@@ -1520,12 +1550,18 @@ h2 {
   .contest-rivals {
     display: grid;
     grid-template-columns: max-content max-content;
+    gap: 6px 24px;
   }
 
   .contest-rival {
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
+    align-items: center;
+  }
+
+  .contest-rival .pixel-select {
+    margin-left: 0;
   }
 }
 
@@ -1548,31 +1584,61 @@ h2 {
 }
 
 /*
- * The board: one table of every competitor. Small enough that five columns fit a phone held upright; names and
- * the points under a distance may wrap, the table never scrolls sideways.
+ * The board: one table of every competitor, each cell at most two lines (a name over its mark, a distance over its
+ * points). Where the screen is narrow the flags go, units shrink to a letter and first names to their initial, so
+ * five columns fit a phone held upright without the table scrolling sideways.
+ *
+ * The columns of numbers have fixed least widths, the same in both rounds, so nothing moves once the second round
+ * begins: the widest usual text of each in the screens' font, where a digit takes 0.75 em and a space or a comma
+ * 0.5 em. A rarer, wider value (a third digit after a minus) widens its column rather than spilling out.
  */
 .contest-table {
+  --cell-pad-start: 8px;
+  --cell-pad-end: 8px;
+  /* "M." and "9." take 1.25 em; the rest leaves room for a reader's wider letter spacing. */
+  --place-w: 1.5em;
+  /* The points under a distance, "-156,0 pkt" at 0.8 em; "999,5 m" and "2. seria" take 4.9 em. */
+  --jump-w: 5.3em;
+  /* "263,5 pkt" */
+  --total-w: 6.25em;
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
-  font-size: clamp(11px, 3.1vw, 16px);
-  line-height: 1.5;
+  font-size: clamp(11px, 3vw, 16px);
+  line-height: 1.45;
 }
 
+/* Ten competitors or more: places of two digits ("16." takes 2 em). */
+.contest-table.contest-many {
+  --place-w: 2.4em;
+}
+
+/* What the table is, as the screens' section labels look, so it does not run into the column headers under it. */
 .contest-table caption {
+  margin-bottom: 12px;
   text-align: left;
-  margin-bottom: 6px;
+  font-family: "Telemark Screen", "Silkscreen", "Telemark Polish", ui-monospace, monospace;
+  font-size: var(--screen-item-px);
+  line-height: 1.5;
+  color: var(--tone-white);
+  font-palette: --tone-white;
 }
 
+/* Every cell keeps room, so no text touches an edge of its row or of the next jumper's panel. */
 .contest-table th,
 .contest-table td {
-  padding: 4px 0.4em;
+  padding: 8px var(--cell-pad-end) 8px var(--cell-pad-start);
   text-align: left;
   vertical-align: top;
   font-weight: 400;
 }
 
+/*
+ * Column headers standing on the rule under them, on one line: the columns are wide enough for them, and only a
+ * reader's wider text spacing may break one where the screen is narrow.
+ */
 .contest-table thead th {
+  padding-block: 2px 6px;
+  vertical-align: bottom;
   color: var(--muted);
   border-bottom: 2px solid var(--line);
 }
@@ -1582,51 +1648,86 @@ h2 {
   text-align: right;
 }
 
-.contest-place {
-  width: 3ch;
+.contest-table .contest-place {
+  width: calc(var(--place-w) + var(--cell-pad-start) + var(--cell-pad-end));
   white-space: nowrap;
+}
+
+@media (min-width: 600px) {
+  .contest-table thead th {
+    white-space: nowrap;
+  }
+}
+
+.contest-table .contest-jump {
+  width: calc(var(--jump-w) + var(--cell-pad-start) + var(--cell-pad-end));
+}
+
+.contest-table .contest-total {
+  width: calc(var(--total-w) + var(--cell-pad-start) + var(--cell-pad-end));
 }
 
 .contest-row {
   border-bottom: 1px solid var(--line);
 }
 
-/* Players and computer jumpers in the colours the original gives them: players light, computers yellow. */
-.contest-player {
+/*
+ * Colour tells only who is who, in the name: players in cyan, as the original sets its human jumpers apart, the
+ * computer jumpers in the plain white of the numbers. Numbers look the same in every row, so a column reads as one;
+ * the place stands back in grey, and the points of a jump under its distance too.
+ */
+.contest-row {
   color: var(--tone-white);
-  font-palette: --tone-white;
 }
 
-.contest-cpu {
-  color: var(--tone-yellow);
-  font-palette: --tone-yellow;
+.contest-row .contest-place {
+  color: var(--muted);
 }
 
-/* A jump since the board was last shown, and the next jumper: a bar at the row's start and a word under the name. */
-.contest-new > :first-child,
-.contest-next > :first-child {
-  box-shadow: inset 4px 0 0 var(--accent);
+.contest-player .contest-who {
+  color: var(--tone-cyan);
 }
 
-.contest-next {
+/* The next jumper's row stands on the panel's colour; its mark and a new jump's each have a colour of their own. */
+.contest-next > * {
   background: var(--panel);
-}
-
-.contest-name {
-  overflow-wrap: anywhere;
+  /* Cells end at fractions of a pixel: each covers the seam to the next with a pixel of its own colour. */
+  box-shadow: 1px 0 0 var(--panel);
 }
 
 .contest-who {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
+}
+
+/* A text with a shorter form: the long one where there is room, the short one (shown, not read) where not. */
+.contest-short {
+  display: none;
 }
 
 .contest-mark {
   display: block;
+  margin-top: 2px;
   font-size: 0.8em;
-  color: var(--accent);
+}
+
+.contest-mark-new {
+  color: var(--tone-green);
+}
+
+.contest-mark-short {
+  display: none;
+}
+
+.contest-mark-next {
+  color: var(--tone-violet);
+}
+
+.contest-distance,
+.contest-points,
+.contest-total {
+  white-space: nowrap;
 }
 
 .contest-distance,
@@ -1634,17 +1735,97 @@ h2 {
   display: block;
 }
 
-.contest-distance {
-  white-space: nowrap;
-}
-
 .contest-points {
+  margin-top: 2px;
   font-size: 0.8em;
   color: var(--muted);
 }
 
-.contest-total {
-  white-space: nowrap;
+/* A fall: the distance in slanted letters (and said in words to a screen reader). */
+.contest-fell .contest-distance {
+  font-style: italic;
+}
+
+/* A disqualification, in place of the distance: in red, as the jump view writes it. */
+.contest-dq .contest-distance {
+  color: var(--tone-red);
+}
+
+.contest-record {
+  margin-top: 4px;
+}
+
+/*
+ * A phone held upright: room before each cell's text and after the last one's, none after the others (the next
+ * cell's room keeps them apart), and the short forms.
+ */
+@media (max-width: 599px) {
+  .contest-table {
+    --cell-pad-start: 6px;
+    --cell-pad-end: 0px;
+    /*
+     * "999,5 m" and "2. seria" take 4.9 em, the points under them ("-156,0 p" at 0.8 em) 4.2 em; the rest keeps
+     * the headers of the two rounds apart. Any wider and "A. Lehtovaara" no longer fits on one line at 360 px.
+     */
+    --jump-w: 5em;
+    /* "263,5 p" */
+    --total-w: 4.75em;
+  }
+
+  .contest-table tr > :last-child {
+    padding-right: 6px;
+  }
+
+  .contest-table tr > .contest-total {
+    width: calc(var(--total-w) + 12px);
+  }
+
+  .contest-table .flag-icon {
+    display: none;
+  }
+
+  /*
+   * The name keeps one line, the mark the second: a name with no room ends in an ellipsis rather than breaking.
+   * The columns take their widths from the headers alone, whatever the results, and the name the rest; the rare
+   * wider total ("-156,0 p", 0.5 em more) stays within the last cell's room.
+   */
+  .contest-table {
+    table-layout: fixed;
+  }
+
+  .contest-who {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .contest-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .contest-short {
+    display: inline;
+  }
+}
+
+/* The least room (a phone of 320 px): the marks shrink to a word. */
+@media (max-width: 349px) {
+  .contest-mark-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .contest-mark-short {
+    display: inline;
+  }
 }
 
 /* Skips a watched computer jump: at the right edge of the picture, clear of its bars and of the jumper's way. */

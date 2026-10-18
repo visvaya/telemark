@@ -195,7 +195,7 @@ interface ContestContext {
   contest: ReturnType<typeof useCompetition>;
   save: SaveData;
   onSettings: (change: Partial<Settings>) => void;
-  onFinished: (hill: HillChoice, result: JumpResult, recording: JumpRecording) => void;
+  onFinished: (hill: HillChoice, result: JumpResult, recording: JumpRecording, holder?: string) => void;
   keepJump: (hill: HillChoice, jump: FinishedJump) => KeepOutcome;
   hills: readonly HillChoice[];
   navigated: boolean;
@@ -217,9 +217,10 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         onSettings={c.onSettings}
         onFinished={(result, recording) => {
           // A player's competition jump counts for the hill record as a training jump does; a computer's never.
-          if (c.contest.jump?.contest.cpu !== null) return;
+          const jump = c.contest.jump;
+          if (jump === null || jump.contest.cpu !== null) return;
           c.contest.onPlayerResult(result);
-          c.onFinished(hill, result, recording);
+          c.onFinished(hill, result, recording, jump.contest.holder);
         }}
         onKeepJump={(jump) => c.keepJump(hill, jump)}
         hills={c.hills}
@@ -278,9 +279,11 @@ export function App({ diagnostics }: AppProps) {
   const { save, persistent, update } = useStoredSave();
   const replays = useReplayShelf(save.settings.replays);
   const ghost = useRecordGhost(replays.shelf, screen.kind === "jump" ? screen.hill : null, save.settings.recordGhost);
-  const onFinished = (hill: HillChoice, result: JumpResult, recording: JumpRecording) => {
+  /** A jump is over: its replay kept, and the hill record taken when it beats it, by `holder` (training: player 1). */
+  const onFinished = (hill: HillChoice, result: JumpResult, recording: JumpRecording, holder?: string) => {
     replays.onJumpFinished(hill, { recording, result }, beatsRecord(result, save.records[hill.id]));
-    update((prev) => withJump(prev, hill.id, result, new Date()));
+    const by = holder ?? UI_TEXT.competition.playerName(1);
+    update((prev) => withJump(prev, hill.id, result, new Date(), by));
   };
 
   const onSettings = (change: Partial<Settings>) => {

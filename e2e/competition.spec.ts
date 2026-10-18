@@ -4,6 +4,8 @@ import { expect, test, type DeviceTraits } from "./support/fixtures";
 import { centerOf, playJump } from "./support/jump";
 
 const FINAL = "Klasyfikacja końcowa";
+/** A distance in a round's cell, or a disqualification. */
+const DISTANCE = /^(\d+,\d\s*m|dyskw\.\s*dyskwalifikacja)$/;
 const NEXT_ROUND = /^Rozpocznij 2\. serię/;
 const SKIP = /^Pomiń/;
 const PRESS_LIMIT = 40;
@@ -31,6 +33,12 @@ async function setUp(page: Page, traits: DeviceTraits, on: Readonly<Record<strin
     await expect(target).toBeChecked({ checked });
   }
 }
+
+/** The widths of the board's columns, in whole CSS pixels. */
+const columnWidths = (page: Page): Promise<number[]> =>
+  page
+    .getByRole("columnheader")
+    .evaluateAll((headers) => headers.map((h) => Math.round(h.getBoundingClientRect().width)));
 
 /** After a player's jump: presses of the left button, as a player goes on, until the board is back. */
 async function goOnAfterJump(page: Page, traits: DeviceTraits): Promise<void> {
@@ -79,6 +87,7 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await openCompetitionSetup(page, traits);
   await press(button(page, TEXT.contestStart), traits);
   await expectBoard(page, 5);
+  const startWidths = await columnWidths(page);
   // Everybody is listed from the start; the next jumper's row says so.
   await expect(rowOf(page, "Gracz 1")).toContainText("skacze teraz");
   for (let jumps = 0; jumps < 2; jumps++) {
@@ -89,8 +98,8 @@ test("a competition of one player and computer jumpers not watched runs to its r
     await expect(jumpCanvas(page)).toBeVisible();
     await playJump(page, traits);
     await goOnAfterJump(page, traits);
-    // The jump just made is marked in its row.
-    await expect(rowOf(page, "Gracz 1")).toContainText("nowy skok");
+    // The jump just made stands in its row (marked as new only beside older results, which depends on the draw).
+    await expect(rowOf(page, "Gracz 1").locator(".contest-distance").nth(jumps)).toHaveText(DISTANCE);
     if (jumps === 0) {
       // The rest of the first round is computed at once; its results come before the second round.
       await expect(page.getByRole("table", { name: "Wyniki po 1. serii" })).toBeVisible();
@@ -98,9 +107,10 @@ test("a competition of one player and computer jumpers not watched runs to its r
       await press(button(page, NEXT_ROUND), traits);
     }
   }
-  await expect(page.getByRole("heading", { name: FINAL, level: 1 })).toBeVisible();
   await expect(page.getByRole("table", { name: FINAL })).toBeVisible();
   await expectBoard(page, 5);
+  // The columns keep their widths from the start list to the end: nothing moves as the results come in.
+  expect(await columnWidths(page)).toEqual(startWidths);
   await expect(page.locator(".contest-row").first()).toContainText("1.");
   await press(button(page, "Jeszcze raz"), traits);
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();
@@ -131,10 +141,16 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
     await expect(page.locator("p[aria-live]")).not.toHaveText("", { timeout: 10_000 });
     if (traits.desktop && round === 2) await page.keyboard.press("Enter");
     else await press(button(page, SKIP), traits);
-    await expect(rowOf(page, "Aatu Lehtovaara")).toContainText("nowy skok");
+    // Alone on the board, the new jump is not marked: there is nothing older to set it apart from.
+    await expect(
+      rowOf(page, "Aatu Lehtovaara")
+        .locator(".contest-distance")
+        .nth(round - 1),
+    ).toHaveText(DISTANCE);
+    await expect(rowOf(page, "Aatu Lehtovaara")).not.toContainText("nowy skok");
     if (round === 1) await press(button(page, NEXT_ROUND), traits);
   }
-  await expect(page.getByRole("heading", { name: FINAL, level: 1 })).toBeVisible();
+  await expect(page.getByRole("table", { name: FINAL })).toBeVisible();
   await press(button(page, "Menu"), traits);
   await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
 });

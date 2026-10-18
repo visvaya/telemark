@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { boardRows, contestJumpHud, neededDistanceM, neededToLead, resultAfterJump } from "./competition-board";
+import {
+  boardRows,
+  contestJumpHud,
+  freshCompetitors,
+  neededDistanceM,
+  neededToLead,
+  resultAfterJump,
+} from "./competition-board";
 import {
   DEFAULT_COMPETITION_SETTINGS,
   competitionReducer,
@@ -37,6 +44,17 @@ describe("the board's rows", () => {
     expect(rows.slice(3).map((r) => r.competitor)).toEqual(s.startOrder.slice(3));
     expect(rows[0]?.totalPoints).toBe(80);
     expect(rows[3]?.scores).toEqual([null, null]);
+  });
+
+  it("mark new jumps only beside older results", () => {
+    let s = fresh();
+    s = scored(s, 50);
+    s = scored(s, 80);
+    const [first, second] = s.startOrder;
+    const rows = boardRows(s);
+    expect([...freshCompetitors(rows, new Set([second ?? -1]))]).toEqual([second]);
+    expect([...freshCompetitors(rows, new Set([first ?? -1, second ?? -1]))]).toEqual([]);
+    expect([...freshCompetitors(boardRows(fresh()), new Set())]).toEqual([]);
   });
 });
 

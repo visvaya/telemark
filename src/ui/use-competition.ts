@@ -15,7 +15,7 @@ import type { HillChoice } from "../game/hill-choice";
 import type { Outfit } from "../game/outfit";
 import { newSeed, startComputedJump } from "../game/training-session";
 import { UI_TEXT } from "../text/ui-text";
-import { competitorName, competitorOutfit } from "./competition-names";
+import { competitorName, competitorOutfit, competitorShortName } from "./competition-names";
 import { recordedInput, type ReplaySource } from "./jump-replay";
 import type { ContestJump } from "./jump-screen";
 
@@ -86,6 +86,7 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
         onNext: () => afterJump(outcome ? outcome.score : playerScore.current),
         onAbandon: abandon,
         hud: contestJumpHud(current.state, index, current.hill.kPointM),
+        holder: competitorShortName(competitor),
       },
     });
     show({ kind: "contest-jump", hill: current.hill });

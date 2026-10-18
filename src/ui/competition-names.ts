@@ -12,6 +12,17 @@ export function competitorName(c: Competitor | undefined): string {
   return c.kind === "player" ? T.playerName(c.slot + 1) : (RIVALS[c.slot]?.name ?? "");
 }
 
+/**
+ * The name where room is short, and of a hill record's holder: a computer jumper's initial and surname
+ * ("K. Morioka"), a player's name as it is.
+ */
+export function competitorShortName(c: Competitor | undefined): string {
+  const name = competitorName(c);
+  if (c?.kind !== "cpu") return name;
+  const [first, ...rest] = name.split(" ");
+  return rest.length === 0 || first === undefined ? name : `${first.charAt(0)}. ${rest.join(" ")}`;
+}
+
 /** The country of a computer jumper; none for a player. */
 export function competitorCountry(c: Competitor | undefined): CountryCode | null {
   return c?.kind === "cpu" ? (RIVALS[c.slot]?.country ?? null) : null;

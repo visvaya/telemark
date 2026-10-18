@@ -1,16 +1,18 @@
 import { useRef, useState } from "react";
-import { currentJumper, placeOf, type JumpScore } from "../game/competition";
-import { boardRows } from "../game/competition-board";
+import { currentJumper, placeOf, type Competitor, type JumpScore } from "../game/competition";
+import { boardRows, freshCompetitors } from "../game/competition-board";
 import { roundJustEnded, type CompetitionRun } from "../game/competition-run";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
-import { competitorCountry, competitorName } from "./competition-names";
+import { competitorCountry, competitorName, competitorShortName } from "./competition-names";
 import { AbandonQuestion } from "./abandon-question";
 import { FlagIcon } from "./flag-icon";
 import { formatDecimal } from "./number-text";
 import { useEntryFocus } from "./use-entry-focus";
 
 const T = UI_TEXT.competition;
+/** From this many competitors places take two digits, and their column is wider. */
+const MANY_COMPETITORS = 10;
 
 interface Props {
   run: CompetitionRun;
@@ -23,17 +25,81 @@ interface Props {
   focusOnEntry: boolean;
 }
 
-/** A jump in its round's cell: the distance, and under it the points and a fall when there was one. */
+/** Text with a shorter form for a narrow table: the long one is read out, the short one only shown there. */
+function Fitted({ long, short }: { long: string; short: string }) {
+  return (
+    <>
+      <span className="contest-long">{long}</span>
+      <span className="contest-short" aria-hidden="true">
+        {short}
+      </span>
+    </>
+  );
+}
+
+/** A row's mark under the name, in its colour; a shorter word where the table has least room. */
+function Mark({ kind, long, short }: { kind: "new" | "next"; long: string; short: string }) {
+  return (
+    <span className={`contest-mark contest-mark-${kind}`}>
+      <span className="contest-mark-long">{long}</span>
+      <span className="contest-mark-short" aria-hidden="true">
+        {short}
+      </span>
+    </span>
+  );
+}
+
+/** Points with their unit, kept on one line. */
+function Points({ points }: { points: number }) {
+  return (
+    <>
+      {`${formatDecimal(points, 1)} `}
+      <Fitted long={T.pointsUnit} short={T.pointsUnitShort} />
+    </>
+  );
+}
+
+/**
+ * A jump in its round's cell: the distance over the points, two lines. A fall sets the distance in slanted letters
+ * and is read out as a word; a disqualified jump (no distance) says so in place of the distance, in the red the jump
+ * view writes it in, over the points it costs (the original adds them to the total).
+ */
 function JumpCell({ score }: { score: JumpScore | null }) {
   if (score === null) return <td className="contest-jump">{T.noJump}</td>;
+  const disqualified = score.distanceM === 0;
+  const fell = score.fell && !disqualified;
   return (
-    <td className="contest-jump">
-      <span className="contest-distance">{T.distance(formatDecimal(score.distanceM, 1))}</span>
+    <td className={`contest-jump${fell ? " contest-fell" : ""}${disqualified ? " contest-dq" : ""}`}>
+      {disqualified ? (
+        <span className="contest-distance">
+          <span aria-hidden="true">{T.disqualifiedShort}</span>
+          <span className="sr-only">{T.disqualified}</span>
+        </span>
+      ) : (
+        <span className="contest-distance">{T.distance(formatDecimal(score.distanceM, 1))}</span>
+      )}
       <span className="contest-points">
-        {T.points(formatDecimal(score.points, 1))}
-        {score.fell ? `, ${T.fell}` : ""}
+        <Points points={score.points} />
+        {fell && <span className="sr-only">{`, ${T.fell}`}</span>}
       </span>
     </td>
+  );
+}
+
+/** The competitor's name: the full one, and the short one that takes its place on a narrow screen. */
+function NameCell({ competitor, mark }: { competitor: Competitor | undefined; mark: "new" | "next" | null }) {
+  const full = competitorName(competitor);
+  const short = competitorShortName(competitor);
+  return (
+    <th scope="row" className="contest-name">
+      {/* Narrow, the name may end in an ellipsis; its full form stays in the row's name for screen readers. */}
+      <span className="contest-who" data-ellipsis="">
+        {competitor?.kind === "cpu" && <FlagIcon country={competitorCountry(competitor)} />}
+        {short === full ? <span>{full}</span> : <Fitted long={full} short={short} />}
+      </span>
+      {mark === "new" && <Mark kind="new" long={T.newJump} short={T.newJumpShort} />}
+      {mark === "next" && <Mark kind="next" long={T.nextJumper} short={T.nextJumperShort} />}
+    </th>
   );
 }
 
@@ -53,10 +119,11 @@ function captionOf(run: CompetitionRun): string {
 function Board({ run }: { run: CompetitionRun }) {
   const { state } = run;
   const next = currentJumper(state);
-  const fresh = new Set(run.log.map((j) => j.competitor));
+  const rows = boardRows(state);
+  const fresh = freshCompetitors(rows, new Set(run.log.map((j) => j.competitor)));
   return (
-    <table className="contest-table">
-      <caption className="hill-section-title">{captionOf(run)}</caption>
+    <table className={state.competitors.length >= MANY_COMPETITORS ? "contest-table contest-many" : "contest-table"}>
+      <caption>{captionOf(run)}</caption>
       <thead>
         <tr>
           <th scope="col" className="contest-place">
@@ -76,33 +143,20 @@ function Board({ run }: { run: CompetitionRun }) {
         </tr>
       </thead>
       <tbody>
-        {boardRows(state).map((row) => {
+        {rows.map((row) => {
           const c = state.competitors[row.competitor];
-          const isNew = fresh.has(row.competitor);
-          const isNext = row.competitor === next;
-          const classes = [
-            "contest-row",
-            c?.kind === "cpu" ? "contest-cpu" : "contest-player",
-            isNew && "contest-new",
-            isNext && "contest-next",
-          ];
+          const mark = row.competitor === next ? "next" : fresh.has(row.competitor) ? "new" : null;
+          const classes = ["contest-row", c?.kind === "player" && "contest-player", mark === "next" && "contest-next"];
           return (
             <tr key={row.competitor} className={classes.filter(Boolean).join(" ")}>
               <td className="contest-place">{row.place === null ? "" : T.place(row.place)}</td>
-              <th scope="row" className="contest-name">
-                <span className="contest-who">
-                  {c?.kind === "cpu" && <FlagIcon country={competitorCountry(c)} />}
-                  {competitorName(c)}
-                </span>
-                {isNew && <span className="contest-mark">{T.newJump}</span>}
-                {isNext && <span className="contest-mark">{T.nextJumper}</span>}
-              </th>
+              <NameCell competitor={c} mark={mark} />
               {row.scores.map((s, i) => (
                 // oxlint-disable-next-line react/no-array-index-key -- one cell per round, in round order
                 <JumpCell key={i} score={s} />
               ))}
               <td className="contest-total">
-                {row.totalPoints === null ? T.noJump : formatDecimal(row.totalPoints, 1)}
+                {row.totalPoints === null ? T.noJump : <Points points={row.totalPoints} />}
               </td>
             </tr>
           );
@@ -128,24 +182,19 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusO
   useEntryFocus(headingRef, focusOnEntry);
   const [asking, setAsking] = useState(false);
   const { state, hill } = run;
-  const ended = roundJustEnded(run);
-  const shownRound = ended && !state.finished ? state.round - 1 : state.round;
   return (
     <main className="screen">
       <header className="contest-header">
         <h1 className="screen-title" tabIndex={-1} ref={headingRef}>
-          {state.finished ? T.finalTitle : T.boardTitle}
+          {T.boardTitle}
         </h1>
-        <p className="note">
-          {UI_TEXT.hillLabel(hill.name, hill.kPointM)}
-          {state.finished ? "" : ` · ${T.round(shownRound)}`}
-        </p>
+        <p className="note">{UI_TEXT.hillLabel(hill.name, hill.kPointM)}</p>
       </header>
       <hr className="rule" />
       <section className="contest-section">
         <Board run={run} />
         <p className="note contest-record">
-          {record === undefined ? T.noHillRecord : T.hillRecord(formatDecimal(record.distanceM, 2))}
+          {record === undefined ? T.noHillRecord : T.hillRecord(formatDecimal(record.distanceM, 2), record.holder)}
         </p>
       </section>
       <div className="menu">

@@ -4,7 +4,9 @@ import type { Page } from "@playwright/test";
  * Looks at the page as laid out and lists what a player would see as broken: a page that scrolls sideways, an
  * element that sticks out of the page, text cut off by its box or spilling out of it, and blocks drawn on top of
  * one another. An empty list means the layout holds. Elements hidden for screen readers only (`.sr-only`) are
- * left out: they are one pixel large by design.
+ * left out: they are one pixel large by design. So is a text marked `data-ellipsis` that ends in an ellipsis where it
+ * has no room (a name in the competition table): it keeps its full form for screen readers, and the full name shows
+ * elsewhere in the game.
  */
 export function layoutProblems(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -18,6 +20,11 @@ export function layoutProblems(page: Page): Promise<string[]> {
       const style = getComputedStyle(element);
       return rect.width > 1 && rect.height > 1 && style.visibility !== "hidden" && element.closest(".sr-only") === null;
     };
+    /** Inside a text allowed to end in an ellipsis: its parts may run past its box, which cuts them off. */
+    const ellipsed = (element: Element): boolean => {
+      const holder = element.closest("[data-ellipsis]");
+      return holder !== null && getComputedStyle(holder).textOverflow === "ellipsis";
+    };
 
     if (root.scrollWidth > root.clientWidth) {
       problems.push(`the page scrolls sideways by ${root.scrollWidth - root.clientWidth} px`);
@@ -25,6 +32,7 @@ export function layoutProblems(page: Page): Promise<string[]> {
 
     for (const element of document.querySelectorAll("body *")) {
       if (!shown(element)) continue;
+      if (element.parentElement !== null && ellipsed(element.parentElement)) continue;
       const rect = element.getBoundingClientRect();
       if (rect.left < -SLACK_PX || rect.right > root.clientWidth + SLACK_PX) {
         problems.push(
@@ -36,7 +44,8 @@ export function layoutProblems(page: Page): Promise<string[]> {
       const scrolls = style.overflowY === "auto" || style.overflowY === "scroll";
       const tooWide = element.scrollWidth > element.clientWidth + SLACK_PX;
       const tooTall = element.scrollHeight > element.clientHeight + SLACK_PX;
-      if (cuts && (tooWide || (tooTall && !scrolls)) && element !== root && element !== document.body) {
+      const intended = ellipsed(element) && !tooTall;
+      if (cuts && (tooWide || (tooTall && !scrolls)) && !intended && element !== root && element !== document.body) {
         problems.push(`${name(element)} cuts off its content`);
       }
       // Text of the element itself, measured as drawn: it must stay inside the element's box.

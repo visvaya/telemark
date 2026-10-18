@@ -26,6 +26,14 @@ export function boardRows(state: CompetitionState): BoardRow[] {
   return [...ranked, ...waiting];
 }
 
+/**
+ * The competitors to mark as just jumped: those of `logged` (jumped since the board was last shown), but only
+ * beside older results; when every result on the board is new, a mark would set nothing apart.
+ */
+export function freshCompetitors(rows: readonly BoardRow[], logged: ReadonlySet<number>): ReadonlySet<number> {
+  return rows.some((r) => r.place !== null && !logged.has(r.competitor)) ? logged : new Set<number>();
+}
+
 /** A competitor's total so far, in tenths of a point. */
 function totalTenthsOf(state: CompetitionState, competitor: number): number {
   return state.scores.reduce((sum, round) => {
