@@ -1599,7 +1599,7 @@ h2 {
   --total-w: 6.25em;
   width: 100%;
   border-collapse: collapse;
-  font-size: clamp(11px, 3.1vw, 16px);
+  font-size: clamp(11px, 3vw, 16px);
   line-height: 1.45;
 }
 
@@ -1733,9 +1733,9 @@ h2 {
     --cell-pad-end: 0px;
     /*
      * "999,5 m" and "2. seria" take 4.9 em, the points under them ("-156,0 p" at 0.8 em) 4.2 em; the rest keeps
-     * the headers of the two rounds apart.
+     * the headers of the two rounds apart. Any wider and "A. Lehtovaara" no longer fits on one line at 360 px.
      */
-    --jump-w: 5.2em;
+    --jump-w: 5em;
     /* "263,5 p" */
     --total-w: 4.75em;
   }
