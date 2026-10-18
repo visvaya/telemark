@@ -96,8 +96,9 @@ export const UI_TEXT = {
       total: "Razem",
     },
     distance: (distance: string) => `${distance} m`,
-    /** The unit after a jump's points, left out where the table is narrow. */
-    pointsUnit: " pkt",
+    /** The unit of points in the table: in full, and the letter it shrinks to where the table is narrow. */
+    pointsUnit: "pkt",
+    pointsUnitShort: "p",
     /** Read out for a fall: the table shows a fall by its slanted letters. */
     fell: "upadek",
     /** A disqualified jump in the table, short, and as it is read out. */

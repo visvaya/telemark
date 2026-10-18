@@ -34,6 +34,12 @@ async function setUp(page: Page, traits: DeviceTraits, on: Readonly<Record<strin
   }
 }
 
+/** The widths of the board's columns, in whole CSS pixels. */
+const columnWidths = (page: Page): Promise<number[]> =>
+  page
+    .getByRole("columnheader")
+    .evaluateAll((headers) => headers.map((h) => Math.round(h.getBoundingClientRect().width)));
+
 /** After a player's jump: presses of the left button, as a player goes on, until the board is back. */
 async function goOnAfterJump(page: Page, traits: DeviceTraits): Promise<void> {
   const board = page.getByRole("heading", { name: /^(Konkurs|Klasyfikacja końcowa)$/, level: 1 });
@@ -81,6 +87,7 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await openCompetitionSetup(page, traits);
   await press(button(page, TEXT.contestStart), traits);
   await expectBoard(page, 5);
+  const startWidths = await columnWidths(page);
   // Everybody is listed from the start; the next jumper's row says so.
   await expect(rowOf(page, "Gracz 1")).toContainText("skacze teraz");
   for (let jumps = 0; jumps < 2; jumps++) {
@@ -102,6 +109,8 @@ test("a competition of one player and computer jumpers not watched runs to its r
   }
   await expect(page.getByRole("table", { name: FINAL })).toBeVisible();
   await expectBoard(page, 5);
+  // The columns keep their widths from the start list to the end: nothing moves as the results come in.
+  expect(await columnWidths(page)).toEqual(startWidths);
   await expect(page.locator(".contest-row").first()).toContainText("1.");
   await press(button(page, "Jeszcze raz"), traits);
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();

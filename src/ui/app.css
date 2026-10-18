@@ -1581,10 +1581,22 @@ h2 {
 
 /*
  * The board: one table of every competitor, each cell at most two lines (a name over its mark, a distance over its
- * points). Where the screen is narrow the flags and the unit of the points go and first names shrink to their
- * initial, so five columns fit a phone held upright without the table scrolling sideways.
+ * points). Where the screen is narrow the flags go, units shrink to a letter and first names to their initial, so
+ * five columns fit a phone held upright without the table scrolling sideways.
+ *
+ * The columns of numbers have fixed least widths, the same in both rounds, so nothing moves once the second round
+ * begins: the widest usual text of each in the screens' font, where a digit takes 0.75 em and a space or a comma
+ * 0.5 em. A rarer, wider value (a third digit after a minus) widens its column rather than spilling out.
  */
 .contest-table {
+  --cell-pad-start: 8px;
+  --cell-pad-end: 8px;
+  /* "M." and "9." */
+  --place-w: 1.25em;
+  /* The points under a distance, "-156,0 pkt" at 0.8 em; "999,5 m" and "2. seria" take 4.9 em. */
+  --jump-w: 5.3em;
+  /* "263,5 pkt" */
+  --total-w: 6.25em;
   width: 100%;
   border-collapse: collapse;
   font-size: clamp(11px, 3.1vw, 16px);
@@ -1602,21 +1614,20 @@ h2 {
   font-palette: --tone-white;
 }
 
-/* Every cell keeps room on all sides, so no text touches an edge of its row or of the next jumper's panel. */
+/* Every cell keeps room, so no text touches an edge of its row or of the next jumper's panel. */
 .contest-table th,
 .contest-table td {
-  padding: 8px;
+  padding: 8px var(--cell-pad-end) 8px var(--cell-pad-start);
   text-align: left;
   vertical-align: top;
   font-weight: 400;
 }
 
-/*
- * Names break only where there is no room at all (320 px, wider text spacing); the headers of the numbers stay on
- * one line where the screen is wide and may take two below 600 px.
- */
+/* Column headers on one line, standing on the rule under them. */
 .contest-table thead th {
   padding-block: 2px 6px;
+  vertical-align: bottom;
+  white-space: nowrap;
   color: var(--muted);
   border-bottom: 2px solid var(--line);
 }
@@ -1626,15 +1637,17 @@ h2 {
   text-align: right;
 }
 
-.contest-place {
-  width: 3ch;
+.contest-table .contest-place {
+  width: calc(var(--place-w) + var(--cell-pad-start) + var(--cell-pad-end));
   white-space: nowrap;
 }
 
-@media (min-width: 600px) {
-  .contest-table thead th {
-    white-space: nowrap;
-  }
+.contest-table .contest-jump {
+  width: calc(var(--jump-w) + var(--cell-pad-start) + var(--cell-pad-end));
+}
+
+.contest-table .contest-total {
+  width: calc(var(--total-w) + var(--cell-pad-start) + var(--cell-pad-end));
 }
 
 .contest-row {
@@ -1665,7 +1678,8 @@ h2 {
   gap: 8px;
 }
 
-.contest-name-short {
+/* A text with a shorter form: the long one where there is room, the short one (shown, not read) where not. */
+.contest-short {
   display: none;
 }
 
@@ -1709,24 +1723,36 @@ h2 {
   margin-top: 4px;
 }
 
+/*
+ * A phone held upright: room before each cell's text and after the last one's, none after the others (the next
+ * cell's room keeps them apart), and the short forms.
+ */
 @media (max-width: 599px) {
-  .contest-table th,
-  .contest-table td {
-    padding: 6px;
+  .contest-table {
+    --cell-pad-start: 6px;
+    --cell-pad-end: 0px;
+    /*
+     * "999,5 m" and "2. seria" take 4.9 em, the points under them ("-156,0 p" at 0.8 em) 4.2 em; the rest keeps
+     * the headers of the two rounds apart.
+     */
+    --jump-w: 5.2em;
+    /* "263,5 p" */
+    --total-w: 4.75em;
   }
 
-  /* The numbers take only the width they need (their headers may break), so the names keep the rest. */
-  .contest-table .contest-jump,
-  .contest-table .contest-total {
-    width: 1%;
+  .contest-table tr > :last-child {
+    padding-right: 6px;
   }
 
-  .contest-table .flag-icon,
-  .contest-unit {
+  .contest-table tr > .contest-total {
+    width: calc(var(--total-w) + 12px);
+  }
+
+  .contest-table .flag-icon {
     display: none;
   }
 
-  .contest-name-full {
+  .contest-long {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1734,7 +1760,7 @@ h2 {
     clip-path: inset(50%);
   }
 
-  .contest-name-short {
+  .contest-short {
     display: inline;
   }
 }

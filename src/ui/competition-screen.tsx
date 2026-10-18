@@ -23,6 +23,28 @@ interface Props {
   focusOnEntry: boolean;
 }
 
+/** Text with a shorter form for a narrow table: the long one is read out, the short one only shown there. */
+function Fitted({ long, short }: { long: string; short: string }) {
+  return (
+    <>
+      <span className="contest-long">{long}</span>
+      <span className="contest-short" aria-hidden="true">
+        {short}
+      </span>
+    </>
+  );
+}
+
+/** Points with their unit, kept on one line. */
+function Points({ points }: { points: number }) {
+  return (
+    <>
+      {`${formatDecimal(points, 1)} `}
+      <Fitted long={T.pointsUnit} short={T.pointsUnitShort} />
+    </>
+  );
+}
+
 /**
  * A jump in its round's cell: the distance over the points, two lines. A fall is set in slanted letters and read
  * out as a word; a disqualified jump (no distance) says so in place of the distance.
@@ -42,8 +64,7 @@ function JumpCell({ score }: { score: JumpScore | null }) {
         <span className="contest-distance">{T.distance(formatDecimal(score.distanceM, 1))}</span>
       )}
       <span className="contest-points">
-        {formatDecimal(score.points, 1)}
-        <span className="contest-unit">{T.pointsUnit}</span>
+        <Points points={score.points} />
         {fell && <span className="sr-only">{`, ${T.fell}`}</span>}
       </span>
     </td>
@@ -58,16 +79,7 @@ function NameCell({ competitor, mark }: { competitor: Competitor | undefined; ma
     <th scope="row" className="contest-name">
       <span className="contest-who">
         {competitor?.kind === "cpu" && <FlagIcon country={competitorCountry(competitor)} />}
-        {short === full ? (
-          <span>{full}</span>
-        ) : (
-          <>
-            <span className="contest-name-full">{full}</span>
-            <span className="contest-name-short" aria-hidden="true">
-              {short}
-            </span>
-          </>
-        )}
+        {short === full ? <span>{full}</span> : <Fitted long={full} short={short} />}
       </span>
       {mark === "new" && <span className="contest-mark contest-mark-new">{T.newJump}</span>}
       {mark === "next" && <span className="contest-mark contest-mark-next">{T.nextJumper}</span>}
@@ -132,7 +144,7 @@ function Board({ run }: { run: CompetitionRun }) {
                 <JumpCell key={i} score={s} />
               ))}
               <td className="contest-total">
-                {row.totalPoints === null ? T.noJump : formatDecimal(row.totalPoints, 1)}
+                {row.totalPoints === null ? T.noJump : <Points points={row.totalPoints} />}
               </td>
             </tr>
           );
