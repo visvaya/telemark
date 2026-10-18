@@ -75,7 +75,6 @@ export const UI_TEXT = {
     nobody: "Włącz co najmniej jednego zawodnika.",
     boardTitle: "Konkurs",
     round: (round: number) => `${round}. seria`,
-    lastJumps: "Ostatnie skoki",
     afterRound: (round: number) => `Wyniki po ${round}. serii`,
     finalTitle: "Klasyfikacja końcowa",
     next: (name: string) => `Dalej: skacze ${name}`,
@@ -86,15 +85,28 @@ export const UI_TEXT = {
     abandonQuestion: "Przerwać konkurs? Wyniki tego konkursu przepadną.",
     abandonYes: "Tak, przerwij",
     abandonNo: "Nie, wróć",
-    columns: { place: "Miejsce", name: "Zawodnik", jump: (round: number) => `${round}. seria`, total: "Razem" },
-    /** One jump in a table: distance and points. */
-    jump: (distance: string, points: string) => `${distance} m, ${points} pkt`,
+    /** The captions of the board's table: before the first jump, during a round, after it, at the end. */
+    startList: "Lista startowa",
+    duringRound: (round: number) => `Wyniki w trakcie ${round}. serii`,
+    columns: {
+      place: "Miejsce",
+      placeShort: "M.",
+      name: "Zawodnik",
+      jump: (round: number) => `${round}. seria`,
+      total: "Razem",
+    },
+    distance: (distance: string) => `${distance} m`,
+    points: (points: string) => `${points} pkt`,
     fell: "upadek",
     place: (place: number) => `${place}.`,
     noJump: "-",
-    total: (points: string) => `${points} pkt`,
-    /** One line of the last jumps: who, how far, how many points and the place after it. */
-    jumpLine: (name: string, jump: string, place: number) => `${name}: ${jump}, miejsce ${place}.`,
+    /** Marks of a row: a jump made since the board was last shown, and the competitor who jumps next. */
+    newJump: "nowy skok",
+    nextJumper: "skacze teraz",
+    hillRecord: (distance: string) => `Rekord skoczni: ${distance} m`,
+    noHillRecord: "Rekord skoczni: -",
+    /** The next jumper in the second round, with the place after the first. */
+    nextWithPlace: (name: string, place: number) => `Dalej: skacze ${name} (${place}.)`,
     /** The bar of the jump view: the jumper and the round, in the picture's capitals. */
     hudName: (name: string, round: number) => `${name.toUpperCase()} · ${round}. SERIA`,
     skip: "Pomiń",
@@ -526,6 +538,10 @@ export const UI_TEXT = {
   hud: {
     playerName: "GRACZ 1",
     newRecord: "NOWY REKORD SKOCZNI!",
+    /** In a competition, on the gate: the points that would equal the leader, and the distance they take. */
+    neededToLead: (points: string, distance: string) => `POTRZEBNE BY PROWADZIĆ ${points} ｐｋｔ (= ${distance} ｍ)`,
+    /** In a competition, after the jump: the total so far and the place after this jump. */
+    contestTotal: (points: string, place: number) => `${points} (${place})`,
     disqualified: "DYSKWALIFIKACJA",
     /**
      * Units in small letters, signs of their own in the picture's font (full-width forms): the original's small

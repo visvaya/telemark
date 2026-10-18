@@ -241,6 +241,7 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
       <CompetitionScreen
         key={`${c.contest.run.state.round}-${c.contest.run.state.position}-${c.contest.run.log.length}`}
         run={c.contest.run}
+        record={c.save.records[c.contest.run.hill.id]}
         onNext={c.contest.next}
         onAgain={c.contest.again}
         onMenu={c.contest.abandon}
