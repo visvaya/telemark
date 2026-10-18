@@ -11,6 +11,18 @@ const PRESS_LIMIT = 40;
 /** A box of the setup by the name after the flag (a computer jumper's box is named with the country first). */
 const box = (page: Page, name: string) => page.getByRole("checkbox", { name: new RegExp(`(^| )${name}$`) });
 
+/** The row of the board's table of a competitor, by the name in its row header. */
+const rowOf = (page: Page, name: string) => page.getByRole("row", { name: new RegExp(name) });
+
+/** The board's table: the column headers, one row per competitor, and the hill record under it. */
+async function expectBoard(page: Page, rows: number): Promise<void> {
+  for (const header of ["Miejsce", "Zawodnik", "1. seria", "2. seria", "Razem"]) {
+    await expect(page.getByRole("columnheader", { name: header, exact: true })).toBeVisible();
+  }
+  await expect(page.locator(".contest-row")).toHaveCount(rows);
+  await expect(page.getByText(/^Rekord skoczni: /)).toBeVisible();
+}
+
 /** Sets the boxes of the setup: which players and which computer jumpers take part, and watching. */
 async function setUp(page: Page, traits: DeviceTraits, on: Readonly<Record<string, boolean>>): Promise<void> {
   for (const [name, checked] of Object.entries(on)) {
@@ -66,6 +78,9 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await openMenu(page);
   await openCompetitionSetup(page, traits);
   await press(button(page, TEXT.contestStart), traits);
+  await expectBoard(page, 5);
+  // Everybody is listed from the start; the next jumper's row says so.
+  await expect(rowOf(page, "Gracz 1")).toContainText("skacze teraz");
   for (let jumps = 0; jumps < 2; jumps++) {
     // The last after the first round jumps first in the second, straight from the start of the round.
     const next = button(page, /^Dalej: skacze Gracz 1/);
@@ -74,16 +89,18 @@ test("a competition of one player and computer jumpers not watched runs to its r
     await expect(jumpCanvas(page)).toBeVisible();
     await playJump(page, traits);
     await goOnAfterJump(page, traits);
-    await expect(page.getByText(/^Gracz 1: /)).toBeVisible();
+    // The jump just made is marked in its row.
+    await expect(rowOf(page, "Gracz 1")).toContainText("nowy skok");
     if (jumps === 0) {
       // The rest of the first round is computed at once; its results come before the second round.
-      await expect(page.getByRole("heading", { name: "Wyniki po 1. serii" })).toBeVisible();
-      await expect(page.locator(".contest-row")).toHaveCount(5);
+      await expect(page.getByRole("table", { name: "Wyniki po 1. serii" })).toBeVisible();
+      await expectBoard(page, 5);
       await press(button(page, NEXT_ROUND), traits);
     }
   }
   await expect(page.getByRole("heading", { name: FINAL, level: 1 })).toBeVisible();
-  await expect(page.locator(".contest-row")).toHaveCount(5);
+  await expect(page.getByRole("table", { name: FINAL })).toBeVisible();
+  await expectBoard(page, 5);
   await expect(page.locator(".contest-row").first()).toContainText("1.");
   await press(button(page, "Jeszcze raz"), traits);
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();
@@ -103,6 +120,9 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
     "Oglądaj skoki rywali": true,
   });
   await press(button(page, TEXT.contestStart), traits);
+  // Before the first jump the table is the start list.
+  await expect(page.getByRole("table", { name: "Lista startowa" })).toBeVisible();
+  await expectBoard(page, 1);
   for (let round = 1; round <= 2; round++) {
     // Alone in the competition, the jumper's second jump follows the start of the round at once.
     if (round === 1) await press(button(page, /^Dalej: skacze Aatu Lehtovaara/), traits);
@@ -111,7 +131,7 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
     await expect(page.locator("p[aria-live]")).not.toHaveText("", { timeout: 10_000 });
     if (traits.desktop && round === 2) await page.keyboard.press("Enter");
     else await press(button(page, SKIP), traits);
-    await expect(page.getByText(/^Aatu Lehtovaara: /)).toBeVisible();
+    await expect(rowOf(page, "Aatu Lehtovaara")).toContainText("nowy skok");
     if (round === 1) await press(button(page, NEXT_ROUND), traits);
   }
   await expect(page.getByRole("heading", { name: FINAL, level: 1 })).toBeVisible();
