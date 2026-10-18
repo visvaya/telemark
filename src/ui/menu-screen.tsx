@@ -39,8 +39,8 @@ interface Props {
 
 /** The choices at the top of the menu, in order, with what each opens. */
 const FIRST_CHOICES = [
-  ["hills", UI_TEXT.menu.training],
   ["contest-setup", UI_TEXT.menu.competition],
+  ["hills", UI_TEXT.menu.training],
   ["replays", UI_TEXT.menu.replays],
   ["outfit", UI_TEXT.menu.outfit],
   ["settings", UI_TEXT.menu.settings],
