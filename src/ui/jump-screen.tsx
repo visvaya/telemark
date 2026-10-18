@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import type { ContestJumpHud } from "../game/competition-board";
 import type { HillChoice } from "../game/hill-choice";
 import { pickScenery } from "../game/scenery";
 import { newSeed } from "../game/training-session";
@@ -65,6 +66,8 @@ export interface ContestJump {
   onNext: () => boolean;
   /** Leaves the competition, after the player said yes. */
   onAbandon: () => void;
+  /** What the picture shows of the competition: the points needed to lead, the total and the place after it. */
+  hud: ContestJumpHud;
 }
 
 /** The competition's way on, which acts once however many presses or keys ask for it. */
@@ -137,7 +140,12 @@ function useContestJump(props: Props) {
         <AbandonQuestion onAnswer={(yes) => (yes ? contest.onAbandon() : setAbandonAsked(false))} />
       ) : null,
   };
-  const live = { contestNext, jumperName: contest?.hudName ?? null, contestCpu: cpu !== null };
+  const live = {
+    contestNext,
+    jumperName: contest?.hudName ?? null,
+    contestCpu: cpu !== null,
+    contestHud: contest?.hud ?? null,
+  };
   return { settings, contestNext, cpu, menuProps, live };
 }
 

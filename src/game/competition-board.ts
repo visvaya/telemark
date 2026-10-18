@@ -97,7 +97,8 @@ export function contestJumpHud(state: CompetitionState, competitor: number, kPoi
     neededPoints,
     neededDistanceM: neededPoints === null ? null : neededDistanceM(neededPoints, kPointM),
     totalBeforePoints: totalTenthsOf(state, competitor) / 10,
-    firstDistanceM: first === null ? null : first.distanceM,
+    // In half metres, as the bar writes the distance of the jump being made.
+    firstDistanceM: first === null ? null : Math.trunc(first.distanceM * 2) / 2,
     otherTotalsPoints: standings(state)
       .filter((r) => r.competitor !== competitor)
       .map((r) => r.totalPoints),

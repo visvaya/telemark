@@ -1,3 +1,4 @@
+import { resultAfterJump } from "../game/competition-board";
 import { PHASE } from "../sim/jump-logic";
 import type { JumpSimState } from "../sim/jump-sim";
 import type { FrameBuffer } from "./frame-buffer";
@@ -250,6 +251,16 @@ export function prompt(m: JumpViewModel, nextJumpAllowed: boolean): readonly str
   return [];
 }
 
+/** Spaces between the two distances of the second round in the bar. */
+const BAR_DISTANCE_GAP = "  ";
+
+/** The bar's right field after the notes: the jump's points, or in a competition the total and the place. */
+function barRightText(m: JumpViewModel, points: number): string {
+  if (m.contest === undefined) return UI_TEXT.hud.points(formatDecimal(points, 1));
+  const after = resultAfterJump(m.contest, points);
+  return UI_TEXT.hud.contestTotal(formatDecimal(after.totalPoints, 1), after.place);
+}
+
 /** Bottom bar: player, then the phase and speed; after the jump the distance (half metres) and points, as in the original. */
 export function drawBar(fb: FrameBuffer, m: JumpViewModel, top: number, notesShown: boolean): void {
   const s = m.state;
@@ -265,16 +276,22 @@ export function drawBar(fb: FrameBuffer, m: JumpViewModel, top: number, notesSho
     return;
   }
   if (L.finished) {
+    // In a competition the right field holds the total and the place after this jump, as the original's does.
+    const right = notesShown ? barRightText(m, L.points) : "";
+    // The original writes it from column 248 of its 320; here it ends at the right edge where the speed did,
+    // so on a wider picture it does not hang in the middle of the bar.
+    const rightAt = fb.width - BAR_TEXT_SIDE_PX - textWidth(right);
     const distance = formatDecimal(L.distanceHalfM, 1);
     const distanceAt = middle + fieldInsetPx(distance, BAR_DISTANCE_CHARS);
-    drawText(fb, distanceAt, top + BAR_TEXT_TOP_PX, UI_TEXT.hud.distance(distance), { ramp: INK.bar });
-    if (notesShown) {
-      const points = UI_TEXT.hud.points(formatDecimal(L.points, 1));
-      // The original writes them from column 248 of its 320; here they end at the right edge where the speed did,
-      // so on a wider picture they do not hang in the middle of the bar.
-      const pointsAt = fb.width - BAR_TEXT_SIDE_PX - textWidth(points);
-      drawText(fb, pointsAt, top + BAR_TEXT_TOP_PX, points, { ramp: INK.bar });
+    const first = m.contest?.firstDistanceM ?? null;
+    // In the second round both distances, the first one before the field of this one, where there is room.
+    const firstText = first === null ? "" : `${UI_TEXT.hud.distance(formatDecimal(first, 1))}${BAR_DISTANCE_GAP}`;
+    const firstAt = distanceAt - textWidth(firstText);
+    if (firstText !== "" && firstAt > nameEnd + BAR_TEXT_SIDE_PX) {
+      drawText(fb, firstAt, top + BAR_TEXT_TOP_PX, firstText, { ramp: INK.bar });
     }
+    drawText(fb, distanceAt, top + BAR_TEXT_TOP_PX, UI_TEXT.hud.distance(distance), { ramp: INK.bar });
+    if (right !== "") drawText(fb, rightAt, top + BAR_TEXT_TOP_PX, right, { ramp: INK.bar });
     return;
   }
   drawText(fb, nameEnd + 10, top + BAR_TEXT_TOP_PX, phaseLabel(s), {

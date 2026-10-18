@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import type { SoundEngine } from "../audio/sound-engine";
+import type { ContestJumpHud } from "../game/competition-board";
 import { vibrate } from "../game/haptics";
 import type { HillChoice } from "../game/hill-choice";
 import { leftTouchLeansOnly, rightTouchEndsPreparation, type PlayerInput } from "../game/player-input";
@@ -50,6 +51,8 @@ export interface LiveProps {
   jumperName: string | null;
   /** Whether the replay played is a computer jumper's competition jump, shown as a jump rather than a replay. */
   contestCpu: boolean;
+  /** What the picture shows of the competition in a competition jump; null in training. */
+  contestHud: ContestJumpHud | null;
 }
 
 /** What the runs need from the screen. */

@@ -23,8 +23,11 @@ const RECORD_EXTRA_M = 0.1;
 const NO_RECORD_M = 10000;
 const MARK_SPACING_M = 5;
 
-/** Colours of the lines on the landing hill (palette indices): marks every 5 m, the K point, the hill record. */
-export const LINE_COLOUR = { mark: 0x54, kPoint: 0x4b, record: 0x6b } as const;
+/**
+ * Colours of the lines on the landing hill (palette indices): marks every 5 m, the K point, the hill record, and
+ * this project's line of the distance that would lead a competition, in the yellow of the original's bar texts.
+ */
+export const LINE_COLOUR = { mark: 0x54, kPoint: 0x4b, record: 0x6b, target: 0x79 } as const;
 
 /** What a hill shows on its landing hill and fences (from its definition in the original). */
 export interface HillMarks {
@@ -43,8 +46,11 @@ export interface DistanceLine {
   colour: number;
 }
 
-/** The lines the original draws across the landing hill: the marks, then the K point, then the hill record. */
-export function distanceLines(marks: HillMarks, recordM: number): DistanceLine[] {
+/**
+ * The lines the original draws across the landing hill: the marks, then the K point, then the hill record; in a
+ * competition, last and so over the others, the distance that would lead (`targetM`), measured as the K point is.
+ */
+export function distanceLines(marks: HillMarks, recordM: number, targetM?: number): DistanceLine[] {
   const lines: DistanceLine[] = [];
   for (let k = 0; k < marks.markCount; k++) {
     lines.push({ distanceM: marks.firstMarkM + MARK_SPACING_M * k + MARK_EXTRA_M, colour: LINE_COLOUR.mark });
@@ -52,6 +58,7 @@ export function distanceLines(marks: HillMarks, recordM: number): DistanceLine[]
   lines.push({ distanceM: marks.kPointM + MARK_EXTRA_M, colour: LINE_COLOUR.kPoint });
   const record = recordM > 0 ? recordM : NO_RECORD_M;
   lines.push({ distanceM: record + RECORD_EXTRA_M + MARK_EXTRA_M, colour: LINE_COLOUR.record });
+  if (targetM !== undefined) lines.push({ distanceM: targetM + MARK_EXTRA_M, colour: LINE_COLOUR.target });
   return lines;
 }
 

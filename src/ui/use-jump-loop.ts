@@ -75,6 +75,8 @@ function drawFrame(picture: JumpPicture, hill: HillChoice, live: LiveProps, v: F
     windDriftM: v.jump.windDriftM,
     ...(best === undefined ? {} : { recordM: best.distanceM }),
     ...(v.ghost === null ? {} : { ghost: v.ghost }),
+    // The competition's values belong to the jump being made, not to a replay of it.
+    ...(live.contestHud === null || (v.replay !== null && !live.contestCpu) ? {} : { contest: live.contestHud }),
     // A computer jumper's competition jump plays as a replay, but the picture shows it as a jump.
     ...(v.replay === null || live.contestCpu
       ? {}
