@@ -12,8 +12,8 @@ test("the menu and the hill list are operated with the keyboard alone", async ({
   // The check for a new release, under the version at the top, comes first.
   expect(await tabThrough(page, 10)).toEqual([
     UPDATE_CHECK.button,
-    TEXT.training,
     TEXT.competition,
+    TEXT.training,
     TEXT.replays,
     TEXT.outfit,
     TEXT.settings,
@@ -23,8 +23,8 @@ test("the menu and the hill list are operated with the keyboard alone", async ({
     "Wczytaj pliki gry",
   ]);
 
-  // Back to the first button; Enter opens the hill list and the focus moves to its heading.
-  for (let i = 0; i < 8; i++) await page.keyboard.press("Shift+Tab");
+  // Back to training, after the competition; Enter opens the hill list and the focus moves to its heading.
+  for (let i = 0; i < 7; i++) await page.keyboard.press("Shift+Tab");
   await expect(button(page, TEXT.training)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: TEXT.hillListTitle })).toBeFocused();
@@ -75,8 +75,8 @@ test("the outfit screen is operated with the keyboard alone", async ({ page }) =
 
 test("the jump screen is operated with the keyboard alone: Escape opens its menu and closes it", async ({ page }) => {
   await openMenu(page);
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
+  for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+  await expect(button(page, TEXT.training)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: TEXT.hillListTitle })).toBeFocused();
   await page.keyboard.press("Tab");
