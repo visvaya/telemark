@@ -1,7 +1,4 @@
-import { standings, type CompetitionState, type JumpScore } from "./competition";
-
-/** Points kept to a tenth, as the classification keeps them, so sums compare as they are shown. */
-const tenths = (points: number): number => Math.round(points * 10);
+import { standings, tenths, type CompetitionState, type JumpScore } from "./competition";
 
 /** One row of the board: a place once the competitor has jumped, null before. */
 export interface BoardRow {
@@ -97,8 +94,7 @@ export function contestJumpHud(state: CompetitionState, competitor: number, kPoi
     neededPoints,
     neededDistanceM: neededPoints === null ? null : neededDistanceM(neededPoints, kPointM),
     totalBeforePoints: totalTenthsOf(state, competitor) / 10,
-    // In half metres, as the bar writes the distance of the jump being made.
-    firstDistanceM: first === null ? null : Math.trunc(first.distanceM * 2) / 2,
+    firstDistanceM: first === null ? null : first.distanceM,
     otherTotalsPoints: standings(state)
       .filter((r) => r.competitor !== competitor)
       .map((r) => r.totalPoints),
