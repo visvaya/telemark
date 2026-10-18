@@ -95,7 +95,7 @@ function Board({ run }: { run: CompetitionRun }) {
   const fresh = freshCompetitors(rows, new Set(run.log.map((j) => j.competitor)));
   return (
     <table className="contest-table">
-      <caption className="hill-section-title">{captionOf(run)}</caption>
+      <caption>{captionOf(run)}</caption>
       <thead>
         <tr>
           <th scope="col" className="contest-place">

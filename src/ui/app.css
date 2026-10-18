@@ -1591,14 +1591,21 @@ h2 {
   line-height: 1.45;
 }
 
+/* What the table is, as the screens' section labels look, so it does not run into the column headers under it. */
 .contest-table caption {
+  margin-bottom: 12px;
   text-align: left;
-  margin-bottom: 8px;
+  font-family: "Telemark Screen", "Silkscreen", "Telemark Polish", ui-monospace, monospace;
+  font-size: var(--screen-item-px);
+  line-height: 1.5;
+  color: var(--tone-white);
+  font-palette: --tone-white;
 }
 
+/* Every cell keeps room on all sides, so no text touches an edge of its row or of the next jumper's panel. */
 .contest-table th,
 .contest-table td {
-  padding: 8px 6px;
+  padding: 8px;
   text-align: left;
   vertical-align: top;
   font-weight: 400;
@@ -1697,7 +1704,7 @@ h2 {
 @media (max-width: 599px) {
   .contest-table th,
   .contest-table td {
-    padding-inline: 3px;
+    padding: 6px;
   }
 
   .contest-table .flag-icon,
