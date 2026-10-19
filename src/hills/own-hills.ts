@@ -70,7 +70,7 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       terrain: { seed: 15838, amplitudeM: 76, baseOverOutrunM: 3 },
       trees: { firstCount: 55, secondCount: 13, fromXM: 31.56, toXM: 157.5, seed: 12850, hidden: [] },
       supports: [
-        { fromXM: 2.5, toXM: 5.8, colour: 12, frontColour: 25 },
+        { fromXM: 3.72, toXM: 5.8, colour: 12, frontColour: 25 },
         { fromXM: 12.45, toXM: 13.45, colour: 12, frontColour: 17 },
         { fromXM: 22.85, toXM: 31.46, colour: 12, frontColour: 25 },
       ],
@@ -145,7 +145,7 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       terrain: { seed: 31676, amplitudeM: 47, baseOverOutrunM: 3 },
       trees: { firstCount: 47, secondCount: 50, fromXM: 47.09, toXM: 193.12, seed: 25700, hidden: [] },
       supports: [
-        { fromXM: 5, toXM: 6.3, colour: 13, frontColour: 25 },
+        { fromXM: 5.5, toXM: 6.3, colour: 13, frontColour: 25 },
         { fromXM: 20.72, toXM: 21.52, colour: 13, frontColour: 17 },
         { fromXM: 39.85, toXM: 46.59, colour: 13, frontColour: 25 },
       ],
@@ -220,7 +220,7 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       terrain: { seed: 47514, amplitudeM: 31, baseOverOutrunM: 3 },
       trees: { firstCount: 85, secondCount: 31, fromXM: 39.94, toXM: 195.32, seed: 38550, hidden: [] },
       supports: [
-        { fromXM: 1, toXM: 3.3, colour: 10, frontColour: 25 },
+        { fromXM: 1.82, toXM: 3.3, colour: 10, frontColour: 25 },
         { fromXM: 36.51, toXM: 39.74, colour: 10, frontColour: 25 },
       ],
       inrun: { platformStartXM: 1.82, nearWallUpPx: 10, nearWallDownPx: 18, wallColour: 132, gateColour: 163 },
@@ -257,7 +257,7 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       terrain: { seed: 55433, amplitudeM: 67, baseOverOutrunM: 3 },
       trees: { firstCount: 40, secondCount: 31, fromXM: 59.82, toXM: 231.16, seed: 12207, hidden: [] },
       supports: [
-        { fromXM: 9, toXM: 12.3, colour: 13, frontColour: 25 },
+        { fromXM: 10.68, toXM: 12.3, colour: 13, frontColour: 25 },
         { fromXM: 17.01, toXM: 24.12, colour: 13, frontColour: 25 },
         { fromXM: 29.43, toXM: 33.02, colour: 13, frontColour: 25 },
         { fromXM: 42.71, toXM: 49.82, colour: 13, frontColour: 25 },
@@ -376,7 +376,7 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       terrain: { seed: 13654, amplitudeM: 71, baseOverOutrunM: 3 },
       trees: { firstCount: 63, secondCount: 49, fromXM: 70.3, toXM: 267.17, seed: 64250, hidden: [] },
       supports: [
-        { fromXM: 13.5, toXM: 15.8, colour: 11, frontColour: 25 },
+        { fromXM: 15, toXM: 15.8, colour: 11, frontColour: 25 },
         { fromXM: 26.25, toXM: 27.25, colour: 11, frontColour: 17 },
         { fromXM: 39.57, toXM: 40.77, colour: 11, frontColour: 17 },
         { fromXM: 50.33, toXM: 57.98, colour: 11, frontColour: 25 },
