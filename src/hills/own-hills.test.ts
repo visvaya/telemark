@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { geometryProblems } from "./hill-geometry";
+import { lookProblems } from "./hill-look-rules";
 import { OWN_HILL_SPECS } from "./own-hills";
 import { parseHillSpec } from "./parse-hill-spec";
 
@@ -11,5 +12,9 @@ describe.each(OWN_HILL_SPECS.map((spec) => [spec.id, spec] as const))("own hill 
 
   it("passes the geometry rules", () => {
     expect(geometryProblems(spec)).toEqual([]);
+  });
+
+  it("passes the look rules", () => {
+    expect(lookProblems(spec)).toEqual([]);
   });
 });

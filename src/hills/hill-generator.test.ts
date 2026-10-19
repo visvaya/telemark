@@ -97,7 +97,7 @@ describe("hill generator", () => {
     expect(caught(() => generateHill({ ...first, gateXM: 40 })).problems[0]?.rule).toBe("generator.character");
   });
 
-  it("rests the end of every inrun on a support and keeps the deck behind the gate to its share of K", () => {
+  it("rests the end of every inrun on a support, keeps every support under the inrun and the deck to its share", () => {
     const [character] = GENERATED_HILL_CHARACTERS;
     if (character === undefined) throw new Error("no character");
     const inrun = {
@@ -123,6 +123,8 @@ describe("hill generator", () => {
           expect(look.supports[i]?.fromXM ?? 0).toBeGreaterThan(look.supports[i - 1]?.toXM ?? Infinity);
         }
         expect(look.supports.length).toBeLessThanOrEqual(shape === short ? 2 : 5);
+        // Every support stands under the inrun: none reaches behind the start platform.
+        expect(look.supports[0]?.fromXM).toBeGreaterThanOrEqual(look.inrun.platformStartXM);
         const deckM = shape.startXM - look.inrun.platformStartXM;
         expect(deckM / character.kPointM).toBeGreaterThanOrEqual(0.035 - 1e-9);
         expect(deckM / character.kPointM).toBeLessThanOrEqual(0.09 + 0.01);

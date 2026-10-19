@@ -4,6 +4,7 @@ import { BorlandRandom } from "../sim/borland-random";
 import { detCos, detExp, detSin } from "../sim/deterministic-math";
 import type { InrunSpec, LandingSpec } from "../sim/hill-setup";
 import { geometryProblems, hillGeometry, kFromSteepestMaxM, type HillGeometry } from "./hill-geometry";
+import { lookProblems, supportsUnderInrun } from "./hill-look-rules";
 import { hillDistance, LIKENESS } from "./hill-likeness";
 import { oracleJump } from "./hill-oracle";
 import { PLAY_RULES, playMeasures, playProblems, windClassSeeds } from "./hill-play";
@@ -551,7 +552,7 @@ export function lookOf(c: HillCharacter, inrun: InrunSpec, lowestXM: number, see
   const rng = new BorlandRandom((seed * LOOK_SEED_MULTIPLIERS.shape) % SEED_RANGE);
   const supports = supportsOf(inrun, rng);
   const nearWallDownPx = L.nearWallDownPx[rng.below(L.nearWallDownPx.length)] ?? L.nearWallDownPx[0];
-  return {
+  const look: HillLook = {
     skyRgb6: THEME_SKY_RGB6[c.look],
     terrain: {
       seed: (seed * LOOK_SEED_MULTIPLIERS.terrain) % SEED_RANGE,
@@ -581,6 +582,8 @@ export function lookOf(c: HillCharacter, inrun: InrunSpec, lowestXM: number, see
       fenceStartM: drawFrom(rng, L.fenceStartM),
     },
   };
+  // The support under the platform is drawn before the platform's length: cut it back to where the platform starts.
+  return { ...look, supports: supportsUnderInrun(look.supports, look.inrun.platformStartXM) };
 }
 
 /** The calmest seed of the play checks' wind scan: the wind the generator's best jump is measured in. */
@@ -724,7 +727,8 @@ export function checkGeneratedHill(spec: HillSpec, options: GeneratorOptions = {
   const parsed = parseHillSpec(spec);
   if (!parsed.ok) throw new HillGenerationError(`generated hill ${spec.id} is not valid hill data`, parsed.problems);
   const geometry = geometryProblems(spec);
-  const admission = geometry.filter((p) => p.level === "admission");
+  const rules = [...geometry, ...lookProblems(spec)];
+  const admission = rules.filter((p) => p.level === "admission");
   if (admission.length > 0) throw new HillGenerationError(`generated hill ${spec.id} is not admitted`, admission);
   const closest = closestOf(spec, [...(options.catalog ?? OWN_HILL_SPECS), ...(options.others ?? [])]);
   if (closest.distance < LIKENESS.tooAlike) {
@@ -738,7 +742,7 @@ export function checkGeneratedHill(spec: HillSpec, options: GeneratorOptions = {
     if (play.length > 0) throw new HillGenerationError(`generated hill ${spec.id} plays badly`, play);
   }
   return {
-    styleProblems: geometry.filter((p) => p.level === "style"),
+    styleProblems: rules.filter((p) => p.level === "style"),
     playJudged,
     closestId: closest.id,
     closestDistance: closest.distance,

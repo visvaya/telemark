@@ -131,6 +131,26 @@ wymagają braku problemów obu poziomów. Test lokalny z plikami gry (`DSJ2_GAME
 oryginału przechodzi każdą regułę dopuszczenia (na każdej da się skakać);
 liczbę skoczni oryginału spełniających każdą regułę pokazuje tylko wtedy, gdy któraś reguła dopuszczenia zawiedzie.
 
+## Reguły wyglądu
+
+`lookProblems` (`src/hills/hill-look-rules.ts`) sprawdza wygląd skoczni; reguły mają te same dwa poziomy co reguły
+geometrii, a granice są w `HILL_LOOK_RULES`:
+
+- dopuszczenie:
+  - `supports-under-inrun`: każda podpora najazdu (`look.supports`) stoi pod najazdem, od początku platformy
+    startowej (`look.inrun.platformStartXM`) do progu (`profile.inrun.takeoffXM`);
+  - `supports-in-order`: podpory idą po kolei wzdłuż najazdu i nie nachodzą na siebie;
+  - `inrun-end-supported`: ostatnia podpora kończy się najwyżej 3,5 m przed progiem, tak jak w każdej skoczni
+    oryginału (koniec najazdu nie wisi w powietrzu);
+  - `deck-share`: pomost za belką (część płaska i platforma) zajmuje 0,022 do 0,141 K, jak w oryginale;
+- styl:
+  - `inrun-end-close`: ostatnia podpora najwyżej 1 m przed progiem, jak zwykle w oryginale;
+  - `deck-share-short`: pomost najwyżej 0,10 K (0,147 K wyglądało na za długi).
+
+Testy skoczni własnych wymagają braku problemów obu poziomów. Generator odrzuca skocznię łamiącą regułę
+dopuszczenia (wyglądu albo geometrii), zwraca problemy stylu, a pierwszą podporę przycina do początku platformy.
+Skoczni oryginału reguły nie dotyczą: ich wygląd pochodzi z pliku gry.
+
 Zakresy reguł stylu to założenia projektu, a nie granice sprawdzone symulacją; to, co mają zapewniać, sprawdzają
 kontrole oparte na symulacji skoków (następna sekcja).
 
