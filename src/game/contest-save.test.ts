@@ -129,6 +129,7 @@ describe.runIf(first && second)("a kept competition", () => {
     ["a slot of 8", changed(["cup", "entrants", 0, "slot"], 8)],
     ["a form of NaN as a string", changed(["cup", "entrants", 2, "record", "form1"], "NaN")],
     ["a form beyond any drawn", changed(["cup", "entrants", 2, "record", "form1"], 1e308)],
+    ["a talent far beyond the widest drawn", changed(["cup", "entrants", 2, "record", "talent2"], 5)],
     ["a level of 5 in a record", changed(["cup", "entrants", 2, "record", "level"], 5)],
     [
       "17 entrants",

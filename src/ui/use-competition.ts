@@ -96,6 +96,9 @@ export function useCompetition(show: Show, ownOutfit: Outfit, keep: (contest: Sa
       return true;
     };
     setRun(current);
+    // The state before this jump, with the computer jumps since the last board: leaving during the jump comes back
+    // to it, so those jumps are not drawn again.
+    keep(keptOf(current, "board"));
     setJump({
       key: `${current.cup.index}-${state.round}-${state.position}`,
       contest: {

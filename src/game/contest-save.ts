@@ -38,8 +38,11 @@ const CONTEST_LIMITS = {
   MAX_COMPETITIONS: 74,
   MAX_HILL_ID_CHARS: 64,
   MAX_CHOSEN_HILLS: 64,
-  /** CPU forms and talents are a few units either way; anything far beyond is not one the game drew. */
-  MAX_CPU_TRAIT: 100,
+  /**
+   * CPU talents are drawn within 1.9 either way (spread 4: 4 x 0.3 + 1 x 0.7) and forms within 1 (`randomCentered`);
+   * twice the widest is room enough, and anything beyond is not one the game drew.
+   */
+  MAX_CPU_TRAIT: 4,
   MAX_CPU_LEVEL: 4,
   MAX_DISTANCE_M: 1000,
   MAX_ABS_POINTS: 1000,
