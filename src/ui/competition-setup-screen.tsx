@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   CPU_LEVEL_SETTINGS,
   DISQUALIFICATION_RULES,
@@ -24,6 +24,35 @@ interface Props {
   onStart: (hills: HillChoice[]) => void;
   onBack: () => void;
   focusOnEntry: boolean;
+  /** The line that tells the competition kept to be resumed; null when none is kept. */
+  kept: string | null;
+  /** Reads a chosen competition file: why it cannot go on, or the way to go on with it. */
+  onReadFile: (file: File) => Promise<ChosenContest>;
+}
+
+/** A chosen competition file: refused with the reason, or ready to go on with. */
+export type ChosenContest = { kind: "refused"; message: string } | { kind: "ready"; go: () => void };
+
+/**
+ * Before a new competition replaces the kept one: the question, with the focus on its safe answer; answered no, the
+ * focus goes back to the start button.
+ */
+function ReplaceQuestion({ kept, onYes, onNo }: { kept: string; onYes: () => void; onNo: () => void }) {
+  const noRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => noRef.current?.focus(), []);
+  return (
+    <div className="tilt-question" role="group" aria-labelledby="replace-question-text">
+      <p className="note" id="replace-question-text">
+        {T.replaceQuestion(kept)}
+      </p>
+      <button type="button" className="pixel-button" onClick={onYes}>
+        {T.replaceYes}
+      </button>
+      <button type="button" className="pixel-button" ref={noRef} onClick={onNo}>
+        {T.replaceNo}
+      </button>
+    </div>
+  );
 }
 
 /** The ticked hills' ids in the order of the list; none ticked yet shows the first hill ticked. */
@@ -154,10 +183,101 @@ function HillsChoice({
   );
 }
 
+/** The computer jumpers, each with its box and level, and whether their jumps are watched. */
+function RivalsChoice({
+  settings,
+  onChange,
+}: {
+  settings: CompetitionSettings;
+  onChange: (settings: CompetitionSettings) => void;
+}) {
+  return (
+    <section className="settings-group" aria-labelledby="contest-cpus">
+      <h2 className="hill-section-title" id="contest-cpus">
+        {T.cpus}
+      </h2>
+      <ul className="contest-rivals">
+        {settings.cpus.map((cpu, i) => {
+          const rival = RIVALS[i];
+          if (!rival) return null;
+          return (
+            <li key={rival.name} className={cpu.on ? "contest-rival" : "contest-rival contest-rival-off"}>
+              <Check
+                label={
+                  <>
+                    <FlagIcon country={rival.country} /> {rival.name}
+                  </>
+                }
+                checked={cpu.on}
+                onChange={(on) => onChange({ ...settings, cpus: replaced(settings.cpus, i, { ...cpu, on }) })}
+              />
+              <select
+                className="pixel-select"
+                aria-label={T.levelLabel(rival.name)}
+                value={cpu.level}
+                onChange={(e) => {
+                  const level = CPU_LEVEL_SETTINGS.find((l) => String(l) === e.currentTarget.value);
+                  if (level !== undefined)
+                    onChange({ ...settings, cpus: replaced(settings.cpus, i, { ...cpu, level }) });
+                }}
+              >
+                {CPU_LEVEL_SETTINGS.map((level: CpuLevelSetting) => (
+                  <option key={level} value={level}>
+                    {T.levels[level]}
+                  </option>
+                ))}
+              </select>
+            </li>
+          );
+        })}
+      </ul>
+      <Check
+        label={T.watchCpu}
+        checked={settings.watchCpu}
+        onChange={(watchCpu) => onChange({ ...settings, watchCpu })}
+      />
+    </section>
+  );
+}
+
+/**
+ * What starts a competition while another is kept: the question first. Also reads a chosen competition file, which
+ * goes on as a kept one does once the question is answered.
+ */
+function useReplacing(kept: string | null, onReadFile: (file: File) => Promise<ChosenContest>) {
+  /** What waits for the answer to the question before the kept competition is replaced. */
+  const [pending, setPending] = useState<(() => void) | null>(null);
+  const [fileMessage, setFileMessage] = useState("");
+  /** Goes on at once without a kept competition, else after the question. */
+  const replacing = (go: () => void) => (kept === null ? go() : setPending(() => go));
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    const chosen = await onReadFile(file);
+    // The same file may be chosen again after a change.
+    input.value = "";
+    setFileMessage(chosen.kind === "refused" ? chosen.message : "");
+    if (chosen.kind === "ready") replacing(chosen.go);
+  };
+  return { pending, setPending, replacing, fileMessage, onFile };
+}
+
 /** The setup of a competition: the hill, who takes part, and whether the computer jumpers are watched. */
-export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onBack, focusOnEntry }: Props) {
+export function CompetitionSetupScreen({
+  hills,
+  settings,
+  onChange,
+  onStart,
+  onBack,
+  focusOnEntry,
+  kept,
+  onReadFile,
+}: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEntryFocus(headingRef, focusOnEntry);
+  const startRef = useRef<HTMLButtonElement>(null);
+  const { pending, setPending, replacing, fileMessage, onFile } = useReplacing(kept, onReadFile);
   const ticked = tickedIds(hills, settings.hillIds);
   const schedule = cupSchedule(
     ticked,
@@ -168,7 +288,7 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
   const nobody = participantCount(settings) === 0;
   const noHill = scheduled.length === 0;
   const ready = !nobody && !noHill;
-  const start = ready ? () => onStart(scheduled) : undefined;
+  const start = ready ? () => replacing(() => onStart(scheduled)) : undefined;
   return (
     <main className="screen">
       <h1 className="screen-title" tabIndex={-1} ref={headingRef}>
@@ -192,51 +312,7 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
           ))}
         </div>
       </section>
-      <section className="settings-group" aria-labelledby="contest-cpus">
-        <h2 className="hill-section-title" id="contest-cpus">
-          {T.cpus}
-        </h2>
-        <ul className="contest-rivals">
-          {settings.cpus.map((cpu, i) => {
-            const rival = RIVALS[i];
-            if (!rival) return null;
-            return (
-              <li key={rival.name} className={cpu.on ? "contest-rival" : "contest-rival contest-rival-off"}>
-                <Check
-                  label={
-                    <>
-                      <FlagIcon country={rival.country} /> {rival.name}
-                    </>
-                  }
-                  checked={cpu.on}
-                  onChange={(on) => onChange({ ...settings, cpus: replaced(settings.cpus, i, { ...cpu, on }) })}
-                />
-                <select
-                  className="pixel-select"
-                  aria-label={T.levelLabel(rival.name)}
-                  value={cpu.level}
-                  onChange={(e) => {
-                    const level = CPU_LEVEL_SETTINGS.find((l) => String(l) === e.currentTarget.value);
-                    if (level !== undefined)
-                      onChange({ ...settings, cpus: replaced(settings.cpus, i, { ...cpu, level }) });
-                  }}
-                >
-                  {CPU_LEVEL_SETTINGS.map((level: CpuLevelSetting) => (
-                    <option key={level} value={level}>
-                      {T.levels[level]}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            );
-          })}
-        </ul>
-        <Check
-          label={T.watchCpu}
-          checked={settings.watchCpu}
-          onChange={(watchCpu) => onChange({ ...settings, watchCpu })}
-        />
-      </section>
+      <RivalsChoice settings={settings} onChange={onChange} />
       <DisqualificationChoice
         value={settings.disqualification}
         onChange={(disqualification) => onChange({ ...settings, disqualification })}
@@ -248,9 +324,23 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
           aria-disabled={!ready}
           aria-describedby={noHill ? undefined : "contest-summary"}
           onClick={start}
+          ref={startRef}
         >
           {T.start}
         </button>
+        {pending !== null && kept !== null && (
+          <ReplaceQuestion
+            kept={kept}
+            onYes={() => {
+              setPending(null);
+              pending();
+            }}
+            onNo={() => {
+              setPending(null);
+              startRef.current?.focus();
+            }}
+          />
+        )}
         {!noHill && (
           <p className="note" id="contest-summary">
             {T.summary(schedule.length)}
@@ -258,6 +348,13 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
         )}
         {nobody && <p className="note error">{T.nobody}</p>}
         {noHill && <p className="note error">{T.noHill}</p>}
+        <label className="pixel-button file-label">
+          {T.loadFromFile}
+          <input type="file" accept="application/json,.json" onChange={(e) => void onFile(e)} />
+        </label>
+        <p className="note error" role="status">
+          {fileMessage}
+        </p>
         <button type="button" className="pixel-button" onClick={onBack}>
           {UI_TEXT.back}
         </button>

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { currentJumper, type CompetitionSettings, type JumpScore } from "../game/competition";
 import { contestJumpHud } from "../game/competition-board";
 import { cpuCompetitionJump, type CpuJumpOutcome } from "../game/competition-jump";
+import { keptOf, runOfKept, type SavedContest } from "../game/contest-save";
 import { cupLeaders } from "../game/cup";
 import {
   competitionOf,
@@ -51,9 +52,10 @@ interface ShownJump {
 
 /**
  * The competition being run, and the way through it: the board, the jumps (a computer jumper's only when
- * watched), the results. Nothing of it is stored: a competition left halfway ends.
+ * watched), the results. Each board, the cup standings and the end are handed to `keep`, so a competition goes on
+ * after the page is closed; null when it is over or ended.
  */
-export function useCompetition(show: Show, ownOutfit: Outfit) {
+export function useCompetition(show: Show, ownOutfit: Outfit, keep: (contest: SavedContest | null) => void) {
   const [run, setRun] = useState<CompetitionRun | null>(null);
   const [jump, setJump] = useState<ShownJump | null>(null);
   /** The result of the player's jump on the screen, once it is over. */
@@ -62,13 +64,21 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
   const board = (next: CompetitionRun) => {
     setRun(next);
     setJump(null);
+    keep(keptOf(next, "board"));
     show({ kind: "contest", hill: next.hill });
   };
 
-  const abandon = () => {
+  /** To the menu; the competition stays kept. */
+  const leave = () => {
     setRun(null);
     setJump(null);
     show({ kind: "menu" });
+  };
+
+  /** To the menu, with the competition no longer kept: ended by the player, or over. */
+  const finish = () => {
+    keep(null);
+    leave();
   };
 
   /** Shows the jump of the next jumper: the player's, or a watched computer jumper's. */
@@ -94,7 +104,8 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
         leader: cupLeaders(current.cup).includes(index),
         cpu: outcome ? cpuSource(outcome, hudName) : null,
         onNext: () => afterJump(outcome ? outcome.score : playerScore.current),
-        onAbandon: abandon,
+        onLeave: leave,
+        onEnd: finish,
         hud: contestJumpHud(state, index, current.hill.kPointM),
         holder: competitorShortName(competitor),
       },
@@ -118,10 +129,26 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
     },
     /** After a competition of a cup: its standings, or the end screen after the last. */
     standings: () => {
-      if (run) show({ kind: "cup-standings" });
+      if (!run) return;
+      keep(keptOf(run, "standings"));
+      show({ kind: "cup-standings" });
     },
     end: () => {
-      if (run) show({ kind: "cup-end" });
+      if (!run) return;
+      keep(keptOf(run, "end"));
+      show({ kind: "cup-end" });
+    },
+    /** Goes on with a kept competition where it was left, on these hills; false when one of them is missing. */
+    resume: (contest: SavedContest, hills: readonly HillChoice[]): boolean => {
+      const resumed = runOfKept(contest, hills);
+      if (resumed === null) return false;
+      setRun(resumed);
+      setJump(null);
+      keep(contest);
+      if (contest.place === "standings") show({ kind: "cup-standings" });
+      else if (contest.place === "end") show({ kind: "cup-end" });
+      else show({ kind: "contest", hill: resumed.hill });
+      return true;
     },
     /** From the cup standings: the board of the next competition. */
     nextCompetition: () => {
@@ -141,6 +168,7 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
     onPlayerResult: (result: JumpScore) => {
       playerScore.current = result;
     },
-    abandon,
+    leave,
+    finish,
   };
 }

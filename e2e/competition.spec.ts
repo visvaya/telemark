@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { OWN_HILL_SPECS } from "../src/hills/own-hills";
 import { button, jumpCanvas, openCompetitionSetup, openMenu, press, storedSave, TEXT } from "./support/app";
@@ -13,6 +14,9 @@ const PRESS_LIMIT = 40;
 
 /** A box of the setup by the name after the flag (a computer jumper's box is named with the country first). */
 const box = (page: Page, name: string) => page.getByRole("checkbox", { name: new RegExp(`(^| )${name}$`) });
+
+/** The safe answer of the question before leaving a competition. */
+const backButton = (page: Page) => page.getByRole("button", { name: "Wróć", exact: true });
 
 /** The row of the board's table of a competitor, by the name in its row header. */
 const rowOf = (page: Page, name: string) => page.getByRole("row", { name: new RegExp(name) });
@@ -124,8 +128,8 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();
   // The question takes the focus on its safe answer; answered no, the focus returns to the way out.
   await press(button(page, TEXT.contestAbandon), traits);
-  await expect(button(page, "Nie, wróć")).toBeFocused();
-  await press(button(page, "Nie, wróć"), traits);
+  await expect(backButton(page)).toBeFocused();
+  await press(backButton(page), traits);
   await expect(button(page, TEXT.contestAbandon)).toBeFocused();
   await press(button(page, TEXT.contestAbandon), traits);
   await press(button(page, TEXT.contestAbandonYes), traits);
@@ -176,8 +180,8 @@ test("leaving a competition jump asks first", async ({ page, traits }) => {
   await expect(button(page, TEXT.jumpAgain)).toHaveCount(0);
   await expect(button(page, TEXT.toHills)).toHaveCount(0);
   await press(button(page, TEXT.toMainMenu), traits);
-  await expect(button(page, "Nie, wróć")).toBeFocused();
-  await press(button(page, "Nie, wróć"), traits);
+  await expect(backButton(page)).toBeFocused();
+  await press(backButton(page), traits);
   await expect(button(page, TEXT.toMainMenu)).toBeFocused();
   await press(button(page, TEXT.toMainMenu), traits);
   await press(button(page, TEXT.contestAbandonYes), traits);
@@ -261,4 +265,81 @@ test("a world cup of two hills runs from the start list to its podium", async ({
   await expect(button(page, "Nowe zawody")).toBeFocused();
   await press(button(page, "Nowe zawody"), traits);
   await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
+});
+
+/** Sets up a cup of the first two own hills with the computer jumpers alone, and starts it. */
+async function startCpuCup(page: Page, traits: DeviceTraits): Promise<void> {
+  const [first, second] = OWN_HILL_SPECS;
+  if (!first || !second) throw new Error("two own hills expected");
+  await openCompetitionSetup(page, traits);
+  await setUp(page, traits, { "Gracz 1": false });
+  await press(button(page, "Wyczyść"), traits);
+  await press(hillBox(page, first.name), traits);
+  await press(hillBox(page, second.name), traits);
+  await press(button(page, TEXT.contestStart), traits);
+  await expect(page.getByRole("table", { name: "Wyniki po 1. serii" })).toBeVisible();
+}
+
+const RESUME = "Wznów zawody";
+const KEPT_LINE = "Puchar Świata · konkurs 1 z 2 · 2. seria";
+
+test("a cup goes on after the page is loaded again, and a new one asks first", async ({ page, traits }) => {
+  await openMenu(page);
+  await expect(button(page, RESUME)).toHaveCount(0);
+  await startCpuCup(page, traits);
+  const board = await page.locator(".contest-table").innerText();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
+  await expect(button(page, RESUME)).toBeVisible();
+  await expect(page.getByText(KEPT_LINE)).toBeVisible();
+  await press(button(page, RESUME), traits);
+  await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
+  expect(await page.locator(".contest-table").innerText()).toBe(board);
+  await expect(button(page, NEXT_ROUND)).toBeFocused();
+
+  // Leaving for the menu keeps the cup; a new competition asks before it replaces it.
+  await press(button(page, TEXT.contestAbandon), traits);
+  await expect(backButton(page)).toBeFocused();
+  await press(button(page, "Wyjdź do menu (zawody zostaną zapisane)"), traits);
+  await expect(button(page, RESUME)).toBeVisible();
+  await openCompetitionSetup(page, traits);
+  await press(button(page, TEXT.contestStart), traits);
+  await expect(page.getByText(`Masz zapisane zawody (${KEPT_LINE}). Rozpocząć nowe?`, { exact: false })).toBeVisible();
+  await expect(button(page, "Nie, wróć")).toBeFocused();
+  await press(button(page, "Nie, wróć"), traits);
+  await expect(button(page, TEXT.contestStart)).toBeFocused();
+  await press(button(page, TEXT.contestStart), traits);
+  await press(button(page, "Tak, rozpocznij nowe"), traits);
+  await expect(page.getByRole("table", { name: "Wyniki po 1. serii" })).toBeVisible();
+
+  // Ending it removes it.
+  await press(button(page, TEXT.contestAbandon), traits);
+  await press(button(page, TEXT.contestAbandonYes), traits);
+  await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
+  await expect(button(page, RESUME)).toHaveCount(0);
+});
+
+test("a cup saved to a file goes on from it on a page without it", async ({ page, traits }) => {
+  // The file comes as a download on every device, so the test can take it.
+  await page.addInitScript(() => Object.defineProperty(navigator, "canShare", { value: undefined }));
+  await openMenu(page);
+  await startCpuCup(page, traits);
+  const board = await page.locator(".contest-table").innerText();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    press(button(page, "Zapisz zawody do pliku"), traits),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^telemark-zawody_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/);
+  const text = await readFile(await download.path());
+
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(button(page, RESUME)).toHaveCount(0);
+  await openCompetitionSetup(page, traits);
+  const input = page.getByLabel("Wczytaj zawody z pliku");
+  await input.setInputFiles({ name: "broken.json", mimeType: "application/json", buffer: Buffer.from("{") });
+  await expect(page.getByText("To nie jest plik zawodów Telemarku.")).toBeVisible();
+  await input.setInputFiles({ name: download.suggestedFilename(), mimeType: "application/json", buffer: text });
+  await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
+  expect(await page.locator(".contest-table").innerText()).toBe(board);
 });

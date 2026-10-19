@@ -1,4 +1,5 @@
 import { DEFAULT_COMPETITION_SETTINGS, parseCompetitionSettings, type CompetitionSettings } from "../game/competition";
+import { parseSavedContest, type SavedContest } from "../game/contest-save";
 import { DEFAULT_OUTFIT, parseOutfit, type Outfit } from "../game/outfit";
 import { DEFAULT_SENSITIVITY, parseSensitivity, type Sensitivity } from "../game/sensitivity";
 
@@ -90,10 +91,15 @@ export interface SaveData {
   /** Best jump per hill id (see HillChoice.id). */
   records: Record<string, HillRecord>;
   settings: Settings;
+  /**
+   * The competition under way, kept to go on with on the next visit; null when there is none (added after version
+   * 2 was introduced; older saves read it as null, and so does one that is not consistent).
+   */
+  contest: SavedContest | null;
 }
 
 export function emptySave(): SaveData {
-  return { schemaVersion: SAVE_SCHEMA_VERSION, records: {}, settings: { ...DEFAULT_SETTINGS } };
+  return { schemaVersion: SAVE_SCHEMA_VERSION, records: {}, settings: { ...DEFAULT_SETTINGS }, contest: null };
 }
 
 /** Property of an unknown value, without assuming its type. */
@@ -136,7 +142,12 @@ export function readableSave(json: string): SaveData | null {
       if (rec) records[id] = rec;
     }
   }
-  return { schemaVersion: SAVE_SCHEMA_VERSION, records, settings: parseSettings(field(raw, "settings")) };
+  return {
+    schemaVersion: SAVE_SCHEMA_VERSION,
+    records,
+    settings: parseSettings(field(raw, "settings")),
+    contest: parseSavedContest(field(raw, "contest")),
+  };
 }
 
 function parseSettings(v: unknown): Settings {
@@ -222,9 +233,14 @@ export function betterRecordOf(
   return first.dateIso >= second.dateIso ? "first" : "second";
 }
 
+/** The save with the competition kept, or with none. */
+export function withContest(save: SaveData, contest: SavedContest | null): SaveData {
+  return save.contest === contest ? save : { ...save, contest };
+}
+
 /**
  * The save to store when a window writes `mine` over `stored` (another window may have stored since): per hill the
- * record that stands (betterRecordOf), and the settings of `mine`, as the last written.
+ * record that stands (betterRecordOf), and the settings and the competition of `mine`, as the last written.
  */
 export function mergedSave(stored: SaveData, mine: SaveData): SaveData {
   const records: Record<string, HillRecord> = { ...stored.records };

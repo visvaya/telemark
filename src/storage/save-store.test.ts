@@ -1,9 +1,14 @@
+import { DEFAULT_COMPETITION_SETTINGS } from "../game/competition";
+import { startRun } from "../game/competition-run";
+import { keptOf } from "../game/contest-save";
+import { OWN_HILLS } from "../game/hill-choice";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SETTINGS,
   beatsRecord,
   emptySave,
   parseSave,
+  withContest,
   withJump,
   withSettings,
   type Settings,
@@ -114,6 +119,22 @@ describe("save data", () => {
       leanControl: "tilt",
       vibration: false,
     });
+    // Written before competitions were kept: none is.
+    expect(parseSave(JSON.stringify(older)).contest).toBeNull();
+  });
+
+  it("keeps a competition, reads a broken one as none, and writes the last one stored", async () => {
+    const hill = OWN_HILLS[0];
+    const run = hill ? startRun([hill], DEFAULT_COMPETITION_SETTINGS, 3, () => 1) : null;
+    if (!run) throw new Error("no run");
+    const contest = keptOf(run, "board");
+    const save = withContest(emptySave(), contest);
+    expect(parseSave(JSON.stringify(save)).contest).toEqual(JSON.parse(JSON.stringify(contest)));
+    expect(parseSave(JSON.stringify({ ...save, contest: { ...contest, place: "jump" } })).contest).toBeNull();
+    expect(withContest(save, contest)).toBe(save);
+    const backend = memoryBackend();
+    await saveSave(backend, save);
+    expect((await saveSave(backend, withContest(save, null))).contest).toBeNull();
   });
 });
 

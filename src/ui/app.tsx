@@ -6,6 +6,7 @@ import {
   beatsRecord,
   emptySave,
   mergedSave,
+  withContest,
   withJump,
   withSettings,
   type SaveData,
@@ -38,6 +39,9 @@ import { useCompetition } from "./use-competition";
 import { CompetitionSetupScreen } from "./competition-setup-screen";
 import { CompetitionScreen } from "./competition-screen";
 import { CupEndScreen, CupStandingsScreen } from "./cup-screens";
+import { contestDescription, missingHillsMessage } from "./contest-description";
+import type { ChosenContest } from "./competition-setup-screen";
+import { CONTEST_FILE_MAX_BYTES, readContestFile } from "../storage/contest-file";
 
 type Screen =
   | { kind: "menu" }
@@ -207,6 +211,9 @@ interface ContestContext {
   diagnostics: boolean;
   offline: OfflineState | null;
   show: (next: Screen) => void;
+  /** The line that tells the kept competition; null when none is kept. */
+  kept: string | null;
+  readContest: (file: File) => Promise<ChosenContest>;
 }
 
 /** The screens of a competition: its setup, the board between its jumps, and its jumps; null for other screens. */
@@ -231,7 +238,7 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         hills={c.hills}
         records={c.save.records}
         onPickHill={() => undefined}
-        onExit={c.contest.abandon}
+        onExit={c.contest.leave}
         onOpenReplays={() => undefined}
         focusOnEntry={c.navigated}
         diagnostics={c.diagnostics}
@@ -248,13 +255,14 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
       <CupStandingsScreen
         run={run}
         onNext={c.contest.nextCompetition}
-        onMenu={c.contest.abandon}
+        onLeave={c.contest.leave}
+        onFinish={c.contest.finish}
         focusOnEntry={c.navigated}
       />
     );
   }
   if (screen.kind === "cup-end" && run) {
-    return <CupEndScreen run={run} onAgain={c.contest.again} onMenu={c.contest.abandon} focusOnEntry={c.navigated} />;
+    return <CupEndScreen run={run} onAgain={c.contest.again} onMenu={c.contest.finish} focusOnEntry={c.navigated} />;
   }
   if (screen.kind === "contest" && run) {
     const state = run.cup.competition;
@@ -267,7 +275,9 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         onAgain={c.contest.again}
         onStandings={c.contest.standings}
         onEnd={c.contest.end}
-        onMenu={c.contest.abandon}
+        onMenu={c.contest.finish}
+        onLeave={c.contest.leave}
+        onFinish={c.contest.finish}
         focusOnEntry={c.navigated}
       />
     );
@@ -281,11 +291,44 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         onStart={(hills) => c.contest.start(hills, c.save.settings.competition)}
         onBack={() => c.show({ kind: "menu" })}
         focusOnEntry={c.navigated}
+        kept={c.kept}
+        onReadFile={c.readContest}
       />
     );
   }
 
   return null;
+}
+
+const refused = (message: string): ChosenContest => ({ kind: "refused", message });
+
+/**
+ * The competition being run, and the one kept in the save: the line that tells it, going on with it, and reading
+ * a competition file.
+ */
+function useKeptContest(
+  show: (next: Screen) => void,
+  save: SaveData,
+  update: (next: (current: SaveData) => SaveData) => void,
+  allHills: readonly HillChoice[],
+) {
+  const contest = useCompetition(show, save.settings.outfit, (kept) => update((prev) => withContest(prev, kept)));
+  const kept = save.contest === null ? null : contestDescription(save.contest, allHills);
+  /** Goes on with the kept competition; a message instead when this device lacks one of its hills. */
+  const resumeKept = (): string | null => {
+    if (save.contest === null) return null;
+    return contest.resume(save.contest, allHills) ? null : missingHillsMessage(save.contest, allHills);
+  };
+  /** A chosen competition file: refused with the reason, or ready to go on with as a kept one is. */
+  const readContest = async (file: File): Promise<ChosenContest> => {
+    if (file.size > CONTEST_FILE_MAX_BYTES) return refused(UI_TEXT.competition.fileRefused.notContest);
+    const read = readContestFile(await file.text());
+    if (!read.ok) return refused(UI_TEXT.competition.fileRefused[read.refusal]);
+    const missing = missingHillsMessage(read.contest, allHills);
+    if (missing !== null) return refused(missing);
+    return { kind: "ready", go: () => contest.resume(read.contest, allHills) };
+  };
+  return { contest, kept, resumeKept, readContest };
 }
 
 interface AppProps {
@@ -312,10 +355,10 @@ export function App({ diagnostics }: AppProps) {
     update((prev) => withSettings(prev, change));
   };
   const allHills = [...OWN_HILLS, ...originalHills];
-  const contest = useCompetition(show, save.settings.outfit);
+  const keptContest = useKeptContest(show, save, update, allHills);
 
   const contestShown = contestScreen(screen, {
-    contest,
+    ...keptContest,
     save,
     onSettings,
     onFinished,
@@ -409,6 +452,8 @@ export function App({ diagnostics }: AppProps) {
       replaysNotStored={replays.notStored}
       offline={offline}
       onOpen={(kind) => show({ kind })}
+      kept={keptContest.kept}
+      onResume={keptContest.resumeKept}
       focusOnEntry={navigated}
       onOriginalHills={setOriginalHills}
     />

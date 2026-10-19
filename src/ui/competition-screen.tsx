@@ -2,11 +2,13 @@ import { useRef } from "react";
 import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
 import { boardRows } from "../game/competition-board";
 import { competitionOf, isCup, roundJustEnded, type CompetitionRun } from "../game/competition-run";
+import { keptOf } from "../game/contest-save";
 import { cupPhase } from "../game/cup";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { competitorCountry, competitorName, competitorShortName } from "./competition-names";
 import { AbandonChoice } from "./abandon-question";
+import { ContestFileButton } from "./contest-file-button";
 import { FlagIcon } from "./flag-icon";
 import { formatDecimal } from "./number-text";
 import { useEntryFocus } from "./use-entry-focus";
@@ -28,7 +30,11 @@ interface Props {
   onStandings: () => void;
   /** After the last competition of a cup: the end screen. */
   onEnd: () => void;
+  /** After the competitions are over: to the menu, with nothing kept any more. */
   onMenu: () => void;
+  /** Out of a competition under way: to the menu with it kept, or ended. */
+  onLeave: () => void;
+  onFinish: () => void;
   focusOnEntry: boolean;
 }
 
@@ -195,7 +201,18 @@ function nextLabel(run: CompetitionRun): string {
  * goes to the way on (the next jump or round, or a new competition at the end), so the keyboard goes through a
  * competition with Enter alone; the button is described by the table's caption, which a screen reader says with it.
  */
-export function CompetitionScreen({ run, record, onNext, onAgain, onStandings, onEnd, onMenu, focusOnEntry }: Props) {
+export function CompetitionScreen({
+  run,
+  record,
+  onNext,
+  onAgain,
+  onStandings,
+  onEnd,
+  onMenu,
+  onLeave,
+  onFinish,
+  focusOnEntry,
+}: Props) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   useEntryFocus(primaryRef, focusOnEntry);
   const { hill, cup } = run;
@@ -228,7 +245,7 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onStandings, o
               {cupNext ? T.toCupStandings : T.toCupEnd}
             </button>
             {/* After the last competition nothing is left to abandon: the way on is the end screen. */}
-            {cupNext && <AbandonChoice label={T.abandon} onAbandon={onMenu} />}
+            {cupNext && <AbandonChoice label={T.abandon} onLeave={onLeave} onEnd={onFinish} />}
           </>
         ) : state.finished ? (
           <>
@@ -256,9 +273,10 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onStandings, o
             >
               {nextLabel(run)}
             </button>
-            <AbandonChoice label={T.abandon} onAbandon={onMenu} />
+            <AbandonChoice label={T.abandon} onLeave={onLeave} onEnd={onFinish} />
           </>
         )}
+        <ContestFileButton contest={keptOf(run, "board")} />
       </div>
     </main>
   );

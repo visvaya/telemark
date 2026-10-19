@@ -66,8 +66,10 @@ export interface ContestJump {
   cpu: ReplaySource | null;
   /** Goes on to the next jumper, once; false while the jump has no result to go on with. */
   onNext: () => boolean;
-  /** Leaves the competition, after the player said yes. */
-  onAbandon: () => void;
+  /** Leaves for the menu with the competition kept, after the player chose so. */
+  onLeave: () => void;
+  /** Ends the competition, after the player chose so. */
+  onEnd: () => void;
   /** What the picture shows of the competition: the points needed to lead, the total and the place after it. */
   hud: ContestJumpHud;
   /** The jumper's name as a hill record keeps it. */
@@ -138,7 +140,7 @@ function useContestJump(props: Props) {
   const menuProps = {
     onExit: props.onExit,
     contest: contest !== undefined,
-    abandon: contest ? <AbandonChoice label={JUMP_TEXT.exit} onAbandon={contest.onAbandon} /> : null,
+    abandon: contest ? <AbandonChoice label={JUMP_TEXT.exit} onLeave={contest.onLeave} onEnd={contest.onEnd} /> : null,
   };
   const live = {
     contestNext,

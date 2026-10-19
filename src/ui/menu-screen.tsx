@@ -33,6 +33,10 @@ interface Props {
     screen: "hills" | "contest-setup" | "replays" | "outfit" | "settings" | "howto" | "install" | "about",
   ) => void;
   onOriginalHills: (hills: HillChoice[]) => void;
+  /** The line that tells the kept competition; null when none is kept. */
+  kept: string | null;
+  /** Goes on with the kept competition; gives back why it cannot instead. */
+  onResume: () => string | null;
   /** Whether the heading takes the keyboard focus when the screen appears. */
   focusOnEntry: boolean;
 }
@@ -82,6 +86,36 @@ function MenuHeader({
   );
 }
 
+/** The button that resumes the kept competition, with the line that tells it under it; a refusal goes to `onRefused`. */
+function ResumeChoice({
+  kept,
+  onResume,
+  onRefused,
+}: {
+  kept: string;
+  onResume: () => string | null;
+  onRefused: (text: string) => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className="pixel-button"
+        aria-describedby="kept-contest"
+        onClick={() => {
+          const refused = onResume();
+          if (refused !== null) onRefused(refused);
+        }}
+      >
+        {UI_TEXT.menu.resumeCompetition}
+      </button>
+      <p className="note" id="kept-contest">
+        {kept}
+      </p>
+    </>
+  );
+}
+
 export function MenuScreen({
   originalCount,
   gameFiles,
@@ -93,6 +127,8 @@ export function MenuScreen({
   offline,
   onOpen,
   onOriginalHills,
+  kept,
+  onResume,
   focusOnEntry,
 }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -136,6 +172,9 @@ export function MenuScreen({
       <hr className="rule" />
       <nav className="menu" aria-label={UI_TEXT.menu.navigation}>
         <h2>{UI_TEXT.menu.navigation}</h2>
+        {kept !== null && (
+          <ResumeChoice kept={kept} onResume={onResume} onRefused={(text) => setMessage({ text, error: true })} />
+        )}
         {FIRST_CHOICES.map(([kind, label]) => (
           <button key={kind} type="button" className="pixel-button" onClick={() => onOpen(kind)}>
             {label}
