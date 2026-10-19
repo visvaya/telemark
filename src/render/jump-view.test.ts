@@ -54,7 +54,9 @@ describe("jump view", { timeout: WHOLE_JUMP_TIMEOUT_MS }, () => {
   it("fits the logical width to the screen with square pixels", () => {
     expect(viewWidthFor(1920, 1080)).toBe(356);
     expect(viewWidthFor(1280, 800)).toBe(320);
-    expect(viewWidthFor(2400, 1080)).toBe(432);
+    expect(viewWidthFor(1920, 875)).toBe(439);
+    expect(viewWidthFor(2560, 1080)).toBe(474);
+    expect(viewWidthFor(3440, 1300)).toBe(480);
     expect(viewWidthFor(390, 844)).toBe(256);
     expect(viewWidthFor(0, 0)).toBe(356);
   });

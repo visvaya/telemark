@@ -186,7 +186,7 @@ pilnuje `scene-motion.test.ts` (opis w `testing.md`).
 
 ## Różnice portu (świadome)
 
-- Widok ma kwadratowe piksele i szerokość od 256 do 432 kolumn: kolumna portu odpowiada 6/5 kolumny oryginału
+- Widok ma kwadratowe piksele i szerokość od 256 do 480 kolumn: kolumna portu odpowiada 6/5 kolumny oryginału
   (`SQUARE_PIXEL_WIDTH`), środki ekranów się pokrywają; tablice liczone są także poza zakresem oryginału.
 - Drzewo, którego tablica kluczowa w oryginale nie sięga (daleko za belką), dostaje u oryginału wysokość spoza
   tablicy; port stawia je na ziemi.

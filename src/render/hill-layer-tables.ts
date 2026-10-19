@@ -8,7 +8,7 @@ import { LAYER_SCALE, layerRows, layerX } from "./scene-layers";
  * Indices beyond the original's tables are computed the same way, for views wider than its screen.
  */
 
-/** Indices computed on either side of the original's table (a 432-column view reaches about 100 past it). */
+/** Indices computed on either side of the original's table (a 480-column view reaches about 130 past it). */
 const MARGIN_INDICES = 480;
 /** Metres of the hill the original's tables cover: past it a hill has no scenery drawn under it. */
 export const LAYER_TABLE_LENGTH_M = 380;
