@@ -42,7 +42,8 @@ describe("competition settings", () => {
       watchCpu: true,
     };
     const s = parseCompetitionSettings(stored);
-    expect(s.hillId).toBe("own-3");
+    expect(s.hillIds).toEqual(["own-3"]);
+    expect(s.doubleCup).toBe(false);
     expect(s.players.slice(0, 3)).toEqual([false, true, false]);
     expect(s.cpus[0]).toEqual({ on: false, level: 5 });
     expect(s.cpus[1]).toEqual({ on: true, level: 3 });
@@ -51,6 +52,21 @@ describe("competition settings", () => {
     expect(parseCompetitionSettings({ disqualification: "fis" }).disqualification).toBe("fis");
     expect(parseCompetitionSettings({ disqualification: "x" }).disqualification).toBe("original");
     expect(parseCompetitionSettings(undefined)).toEqual(DEFAULT_COMPETITION_SETTINGS);
+  });
+
+  it("read the chosen hills and the double cup, and drop what is not a hill id", () => {
+    const long = "x".repeat(65);
+    const s = parseCompetitionSettings({ hillIds: ["a", "b", "a", "", 7, long, "c"], doubleCup: true });
+    expect(s.hillIds).toEqual(["a", "b", "c"]);
+    expect(s.doubleCup).toBe(true);
+    expect(parseCompetitionSettings({ hillIds: [], hillId: "x" }).hillIds).toEqual([]);
+    expect(parseCompetitionSettings({ hillIds: "a" }).hillIds).toBeNull();
+    expect(parseCompetitionSettings({ hillIds: { 0: "a" } }).hillIds).toBeNull();
+    expect(parseCompetitionSettings({ hillId: 3 }).hillIds).toBeNull();
+    expect(parseCompetitionSettings({ hillId: "" }).hillIds).toBeNull();
+    expect(parseCompetitionSettings({ doubleCup: "yes" }).doubleCup).toBe(false);
+    const huge = Array.from({ length: 10_000 }, (_v, i) => `h${i}`);
+    expect(parseCompetitionSettings({ hillIds: huge }).hillIds).toEqual(huge.slice(0, 64));
   });
 
   it("never read as a competition without anybody", () => {

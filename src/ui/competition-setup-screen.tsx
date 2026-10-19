@@ -25,8 +25,8 @@ interface Props {
 }
 
 /** The hill the settings name, or the first on the list when it is not there (the original's files went). */
-function chosenHill(hills: readonly HillChoice[], hillId: string | null): HillChoice | undefined {
-  return hills.find((h) => h.id === hillId) ?? hills[0];
+function chosenHill(hills: readonly HillChoice[], hillIds: readonly string[] | null): HillChoice | undefined {
+  return hills.find((h) => hillIds?.includes(h.id) === true) ?? hills[0];
 }
 
 const replaced = <T,>(list: readonly T[], at: number, value: T): T[] => list.map((v, i) => (i === at ? value : v));
@@ -77,7 +77,7 @@ function DisqualificationChoice({
 export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onBack, focusOnEntry }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEntryFocus(headingRef, focusOnEntry);
-  const hill = chosenHill(hills, settings.hillId);
+  const hill = chosenHill(hills, settings.hillIds);
   const start = hill !== undefined && participantCount(settings) > 0 ? () => onStart(hill) : undefined;
   const ready = start !== undefined;
   return (
@@ -94,7 +94,7 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
           className="pixel-select"
           aria-labelledby="contest-hill"
           value={hill?.id ?? ""}
-          onChange={(e) => onChange({ ...settings, hillId: e.currentTarget.value })}
+          onChange={(e) => onChange({ ...settings, hillIds: [e.currentTarget.value] })}
         >
           {hills.map((h) => (
             <option key={h.id} value={h.id}>
