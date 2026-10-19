@@ -1,248 +1,263 @@
-# Wydanie, tryb offline i wdrożenie
+# Release, offline mode and deployment
 
-Gra jest zbiorem plików statycznych: nie ma serwera aplikacji, kont ani analityki, a dane gracza zostają
-w przeglądarce. Ten dokument opisuje, z czego składa się wydanie, jak gra działa bez sieci i jak aktualizuje
-się u gracza, jak wydanie trafia na hosting (Cloudflare Workers ze statycznymi zasobami) i jak je wycofać.
+The game is a set of static files: there is no application server, no accounts and no analytics, and the
+player's data stays in the browser. This document describes what a release consists of, how the game works
+without a network and how it updates for the player, how a release reaches the hosting (Cloudflare Workers with
+static assets) and how to roll it back.
 
-## Pakiet
+## Package
 
-`pnpm build` kończy się krokiem wydania (`scripts/write-release.mjs`) i zostawia w `dist/` dokładnie to, co jest
-wdrażane:
+`pnpm build` ends with the release step (`scripts/write-release.mjs`) and leaves in `dist/` exactly what is
+deployed:
 
-| Plik | Rola |
+| File | Role |
 |---|---|
-| `index.html`, `assets/*.js`, `assets/*.css` | strona i paczki z hashem treści w nazwie; czcionki są w arkuszu stylów |
-| `manifest.webmanifest`, `icons/*.png` | instalacja na ekranie głównym; ikony rysuje renderer gry (`scripts/make-icons.mjs`) |
-| `licenses/silkscreen-ofl.txt` | licencja czcionek rozpowszechnianych w arkuszu stylów |
-| `release.json` | wersja (`version`), commit źródła (`sourceSha`) i identyfikator zawartości (`contentId`) |
-| `sw.js` | service worker z listą plików wydania i ich skrótami SHA-256 |
-| `_headers` | nagłówki odpowiedzi dla hostingu; host nie serwuje tego pliku |
+| `index.html`, `assets/*.js`, `assets/*.css` | the page and the bundles with a content hash in the name; the fonts are in the style sheet |
+| `manifest.webmanifest`, `icons/*.png` | installation on the home screen; the icons are drawn by the game's renderer (`scripts/make-icons.mjs`) |
+| `licenses/silkscreen-ofl.txt` | licence of the fonts distributed in the style sheet |
+| `release.json` | version (`version`), source commit (`sourceSha`) and content identifier (`contentId`) |
+| `sw.js` | service worker with the list of the release's files and their SHA-256 hashes |
+| `_headers` | response headers for the hosting; the host does not serve this file |
 
-Obok powstaje `dist.sha256`: skróty wszystkich plików pakietu w formacie `sha256sum --check`.
+Next to it `dist.sha256` is made: the hashes of all files of the package in the `sha256sum --check` format.
 
-Kolejność kroku wydania: wynik bundlera i pliki z `public/` są wejściem; z nich powstaje `contentId` (skróty
-i ścieżki plików wejściowych oraz źródło workera), potem `release.json`, potem lista plików dla workera, na końcu
-`sw.js`. Nic nie zależy od czasu uruchomienia: to samo źródło daje te same bajty. Commit, który nie zmienia gry
-(dokumentacja, testy), daje ten sam `contentId`.
+Order of the release step: the bundler's output and the files from `public/` are the input; from them the
+`contentId` is made (the hashes and paths of the input files and the worker's source), then `release.json`, then
+the file list for the worker, and finally `sw.js`. Nothing depends on the time of the run: the same source gives
+the same bytes. A commit that does not change the game (documentation, tests) gives the same `contentId`.
 
-## Wersja
+## Version
 
-Numer wersji ma jedno źródło: pole `version` w `package.json`, w postaci trzech liczb (`0.4.2`). Build wpisuje go
-do gry (`vite.config.ts`, `src/game/version.ts`), gdzie widać go w nagłówku menu głównego, w menu skoku
-i w nakładce `?diag`, oraz do `release.json`. Publikacja oznacza opublikowany commit tagiem `v<wersja>` i zakłada
-wydanie na GitHubie z listą PR od poprzedniego (zadanie `release`).
+The version number has a single source: the field `version` in `package.json`, in the form of three numbers
+(`0.4.2`). The build writes it into the game (`vite.config.ts`, `src/game/version.ts`), where it is visible in the
+header of the main menu, in the jump menu and in the `?diag` overlay, and into `release.json`. Publication marks
+the published commit with the tag `v<version>` and creates a GitHub release with the list of PRs since the previous
+one (the `release` job).
 
-PR, który zmienia grę, podnosi numer o krok, który wskazuje jego tytuł (Conventional Commits): `feat` środkową
-liczbę, każdy inny typ ostatnią, zmiana łamiąca (`!`) pierwszą, a przed 1.0 środkową. PR, który gry nie zmienia
-(dokumentacja, testy, workflow, narzędzia), numeru nie rusza. Grę zmieniają pliki, z których powstaje pakiet:
-`src/` (bez testów), `public/`, `index.html`, konfiguracja Vite i TypeScriptu, `package.json` poza samym numerem,
-lockfile, `deploy/wrangler.jsonc` i krok wydania (`scripts/lib/version-rules.mjs`).
+A PR that changes the game raises the number by the step its title indicates (Conventional Commits): `feat` the
+middle number, every other type the last one, a breaking change (`!`) the first one, and before 1.0 the middle
+one. A PR that does not change the game (documentation, tests, workflow, tools) leaves the number alone. The game
+is changed by the files the package is made from: `src/` (without tests), `public/`, `index.html`, the Vite and
+TypeScript configuration, `package.json` apart from the number itself, the lockfile, `deploy/wrangler.jsonc` and
+the release step (`scripts/lib/version-rules.mjs`).
 
 ```sh
-pnpm version:bump "feat(ui): tytuł PR"   # ustawia numer względem origin/master; ponowne uruchomienie nic nie zmienia
+pnpm version:bump "feat(ui): PR title"   # sets the number relative to origin/master; running it again changes nothing
 ```
 
-Pilnują tego dwie kontrole: `hygiene` w PR (`scripts/check-version.mjs`: numer zgodny z tytułem i zmienionymi
-plikami) i `deploy` przed publikacją (`scripts/compare-release.mjs`: zmieniona gra musi mieć numer wyższy niż
-wdrożona, inaczej nic nie jest publikowane). Dwa PR zmieniające grę, scalone jeden po drugim bez odświeżenia
-drugiego, mogą nieść ten sam numer; wtedy publikację zatrzymuje druga kontrola i trzeba podnieść numer w nowym PR.
+Two checks enforce this: `hygiene` in the PR (`scripts/check-version.mjs`: the number agrees with the title and
+the changed files) and `deploy` before publication (`scripts/compare-release.mjs`: a changed game must have a
+number higher than the deployed one, otherwise nothing is published). Two PRs that change the game, merged one
+after the other without refreshing the second, can carry the same number; then the second check stops the
+publication and the number has to be raised in a new PR.
 
-`pnpm check:dist` (`scripts/lib/dist-rules.mjs`) wymaga, żeby w `dist/` były wszystkie pliki z listy i nic poza
-nimi, bez plików oryginalnej gry, w budżetach rozmiaru (paczki, worker, ikony). Podgląd jednoplikowy
-(`pnpm build:single`) trafia do `dist-single/` i nie jest częścią pakietu: nie ma manifestu, ikon ani workera.
+`pnpm check:dist` (`scripts/lib/dist-rules.mjs`) requires that `dist/` holds all the files from the list and
+nothing else, no files of the original game, within the size budgets (bundles, worker, icons). The single-file
+preview (`pnpm build:single`) goes to `dist-single/` and is not part of the package: it has no manifest, icons or
+worker.
 
 ## Service worker
 
-Źródło: `scripts/lib/service-worker-template.js`; krok wydania wpisuje do niego listę plików. Zasady:
+Source: `scripts/lib/service-worker-template.js`; the release step writes the file list into it. Rules:
 
-- **Instalacja** pobiera każdy plik wydania, porównuje jego SHA-256 z listą i dopiero potem zapisuje wszystko do
-  własnego cache (`telemark-shell-<id>`). Brak pliku, inna treść, przekierowanie albo brak miejsca kończy
-  instalację błędem i nie zostawia żadnej części wydania; działające wcześniej wydanie zostaje nietknięte.
-- **Nowe wydanie czeka.** Worker nie woła sam `skipWaiting()` ani nigdy `clients.claim()`, a strona nie
-  przeładowuje się bez prośby gracza. Strona dostaje dokument i skrypty zawsze z jednego wydania, a skok nie jest
-  przerywany. Nowe wydanie przejmuje stronę przy kolejnym uruchomieniu po zamknięciu wszystkich okien gry albo po
-  „Zainstaluj teraz” (niżej). Menu skoku pokazuje wtedy w ramce „Jest nowa wersja gry: <numer>. Zamknij grę
-  całkowicie [...] i uruchom ją ponownie”, menu główne (u góry) krótszą ramkę z przyciskiem; numer podaje czekający
-  worker (`version` w danych wydania i w odpowiedzi na pytanie strony o wydanie), worker sprzed 0.10 go nie zna i
-  wtedy komunikat jest bez numeru. Komunikat pojawia się dopiero po 1,5 s oczekiwania: przy pierwszym uruchomieniu
-  po aktualizacji przeglądarka potrafi przez chwilę zgłaszać nowe wydanie jako czekające, zanim przejmie ono
-  stronę, a komunikat na tę chwilę migałby.
-- **Sprawdzenie i instalacja na żądanie.** Menu główne ma zaraz za numerem wersji (sklejoną z nim przy zawijaniu)
-  ikonkę strzałki w kółku (7 na 7 pikseli gry, pole 24 px): przycisk bez ramki w przygaszonej żółci, z nazwą
-  „Szukaj aktualizacji” dla czytnika i w podpowiedzi, z ramką w motywie wysokiego kontrastu, obracający się ćwierćobrotami w czasie sprawdzania (bez ruchu przy `prefers-reduced-motion`)
-  (`registration.update()`); wynik pojawia się pod wersją w regionie `aria-live="polite"`, drobnym pismem: „Sprawdzam...”, „Masz
-  najnowszą wersję.”, „Jest nowa wersja gry. Pobieram ją.”, „Gra jeszcze się zapisuje.” (pierwsza wizyta, pierwsze
-  wydanie jeszcze się zapisuje) albo „Brak połączenia: nie można sprawdzić.” (przeglądarka nie odróżnia braku sieci
-  od braku odpowiedzi serwera). Gdy znalezionego wydania nie udało się zapisać (worker odrzucony przed zapisaniem),
-  linia zmienia się na „Nie udało się pobrać nowej wersji: spróbuj później.”. Kolejne naciśnięcia w trakcie
-  sprawdzania nic nie robią. Bez workera (podgląd jednoplikowy, serwer deweloperski, niebezpieczny adres) przycisku
-  nie ma: nie ma czego sprawdzać. W menu głównym ramka czekającego wydania jest krótka: „Jest nowa wersja gry:
-  <numer>.”, przycisk „Zainstaluj teraz” i pod nim „Albo zamknij wszystkie okna gry i uruchom ją ponownie.”; linia
-  obok przycisku sprawdzania przestaje wtedy mówić o nowej wersji. Po naciśnięciu „Zainstaluj teraz” strona mówi
-  „Instaluję...” (przycisk do tego czasu nic nie robi), wysyła do czekającego workera komunikat
-  `telemark:take-over`, worker woła `skipWaiting()`, a strona przeładowuje się raz, gdy ten worker jest aktywny
-  (śledzony po własnym stanie, nie po zmianie kontrolera strony, więc działa też na stronie wczytanej z pominięciem
-  workera, np. po Ctrl+Shift+R). Gdy czekający worker zostanie odrzucony (zastąpiło go nowsze wydanie) albo
-  instalacji nie da się zacząć, strona mówi „Nie udało się zainstalować: spróbuj ponownie.” i przycisk znów działa.
-  Menu skoku przycisku nie ma: przeładowanie przerwałoby skok. Inne otwarte okna gry nie są przeładowywane:
-  przechodzą pod nowego workera i dalej działają na kodzie, z którym wystartowały; zamiast ramki czekającego
-  wydania pokazują „Gra zaktualizowała się w innym oknie: przeładuj, żeby jej używać.”, w menu głównym z
-  przyciskiem „Przeładuj” (w menu skoku bez niego). Okno rozpoznaje to po tym, że wydanie czekało, gdy stronę
-  obsługiwał starszy worker, a ta strona o instalację nie prosiła. Strona startowa nowego wydania usuwa przy tym
-  cache poprzedniego; okno starego wydania ma cały kod wczytany (gra nie doczytuje modułów), a plik, którego nowe
-  wydanie nie ma, dostałoby z sieci.
-- **Poprzednie wydanie zostaje zapisane, dopóki nie wystartuje strona nowego.** Przejęcie przez nowego workera
-  niczego nie usuwa. Cache innych wydań (tylko z prefiksem gry) znika, gdy worker poda własną stronę startową
-  z własnego cache, o ile żadne nowsze wydanie właśnie się nie zapisuje ani nie czeka: jego cache musi zostać.
-  Zapis gracza (localStorage, IndexedDB) nie jest nigdy czytany ani zmieniany przez workera.
-- **Obsługa żądań:** tylko GET z własnego adresu; `/` i `/index.html` dają stronę startową, parametry
-  zapytania są ignorowane. Plik z listy wydania pochodzi z jego cache. Plik spoza listy, dopóki zapisane jest
-  jeszcze inne wydanie, pochodzi z tamtego wydania, a gdy go tam nie ma, z sieci; strona (nawigacja) nigdy nie
-  pochodzi z innego wydania. Gdy zapisane jest tylko własne wydanie, żądania spoza listy worker zostawia
-  przeglądarce. Nieznana ścieżka nie dostaje strony w zastępstwie.
-- **Rejestracja** (`src/pwa/`, `src/ui/use-offline-state.ts`): tylko w buildzie produkcyjnym, pod bezpiecznym
-  adresem i gdy strona ma znacznik `<meta name="telemark-offline">`. Podgląd jednoplikowy go nie ma. Menu pokazuje
-  „Gotowe do gry bez internetu.” dopiero wtedy, gdy aktywny worker potwierdzi komplet plików.
-- Pierwsza strona pierwszej wizyty nie jest przejmowana przez workera; gra startuje bez sieci od następnego
-  uruchomienia.
-- Uruchomienie tuż po zamknięciu ostatniego okna może jeszcze raz dostać stronę starego wydania, a przeglądarka
-  przełącza pod nią workera (zaobserwowane w Chromium). Skrypt tej strony podaje wtedy nowy worker z zapisanego
-  jeszcze starego wydania, bo serwer już go nie ma; nowe wydanie działa od kolejnego uruchomienia. Gra niczego
-  nie doładowuje później, więc wydania się nie mieszają; przy podziale kodu na części ładowane w trakcie gry
-  trzeba do tego wrócić. Znana luka: dwa okna uruchomione w tej samej chwili, z których pierwsze dostało starą
-  stronę, a drugie już nową; start drugiego usuwa stare wydanie i pierwsze może nie dostać skryptu (zostaje
-  wtedy tekst z linkiem ponownego wczytania).
+- **Installation** fetches every file of the release, compares its SHA-256 with the list and only then writes
+  everything into its own cache (`telemark-shell-<id>`). A missing file, different content, a redirect or lack of
+  space ends the installation with an error and leaves no part of the release; the release that worked before
+  stays untouched.
+- **A new release waits.** The worker does not call `skipWaiting()` on its own, nor ever `clients.claim()`, and
+  the page does not reload without the player asking. The page always gets the document and the scripts from one
+  release, and a jump is not interrupted. The new release takes over the page at the next start after all game
+  windows are closed or after "Zainstaluj teraz" (below). The jump menu then shows in a box "Jest nowa wersja
+  gry: <numer>. Zamknij grę całkowicie [...] i uruchom ją ponownie", the main menu (at the top) a shorter box with
+  a button; the number is given by the waiting worker (`version` in the release data and in the answer to the
+  page's question about the release), a worker from before 0.10 does not know it and then the message has no
+  number. The message appears only after 1.5 s of waiting: at the first start after an update the browser can for
+  a moment report the new release as waiting before it takes over the page, and a message for that moment would
+  flash.
+- **Check and installation on demand.** The main menu has right after the version number (kept together with it
+  when wrapping) an icon of an arrow in a circle (7 by 7 game pixels, a 24 px area): a borderless button in dimmed
+  yellow, named "Szukaj aktualizacji" for the screen reader and in the tooltip, with a border in the high contrast
+  theme, turning in quarter turns while checking (no motion with `prefers-reduced-motion`)
+  (`registration.update()`); the result appears under the version in an `aria-live="polite"` region, in small
+  print: "Sprawdzam...", "Masz najnowszą wersję.", "Jest nowa wersja gry. Pobieram ją.", "Gra jeszcze się
+  zapisuje." (first visit, the first release is still being stored) or "Brak połączenia: nie można sprawdzić."
+  (the browser does not tell a missing network from a missing server response). When a found release could not be
+  stored (the worker was rejected before storing), the line changes to "Nie udało się pobrać nowej wersji: spróbuj
+  później.". Further presses during the check do nothing. Without a worker (single-file preview, development
+  server, insecure address) there is no button: there is nothing to check. In the main menu the box of the waiting
+  release is short: "Jest nowa wersja gry: <numer>.", the button "Zainstaluj teraz" and under it "Albo zamknij
+  wszystkie okna gry i uruchom ją ponownie."; the line next to the check button then stops speaking of a new
+  version. After "Zainstaluj teraz" is pressed the page says "Instaluję..." (until then the button does nothing),
+  sends the message `telemark:take-over` to the waiting worker, the worker calls `skipWaiting()`, and the page
+  reloads once when that worker is active (tracked by its own state, not by a change of the page's controller, so
+  it also works on a page loaded bypassing the worker, e.g. after Ctrl+Shift+R). When the waiting worker is
+  rejected (a newer release replaced it) or the installation cannot start, the page says "Nie udało się
+  zainstalować: spróbuj ponownie." and the button works again. The jump menu has no button: a reload would
+  interrupt the jump. Other open game windows are not reloaded: they pass to the new worker and keep running on the
+  code they started with; instead of the box of the waiting release they show "Gra zaktualizowała się w innym
+  oknie: przeładuj, żeby jej używać.", in the main menu with the button "Przeładuj" (in the jump menu without it).
+  A window recognises this by the release having waited while the page was served by an older worker, and this
+  page not having asked for the installation. The start page of the new release removes the cache of the previous
+  one at that point; a window of the old release has all its code loaded (the game does not load modules later),
+  and a file the new release does not have it would get from the network.
+- **The previous release stays stored until the page of the new one starts.** A takeover by the new worker removes
+  nothing. The caches of other releases (only with the game's prefix) disappear when the worker serves its own
+  start page from its own cache, unless a newer release is just being stored or waiting: its cache must stay. The
+  player's save (localStorage, IndexedDB) is never read or changed by the worker.
+- **Request handling:** only GET from the own address; `/` and `/index.html` give the start page, query parameters
+  are ignored. A file from the release's list comes from its cache. A file outside the list, while another release
+  is still stored, comes from that release, and when it is not there, from the network; the page (navigation)
+  never comes from another release. When only the own release is stored, the worker leaves requests outside the
+  list to the browser. An unknown path does not get the page as a substitute.
+- **Registration** (`src/pwa/`, `src/ui/use-offline-state.ts`): only in the production build, at a secure address
+  and when the page has the marker `<meta name="telemark-offline">`. The single-file preview does not have it. The
+  menu shows "Gotowe do gry bez internetu." only when the active worker confirms the complete set of files.
+- The first page of the first visit is not taken over by the worker; the game starts without a network from the
+  next start.
+- A start right after the last window is closed can once more get the page of the old release, and the browser
+  switches the worker under it (observed in Chromium). The script of that page is then served by the new worker
+  from the still stored old release, because the server no longer has it; the new release works from the next
+  start. The game loads nothing later, so the releases do not mix; if the code is split into parts loaded during
+  the game, this has to be revisited. Known gap: two windows started at the same moment, of which the first got
+  the old page and the second already the new one; the start of the second removes the old release and the first
+  may not get its script (the text with a reload link then stays).
 
-Gdy skryptu gry nie da się pobrać (strona z jednego wydania, skrypt już z następnego), zostaje statyczny tekst
-z `index.html` z linkiem ponownego wczytania. Strona nie przeładowuje się sama.
+When the game's script cannot be fetched (the page from one release, the script already from the next), the static
+text from `index.html` with a reload link stays. The page does not reload by itself.
 
-## Nagłówki
+## Headers
 
-Jedno źródło: `public/_headers` (format statycznych zasobów Cloudflare). Serwer testów
-(`scripts/serve-dist.mjs`) stosuje ten sam plik, więc testy przeglądarkowe działają pod produkcyjną polityką.
+A single source: `public/_headers` (the Cloudflare static assets format). The test server
+(`scripts/serve-dist.mjs`) applies the same file, so the browser tests run under the production policy.
 
-- Wszystkie odpowiedzi: `Content-Security-Policy` (tylko własny adres, bez skryptów i stylów wpisanych w stronę,
-  czcionki wyłącznie jako `data:`), `Permissions-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
-- `/assets/*`: `Cache-Control: no-cache`, jak reszta plików. Długi cache (`immutable`) został zdjęty: host dokleja
-  nagłówek także do odpowiedzi 404, a przez kilka sekund po wdrożeniu plik nowego wydania może być niedostępny na
-  serwerze, który akurat odpowiada (zaobserwowane); przeglądarka trzymałaby taką odpowiedź rok. Po pierwszej
-  wizycie te pliki i tak podaje service worker.
-- Strona, `sw.js`, `release.json`, manifest, ikony, licencja: `Cache-Control: no-cache`.
-- Reguły pasujące do tej samej ścieżki sumują się, a ten sam nagłówek z dwóch reguł zostałby sklejony
-  przecinkiem, więc żadne dwie reguły nie ustawiają tego samego nagłówka dla jednej ścieżki (pilnuje tego test).
+- All responses: `Content-Security-Policy` (own address only, no scripts or styles inlined in the page, fonts only
+  as `data:`), `Permissions-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
+- `/assets/*`: `Cache-Control: no-cache`, like the other files. The long cache (`immutable`) was removed: the host
+  also attaches the header to 404 responses, and for a few seconds after a deployment a file of the new release
+  can be unavailable on the server that happens to answer (observed); the browser would keep such a response for
+  a year. After the first visit these files are served by the service worker anyway.
+- The page, `sw.js`, `release.json`, manifest, icons, licence: `Cache-Control: no-cache`.
+- Rules matching the same path add up, and the same header from two rules would be joined with a comma, so no two
+  rules set the same header for one path (a test enforces this).
 
-Konfiguracja hostingu (`deploy/wrangler.jsonc`): same zasoby statyczne, `html_handling: "auto-trailing-slash"`
-(`/` zwraca stronę, `/index.html` przekierowuje na `/`; w trybie `"none"` host nie zwraca strony pod `/`),
-`not_found_handling: "none"` (nieznana ścieżka to 404), adresy podglądu wersji wyłączone.
+Hosting configuration (`deploy/wrangler.jsonc`): static assets only, `html_handling: "auto-trailing-slash"`
+(`/` returns the page, `/index.html` redirects to `/`; in mode `"none"` the host does not return the page at `/`),
+`not_found_handling: "none"` (an unknown path is a 404), version preview addresses disabled.
 
-## Wdrożenie z CI
+## Deployment from CI
 
-Workflow `CI` (`.github/workflows/ci.yml`), zadanie `deploy`:
+Workflow `CI` (`.github/workflows/ci.yml`), job `deploy`:
 
-1. Uruchamia się po `push` do `master` albo po ręcznym uruchomieniu workflow na `master`, tylko gdy zmienna
-   repozytorium `DEPLOY_ENABLED` ma wartość `true`, i dopiero po zielonych `web`, `tools` i `hygiene` tego samego
-   przebiegu. PR i harmonogram nigdy nie wdrażają.
-2. Zadanie `build` buduje pakiet raz, sprawdza go i zapisuje jako artefakt `telemark-dist-<commit>` razem
-   z `dist.sha256`. Zadania macierzy `browser` (silniki przeglądarek i tryb pomiarowy) testują ten artefakt
-   równolegle, obok nich zadanie `checks` uruchamia kontrole kodu i testy jednostkowe, a zbiorcze `web` jest
-   zielone tylko wtedy, gdy wszystkie przeszły. `deploy` pobiera ten sam
-   artefakt, sprawdza skróty, komplet plików i commit w `release.json`; niczego nie buduje.
-3. Jeśli `master` ma już nowszy commit, przebieg kończy się bez publikacji. Jeśli wdrożona zawartość ma ten sam
-   `contentId`, publikacji nie ma (gracze nie pobierają gry drugi raz), a kontrola HTTP sprawdza to, co jest
-   wdrożone. Zmieniona gra z numerem nie wyższym niż wdrożony kończy zadanie błędem bez publikacji.
-4. Publikuje Wrangler przypięty w `deploy/` (własny lockfile, instalacja w trybie frozen). Jego wynik nie
-   trafia do logu wprost (`scripts/run-wrangler.mjs`): po sukcesie tylko identyfikator wersji, po błędzie
-   tekst bez identyfikatorów konta.
-5. Kontrola HTTP (`scripts/check-deployment.mjs`): każdy plik pakietu odpowiada tymi samymi bajtami, z typem
-   i nagłówkami z `_headers`; paczki są skompresowane; `release.json` wskazuje ten commit i tę wersję; `/index.html`
-   przekierowuje na `/`; nieznane ścieżki i `_headers` dają 404; adres HTTP przekierowuje na HTTPS. Wyjątek:
-   adres w domenie najwyższego poziomu, którą przeglądarki otwierają wyłącznie przez HTTPS (lista HSTS preload,
-   np. `.dev`), może odpowiadać po HTTP bez przekierowania. Tak robi `workers.dev`, gdzie nie ma ustawienia
-   wymuszającego przekierowanie; kontrola odnotowuje to wtedy w raporcie jako uwagę.
-6. Podsumowanie zadania podaje commit, `contentId`, skrót listy `dist.sha256` i identyfikator wersji do wycofania.
-7. Po publikacji osobne zadanie `release` (prawo zapisu do repozytorium, bez poświadczeń hostingu) zakłada tag
-   `v<wersja>` na opublikowanym commicie i wydanie na GitHubie. Tag, który już jest na tym commicie, zostaje;
-   tag na innym commicie (ponowna publikacja po wycofaniu) daje ostrzeżenie bez nowego wydania.
+1. It runs after a `push` to `master` or after a manual run of the workflow on `master`, only when the repository
+   variable `DEPLOY_ENABLED` has the value `true`, and only after a green `web`, `tools` and `hygiene` of the same
+   run. PRs and the schedule never deploy.
+2. The `build` job builds the package once, checks it and stores it as the artifact `telemark-dist-<commit>`
+   together with `dist.sha256`. The jobs of the `browser` matrix (browser engines and the measurement mode) test
+   this artifact in parallel, next to them the `checks` job runs the code checks and the unit tests, and the
+   aggregate `web` is green only when all of them passed. `deploy` downloads the same artifact, checks the hashes,
+   the complete set of files and the commit in `release.json`; it builds nothing.
+3. If `master` already has a newer commit, the run ends without publication. If the deployed content has the same
+   `contentId`, there is no publication (players do not download the game a second time), and the HTTP check
+   checks what is deployed. A changed game with a number not higher than the deployed one ends the job with an
+   error and no publication.
+4. Wrangler, pinned in `deploy/` (its own lockfile, installed in frozen mode), publishes. Its output does not go to
+   the log directly (`scripts/run-wrangler.mjs`): after success only the version identifier, after an error the
+   text without account identifiers.
+5. HTTP check (`scripts/check-deployment.mjs`): every file of the package responds with the same bytes, with the
+   type and the headers from `_headers`; the bundles are compressed; `release.json` points to this commit and this
+   version; `/index.html` redirects to `/`; unknown paths and `_headers` give 404; the HTTP address redirects to
+   HTTPS. Exception: an address in a top-level domain that browsers open only over HTTPS (the HSTS preload list,
+   e.g. `.dev`) may respond over HTTP without a redirect. `workers.dev` does this, and has no setting that forces
+   the redirect; the check then records it in the report as a note.
+6. The job summary gives the commit, the `contentId`, the hash of the `dist.sha256` list and the version
+   identifier for a rollback.
+7. After publication a separate `release` job (write access to the repository, no hosting credentials) creates the
+   tag `v<version>` on the published commit and a GitHub release. A tag already on this commit stays; a tag on
+   another commit (republication after a rollback) gives a warning without a new release.
 
-Ustawienia repozytorium, których używa workflow:
+Repository settings the workflow uses:
 
-| Nazwa | Rodzaj | Cel |
+| Name | Kind | Purpose |
 |---|---|---|
-| `DEPLOY_ENABLED` | zmienna repozytorium | `true` włącza automatyczną publikację; inna wartość ją wstrzymuje |
-| `PRODUCTION_URL` | zmienna repozytorium | publiczny adres gry, bez ścieżki |
-| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | sekrety środowiska `production` | publikacja i wycofanie; środowisko ograniczone do gałęzi `master` |
+| `DEPLOY_ENABLED` | repository variable | `true` enables automatic publication; any other value suspends it |
+| `PRODUCTION_URL` | repository variable | the public address of the game, without a path |
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | secrets of the `production` environment | publication and rollback; the environment is restricted to the `master` branch |
 
-Pull request, który zmienia `deploy/` albo workflow, sprawdza narzędzie bez poświadczeń: instalacja z lockfile'a
-i `wrangler deploy --dry-run` na zbudowanym pakiecie.
+A pull request that changes `deploy/` or the workflow checks the tool without credentials: installation from the
+lockfile and `wrangler deploy --dry-run` on the built package.
 
-## Wycofanie wydania
+## Rolling back a release
 
-Workflow `Rollback` (`.github/workflows/rollback.yml`), uruchamiany ręcznie na `master`:
+Workflow `Rollback` (`.github/workflows/rollback.yml`), run manually on `master`:
 
-1. Wstrzymać automatyczną publikację: `DEPLOY_ENABLED` na wartość inną niż `true`. Workflow odmawia pracy, gdy
-   publikacja jest włączona, bo następny push wdrożyłby nowsze wydanie ponownie.
-2. Uruchomić workflow z identyfikatorem wersji (z podsumowania jej wdrożenia) i commitem, z którego powstała.
-   Host przywraca wersję, którą już ma; nic nie jest budowane od nowa.
-3. Kontrola HTTP sprawdza wdrożenie względem wydania zapisanego w serwowanym `sw.js`: każdy plik z jego listy
-   odpowiada bajtami o podanym skrócie, a `release.json` wskazuje podany commit.
-4. Włączenie publikacji z powrotem jest osobnym, świadomym krokiem, gdy `master` zawiera wydanie do publikacji.
+1. Suspend automatic publication: `DEPLOY_ENABLED` set to a value other than `true`. The workflow refuses to work
+   when publication is enabled, because the next push would deploy the newer release again.
+2. Run the workflow with the version identifier (from the summary of its deployment) and the commit it was made
+   from. The host restores a version it already has; nothing is rebuilt.
+3. The HTTP check checks the deployment against the release recorded in the served `sw.js`: every file from its
+   list responds with bytes of the given hash, and `release.json` points to the given commit.
+4. Enabling publication again is a separate, deliberate step, when `master` contains a release to publish.
 
-Sprawdzone próbą 2026-10-13 (cofnięcie o jedną wersję i powrót, każde około 30 s): host przywraca wersję razem
-z jej plikami statycznymi. Po cofnięciu `/release.json` podawał commit i zawartość wcześniejszego wydania,
-a strona wskazywała jego skrypt, który odpowiadał kodem 200.
+Checked by a trial on 2026-10-13 (a rollback by one version and back, each about 30 s): the host restores a
+version together with its static files. After the rollback `/release.json` gave the commit and the content of the
+earlier release, and the page pointed to its script, which responded with code 200.
 
-Skutki dla graczy: zapis nie jest ruszany. Gracz, który ma już nowsze wydanie, dostaje starsze jako kolejną
-aktualizację, po zamknięciu wszystkich okien gry. Wycofanie nie usuwa kopii, które już działają offline.
-Wydania przed i po muszą czytać ten sam zapis; wycofanie przez zmianę schematu zapisu wymaga osobnego testu.
+Effects for players: the save is not touched. A player who already has the newer release gets the older one as
+the next update, after closing all game windows. A rollback does not remove copies already running offline. The
+releases before and after must read the same save; a rollback across a change of the save schema needs a separate
+test.
 
 ## Monitor
 
-Workflow `Monitor` (`.github/workflows/monitor.yml`) sprawdza opublikowaną grę spoza hostingu cztery razy na dobę
-(01:23, 07:23, 13:23 i 19:23 UTC) oraz na żądanie. Uruchamia `scripts/monitor-deployment.mjs`, który tylko czyta:
+The workflow `Monitor` (`.github/workflows/monitor.yml`) checks the published game from outside the hosting four
+times a day (01:23, 07:23, 13:23 and 19:23 UTC) and on demand. It runs `scripts/monitor-deployment.mjs`, which only
+reads:
 
-1. `release.json` pod adresem gry podaje commit. Musi to być commit z historii `master`; wydanie przywrócone
-   wycofaniem też spełnia ten warunek. Raport podaje, ile commitów `master` ma po nim. Jeśli wydanie podaje
-   wersję, tag `v<wersja>` musi wskazywać ten commit (tag powstaje około minuty po publikacji, więc przebieg
-   w tej minucie zgłosi jego brak); wydania sprzed numerów wersji go nie mają.
-2. Kontrola HTTP względem wydania zapisanego w serwowanym `sw.js` (ta sama co po wycofaniu), z plikiem
-   `public/_headers` z commita wydania: bajty każdego pliku, typ, kompresja paczek i nagłówki, także dla `sw.js`;
-   nieznane ścieżki dają 404, `/index.html` przekierowuje na `/`. Trwające wdrożenie: kontrola czeka do 120 s,
-   a gdy wydanie zmieni się w trakcie, zaczyna raz od nowa.
-3. Certyfikat jest zaufany, wystawiony na nazwę hosta i ma co najmniej 14 dni do końca.
-4. Strona startowa odpowiada w czasie: mediana z 5 prób do 1500 ms.
+1. `release.json` at the game's address gives the commit. It must be a commit from the history of `master`; a
+   release restored by a rollback also meets this condition. The report gives how many commits `master` has after
+   it. If the release gives a version, the tag `v<version>` must point to this commit (the tag is created about a
+   minute after publication, so a run within that minute reports it missing); releases from before version
+   numbers do not have it.
+2. HTTP check against the release recorded in the served `sw.js` (the same as after a rollback), with the file
+   `public/_headers` from the release's commit: the bytes of each file, the type, the compression of the bundles
+   and the headers, also for `sw.js`; unknown paths give 404, `/index.html` redirects to `/`. A deployment in
+   progress: the check waits up to 120 s, and when the release changes in the meantime, it starts over once.
+3. The certificate is trusted, issued for the host name and has at least 14 days until it expires.
+4. The start page responds in time: the median of 5 attempts up to 1500 ms.
 
-Nieudany przebieg to alarm. GitHub powiadamia osobę, która ostatnio zmieniła harmonogram w pliku workflow (przy
-ręcznym uruchomieniu: tę, która je uruchomiła), według jej ustawień powiadomień Actions. Próba alarmu bez
-ruszania gry: `gh workflow run monitor.yml -f address=https://example.com`.
+A failed run is an alarm. GitHub notifies the person who last changed the schedule in the workflow file (for a
+manual run: the person who started it), according to their Actions notification settings. Testing the alarm
+without touching the game: `gh workflow run monitor.yml -f address=https://example.com`.
 
-Ograniczenia:
+Limitations:
 
-- Zaplanowane przebiegi startują z opóźnieniem, a w repozytorium publicznym GitHub wyłącza je po 60 dniach bez
-  aktywności w repozytorium.
-- Monitor pyta z centrum danych i bez service workera: nie widzi tego, co widzi gracz z zainstalowaną grą.
-- Treść jest porównywana z wydaniem, które adres sam podaje, nie z pakietem zbudowanym od nowa; zgodność pakietu
-  z commitem sprawdza zadanie `deploy` przy publikacji.
-- Progi (14 dni, 1500 ms) są w `scripts/lib/monitor-rules.mjs`; próg czasu jest ustawiony z zapasem na adres,
-  który ledwo odpowiada, a nie na wolniejszy dzień.
+- Scheduled runs start with a delay, and in a public repository GitHub disables them after 60 days without
+  activity in the repository.
+- The monitor asks from a data centre and without a service worker: it does not see what a player with the
+  installed game sees.
+- The content is compared with the release the address itself gives, not with a package built anew; the agreement
+  of the package with the commit is checked by the `deploy` job at publication.
+- The thresholds (14 days, 1500 ms) are in `scripts/lib/monitor-rules.mjs`; the time threshold is set with a
+  margin for an address that barely responds, not for a slower day.
 
-## Lokalnie
+## Locally
 
 ```sh
-pnpm build                              # pakiet w dist/ i dist.sha256
+pnpm build                              # package in dist/ and dist.sha256
 pnpm check:dist
-node scripts/serve-dist.mjs             # dist/ pod http://127.0.0.1:4317, z nagłówkami z _headers
-node scripts/check-deployment.mjs http://127.0.0.1:4317   # ta sama kontrola co po wdrożeniu
-node scripts/monitor-deployment.mjs <adres gry>           # to, co robi workflow Monitor; same odczyty
-node scripts/make-icons.mjs             # ikony od nowa, po zmianie obrazka (src/pwa/icon-picture.ts)
-node scripts/export-screen-glyphs.mjs glyphs.json   # czcionka ekranów od nowa, po zmianie src/render/pixel-font.ts,
-python tools/font/make_screen_font.py glyphs.json src/ui/fonts/telemark-screen.woff2   # potem ten krok
+node scripts/serve-dist.mjs             # dist/ at http://127.0.0.1:4317, with the headers from _headers
+node scripts/check-deployment.mjs http://127.0.0.1:4317   # the same check as after a deployment
+node scripts/monitor-deployment.mjs <game address>        # what the Monitor workflow does; reads only
+node scripts/make-icons.mjs             # icons anew, after a change of the picture (src/pwa/icon-picture.ts)
+node scripts/export-screen-glyphs.mjs glyphs.json   # screen font anew, after a change of src/render/pixel-font.ts,
+python tools/font/make_screen_font.py glyphs.json src/ui/fonts/telemark-screen.woff2   # then this step
 ```
 
-## Czego nie sprawdza automat
+## What automation does not check
 
-- Instalacji na ekranie głównym, uruchomienia z ikony, trybu bez paska przeglądarki i prawdziwych wcięć ekranu:
-  żaden silnik w testach tego nie ma; lista ręcznego odbioru jest w `docs/testing.md`.
-- Zachowania hosta, którego serwer testów tylko naśladuje. Kontrola HTTP po wdrożeniu jest dowodem dla
-  prawdziwego hosta; wypisuje też jako uwagę, jaki `Cache-Control` dostaje odpowiedź 404 pod `/assets/`.
-- Tego, jak wycofanie dociera do gracza z zainstalowanym nowszym wydaniem na prawdziwym telefonie (w testach
-  robi to `offline.spec.ts`), i wycofania o więcej niż jedną wersję.
+- Installation on the home screen, starting from the icon, the mode without the browser bar and real screen
+  insets: no engine in the tests has these; the manual acceptance list is in `docs/testing.md`.
+- The behaviour of the host, which the test server only imitates. The HTTP check after a deployment is the
+  evidence for the real host; it also prints as a note which `Cache-Control` a 404 response under `/assets/` gets.
+- How a rollback reaches a player with a newer release installed on a real phone (in the tests `offline.spec.ts`
+  does this), and a rollback by more than one version.
