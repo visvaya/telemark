@@ -1,16 +1,17 @@
-# Skocznie własne: format i reguły
+# Own hills: format and rules
 
-## Czym jest skocznia
+## What a hill is
 
-Skocznia własna gry to same dane: jeden obiekt zgodny z JSON, bez funkcji i bez kodu. Ten sam format obowiązuje
-każdą skocznię, niezależnie od źródła (zrobioną ręcznie, wygenerowaną, a później zrobioną przez gracza). Dzięki
-temu każda skocznia przechodzi te same kontrole, a plik skoczni nie może niczego wykonać. Kod: `src/hills/`.
+An own hill of the game is data alone: one JSON-compatible object, with no functions and no code. The same
+format applies to every hill, whatever its source (made by hand, generated, and later made by a player). Thanks to
+this every hill goes through the same checks, and a hill file cannot execute anything. Code: `src/hills/`.
 
-Skocznie z plików oryginału mają własny opis w `hill-format.md`; ten dokument ich nie dotyczy.
+The hills from the original's files have their own description in `hill-format.md`; this document does not apply
+to them.
 
 ## Format
 
-Typ `HillSpec` (`src/hills/hill-spec.ts`), wersja formatu `schemaVersion: 1`. Przykład: skocznia „Ćwiczebna”
+Type `HillSpec` (`src/hills/hill-spec.ts`), format version `schemaVersion: 1`. Example: the hill "Ćwiczebna"
 (`src/hills/own-hills.ts`).
 
 ```json
@@ -44,587 +45,631 @@ Typ `HillSpec` (`src/hills/hill-spec.ts`), wersja formatu `schemaVersion: 1`. Pr
 }
 ```
 
-`profile` to parametry procedur budujących profil (`buildHillProfile` w `src/sim/hill-setup.ts`, znaczenie pól
-w `physics-spec.md`), `look` to wygląd poza profilem (`HillLook` w `src/render/hill-look.ts`).
+`profile` holds the parameters of the procedures that build the profile (`buildHillProfile` in
+`src/sim/hill-setup.ts`, the meaning of the fields in `physics-spec.md`), `look` is the appearance beyond the
+profile (`HillLook` in `src/render/hill-look.ts`).
 
-## Kontrola formatu
+## Format check
 
-`parseHillSpec` (`src/hills/parse-hill-spec.ts`) czyta dane z niezaufanego źródła. Każdy obiekt jest sprawdzany
-z listą znanych kluczy: klucz nieznany (także `__proto__`, `constructor`, `prototype`) i brakujący to błąd.
-Dozwolone są tylko zwykłe obiekty, tablice i skończone liczby. Wynik jest budowany od nowa z dozwolonych pól.
-Za długa lista i za długi tekst są zgłaszane bez czytania nadmiaru, więc rozmiar danych nie zwiększa kosztu kontroli.
-Kontrola zbiera wszystkie problemy naraz; każdy ma stały identyfikator reguły (`format.…`), ścieżkę pola
-i krótki opis po angielsku do logów. Teksty dla gracza dojdą w `src/text/ui-text.ts`.
+`parseHillSpec` (`src/hills/parse-hill-spec.ts`) reads data from an untrusted source. Each object is checked
+against the list of known keys: an unknown key (including `__proto__`, `constructor`, `prototype`) and a missing
+one are errors. Only plain objects, arrays and finite numbers are allowed. The result is built anew from the
+allowed fields. Too long a list and too long a text are reported without reading the excess, so the size of the
+data does not raise the cost of the check. The check collects all problems at once; each has a fixed rule
+identifier (`format.…`), a field path and a short description in English for the logs. The texts for the player
+will come in `src/text/ui-text.ts`.
 
-Granice formatu (`src/hills/hill-spec-limits.ts`) mówią, co przyjmie silnik i rysowanie, a nie co jest dobrą
-skocznią:
+The format limits (`src/hills/hill-spec-limits.ts`) say what the engine and the drawing accept, not what makes a
+good hill:
 
-- wersja: wyższa od obsługiwanej daje jeden problem `format.newer-version` (dane z nowszej gry), inna `format.version`;
-- `id`: małe litery i cyfry w grupach łączonych dywizem, 1..40 znaków, bo jest kluczem rekordów i powtórek;
-- `name`: 1..24 znaki po normalizacji NFC, bez znaków sterujących, sterujących kierunkiem pisma i zerowej
-  szerokości, tylko znaki, które czcionka obrazu skoku rysuje (`fontDraws` w `src/render/pixel-font.ts`), bo
-  inaczej nazwa wyglądałaby inaczej, niż ją zapisano;
-- szerokość tytułu: napis „nazwa K…” ma najwyżej 138 px, bo tyle miejsca zostaje w najwęższym obrazie (256 px) między
-  przyciskiem pauzy w lewym górnym rogu (najdalej do kolumny 61) a oknem wiatru ze światłem startowym (57 px
-  z odstępem) (`src/hills/hill-title.ts`);
-- `kPointM`: liczba całkowita 20..300;
-- rozbieg: zakresy pól oraz kolejność `startXM < takeoffXM` i `flatEndXM <= lineEndXM < takeoffXM`, bo funkcje
-  profilu biorą część płaską do `flatEndXM`, prostą do `lineEndXM`, a łuk dalej; płaska część za końcem prostej
-  zostałaby nadpisana łukiem; start może leżeć na części płaskiej;
-- zeskok: zakresy pól, wybieg zaczyna się co najmniej 20 m za progiem i najdalej na 600 m;
-- wygląd: kolory to indeksy palety 0..255 (bramka startowa najwyżej 254, bo jej druga połowa bierze następny
-  indeks), niebo w 6-bitowym RGB, ziarna 0..65535, najwyżej 8 podpór i 8 ukrytych grup drzew, odcinki z początkiem
-  przed końcem.
+- version: higher than the supported one gives a single problem `format.newer-version` (data from a newer game),
+  any other `format.version`;
+- `id`: lower-case letters and digits in groups joined by a hyphen, 1..40 characters, because it is the key of
+  records and replays;
+- `name`: 1..24 characters after NFC normalisation, without control characters, bidirectional control characters
+  and zero-width characters, only characters the jump picture's font draws (`fontDraws` in
+  `src/render/pixel-font.ts`), because otherwise the name would look different from how it was written;
+- title width: the text "name K…" is at most 138 px, because that is the room left in the narrowest picture
+  (256 px) between the pause button in the top left corner (at most up to column 61) and the wind box with the
+  start light (57 px with spacing) (`src/hills/hill-title.ts`);
+- `kPointM`: an integer 20..300;
+- inrun: field ranges and the order `startXM < takeoffXM` and `flatEndXM <= lineEndXM < takeoffXM`, because the
+  profile functions take the flat part up to `flatEndXM`, the straight up to `lineEndXM`, and the curve beyond; a
+  flat part beyond the end of the straight would be overwritten by the curve; the start may lie on the flat part;
+- landing hill: field ranges, the outrun starts at least 20 m behind the takeoff and at most at 600 m;
+- look: colours are palette indices 0..255 (the start gate at most 254, because its second half takes the next
+  index), the sky in 6-bit RGB, seeds 0..65535, at most 8 supports and 8 hidden groups of trees, segments with the
+  start before the end.
 
-## Reguły geometrii
+## Geometry rules
 
-`geometryProblems` (`src/hills/hill-geometry.ts`) mierzy zbudowany profil (`hillGeometry`) i sprawdza progi
-z `HILL_RULES` (identyfikatory `geometry.…`). Pomiary są skończone dla każdej skoczni, która przeszła kontrolę formatu.
+`geometryProblems` (`src/hills/hill-geometry.ts`) measures the built profile (`hillGeometry`) and checks the
+thresholds from `HILL_RULES` (identifiers `geometry.…`). The measurements are finite for every hill that passed
+the format check.
 
-- `join-height`: na złączach płaskie/prosta, prosta/łuk i zeskok/wybieg skok wysokości najwyżej 0,01 m, bo stopień
-  w torze to uderzenie w nartę;
-- `join-slope`: na złączach prosta/łuk i zeskok/wybieg różnica nachylenia najwyżej 0,5°; płaska część leży za
-  belką startową i styka się z prostą pod jej pełnym kątem, więc tam sprawdzana jest tylko wysokość;
-- `takeoff-angle`: kąt progu 6..12° w dół;
-- `table-height`: próg 1..3 m nad zeskokiem;
-- `landing-angle-at-k`: nachylenie zeskoku w punkcie K 34..48°, bo w okolicy K ląduje większość skoków i tam
-  zeskok ma przejmować lądowanie;
-- `k-near-steepest`: punkt K w poziomie najwyżej `max(15 m, 0,12 K)` od najbardziej stromego miejsca zeskoku
-  (`kFromSteepestMaxM`): na dużej skoczni prawie najbardziej stromy odcinek zeskoku jest dłuższy, więc najbardziej
-  strome miejsce może leżeć dalej od K. Udział 0,12 K wystarcza dużym skoczniom generatora z jego zapasem; duże
-  skocznie oryginału leżą do około 0,18 K od K (zmierzone lokalnie na plikach gry), ale reguły stylu nie muszą
-  ich przepuszczać.
-  15 m trzyma małe skocznie przy kilku metrach, które skoczek rozróżnia;
-- `landing-area-length`: koniec strefy lądowania (pierwsze miejsce za najbardziej stromym, gdzie zeskok jest
-  łagodniejszy niż 32°, mierzony łukiem od progu) leży 0,1..0,4 K za punktem K, bo dalsze skoki potrzebują miejsca;
-- `outrun-length`: od końca strefy lądowania do najniższego punktu wybiegu co najmniej 30 m w poziomie, na
-  wyhamowanie;
-- `outrun-within-scene`: najniższy punkt wybiegu najdalej 380 m, bo tyle obejmują tablice warstw sceny
-  (`LAYER_TABLE_LENGTH_M` w `src/render/hill-layer-tables.ts`);
-- `inrun-descends`, `landing-descends`: rozbieg opada od startu do progu, a zeskok od progu do najniższego punktu
-  wybiegu (próbki co 0,1 m; próbka może leżeć najwyżej 1 mm wyżej od poprzedniej, bo przy dnie łagodnego wybiegu
-  sąsiednie wysokości różnią się mniej, niż rozróżnia pojedyncza precyzja).
+- `join-height`: at the joins flat/straight, straight/curve and landing hill/outrun a height step of at most
+  0.01 m, because a step in the track is a blow to the ski;
+- `join-slope`: at the joins straight/curve and landing hill/outrun a slope difference of at most 0.5°; the flat
+  part lies behind the start gate and meets the straight at its full angle, so only the height is checked there;
+- `takeoff-angle`: takeoff angle 6..12° downwards;
+- `table-height`: the takeoff 1..3 m above the landing hill;
+- `landing-angle-at-k`: slope of the landing hill at the K point 34..48°, because most jumps land around K and the
+  landing hill is to take the landing there;
+- `k-near-steepest`: the K point horizontally at most `max(15 m, 0,12 K)` from the steepest place of the landing
+  hill (`kFromSteepestMaxM`): on a large hill the almost steepest section of the landing hill is longer, so the
+  steepest place can lie farther from K. A share of 0.12 K is enough for the generator's large hills with its
+  margin; the original's large hills lie up to about 0.18 K from K (measured locally on the game files), but the
+  style rules do not have to let them through.
+  15 m keeps small hills to the few metres the jumper can tell apart;
+- `landing-area-length`: the end of the landing area (the first place after the steepest one where the landing
+  hill is gentler than 32°, measured along the arc from the takeoff) lies 0.1..0.4 K behind the K point, because
+  longer jumps need room;
+- `outrun-length`: from the end of the landing area to the lowest point of the outrun at least 30 m horizontally,
+  for braking;
+- `outrun-within-scene`: the lowest point of the outrun at most at 380 m, because that is what the scene's layer
+  tables cover (`LAYER_TABLE_LENGTH_M` in `src/render/hill-layer-tables.ts`);
+- `inrun-descends`, `landing-descends`: the inrun descends from the start to the takeoff, and the landing hill from
+  the takeoff to the lowest point of the outrun (samples every 0.1 m; a sample may lie at most 1 mm higher than
+  the previous one, because near the bottom of a gentle outrun neighbouring heights differ by less than single
+  precision can resolve).
 
-### Dwa poziomy reguł
+### Two levels of rules
 
-Każda reguła geometrii ma poziom (`GEOMETRY_RULE_LEVELS`, pole `level` problemu; problemy formatu i symulacji
-poziomu nie mają, bo z natury są dopuszczające):
+Each geometry rule has a level (`GEOMETRY_RULE_LEVELS`, the field `level` of a problem; format and simulation
+problems have no level, because by nature they are admission problems):
 
-- **dopuszczenie** (`admission`): reguły, których potrzebuje silnik albo scena, albo których nie łamie żadna
-  skocznia tej gry; skocznia, która je łamie, jest odrzucana:
-  - `join-height`, `join-slope`: stopień albo załamanie toru to uderzenie w narty;
-  - `inrun-descends`: wznoszący się rozbieg może zatrzymać skoczka przed progiem;
-  - `landing-descends`: wznoszący się zeskok to ściana, w którą skoczek wlatuje;
-  - `table-height`: próg daleko nad zeskokiem albo pod nim odbiera wybiciu sens;
-- **styl** (`style`): reguły nowoczesnej skoczni, których trzymają się skocznie własne gry; skocznia gracza, która
-  je łamie, jest dopuszczana z uwagą, a nie odrzucana:
-  - `takeoff-angle`: skocznie oryginału mają progi daleko poza tym zakresem i dobrze się na nich skacze;
-  - `landing-area-length`: czy dobry gracz przeskoczy strefę lądowania, sprawdza symulacja;
-  - `outrun-length`: czy skoczek zatrzyma się w scenie, sprawdza symulacja;
-  - `outrun-within-scene`: scena jest rysowana do 380 m, ale liczy się to, że skoczek zatrzyma się przed jej
-    końcem, co sprawdza symulacja; najniższy punkt wybiegu może leżeć dalej (tak jest na dwóch skoczniach
-    oryginału);
-  - `k-near-steepest`, `landing-angle-at-k`: czy dobry gracz ląduje blisko K, sprawdza symulacja.
+- **admission** (`admission`): rules the engine or the scene needs, or which no hill of this game breaks; a hill
+  that breaks them is rejected:
+  - `join-height`, `join-slope`: a step or a kink in the track is a blow to the skis;
+  - `inrun-descends`: a rising inrun can stop the jumper before the takeoff;
+  - `landing-descends`: a rising landing hill is a wall the jumper flies into;
+  - `table-height`: a takeoff far above the landing hill or below it makes the takeoff pointless;
+- **style** (`style`): the rules of a modern hill, which the game's own hills keep to; a player's hill that breaks
+  them is admitted with a note, not rejected:
+  - `takeoff-angle`: the original's hills have takeoffs far outside this range and jump well;
+  - `landing-area-length`: whether a good player jumps beyond the landing area is checked by the simulation;
+  - `outrun-length`: whether the jumper stops within the scene is checked by the simulation;
+  - `outrun-within-scene`: the scene is drawn up to 380 m, but what counts is that the jumper stops before its
+    end, which the simulation checks; the lowest point of the outrun may lie farther (as on two of the original's
+    hills);
+  - `k-near-steepest`, `landing-angle-at-k`: whether a good player lands near K is checked by the simulation.
 
-`geometryProblems` zwraca problemy obu poziomów, `admissionProblems` tylko dopuszczające. Testy skoczni własnych
-wymagają braku problemów obu poziomów. Test lokalny z plikami gry (`DSJ2_GAME_DIR`) sprawdza, że każda z 37 skoczni
-oryginału przechodzi każdą regułę dopuszczenia (na każdej da się skakać);
-liczbę skoczni oryginału spełniających każdą regułę pokazuje tylko wtedy, gdy któraś reguła dopuszczenia zawiedzie.
+`geometryProblems` returns the problems of both levels, `admissionProblems` only the admission ones. The tests of
+the own hills require no problems of either level. A local test with the game files (`DSJ2_GAME_DIR`) checks that
+each of the 37 hills of the original passes every admission rule (each can be jumped on); it shows the number of
+the original's hills meeting each rule only when some admission rule fails.
 
-## Reguły wyglądu
+## Look rules
 
-`lookProblems` (`src/hills/hill-look-rules.ts`) sprawdza wygląd skoczni; reguły mają te same dwa poziomy co reguły
-geometrii, a granice są w `HILL_LOOK_RULES`:
+`lookProblems` (`src/hills/hill-look-rules.ts`) checks the look of a hill; the rules have the same two levels as
+the geometry rules, and the limits are in `HILL_LOOK_RULES`:
 
-- dopuszczenie:
-  - `supports-under-inrun`: każda podpora najazdu (`look.supports`) stoi pod najazdem, od początku platformy
-    startowej (`look.inrun.platformStartXM`) do progu (`profile.inrun.takeoffXM`);
-  - `supports-in-order`: podpory idą po kolei wzdłuż najazdu i nie nachodzą na siebie;
-  - `inrun-end-supported`: ostatnia podpora kończy się najwyżej 3,5 m przed progiem, tak jak w każdej skoczni
-    oryginału (koniec najazdu nie wisi w powietrzu);
-  - `deck-share`: pomost za belką (część płaska i platforma) zajmuje 0,022 do 0,141 K, jak w oryginale;
-- styl:
-  - `inrun-end-close`: ostatnia podpora najwyżej 1 m przed progiem, jak zwykle w oryginale;
-  - `deck-share-short`: pomost najwyżej 0,10 K (0,147 K wyglądało na za długi).
+- admission:
+  - `supports-under-inrun`: every inrun support (`look.supports`) stands under the inrun, from the start of the
+    start platform (`look.inrun.platformStartXM`) to the takeoff (`profile.inrun.takeoffXM`);
+  - `supports-in-order`: the supports follow one another along the inrun and do not overlap;
+  - `inrun-end-supported`: the last support ends at most 3.5 m before the takeoff, as on every hill of the
+    original (the end of the inrun does not hang in the air);
+  - `deck-share`: the deck behind the gate (the flat part and the platform) takes 0.022 to 0.141 K, as in the
+    original;
+- style:
+  - `inrun-end-close`: the last support at most 1 m before the takeoff, as usual in the original;
+  - `deck-share-short`: the deck at most 0.10 K (0.147 K looked too long).
 
-Testy skoczni własnych wymagają braku problemów obu poziomów. Generator odrzuca skocznię łamiącą regułę
-dopuszczenia (wyglądu albo geometrii), zwraca problemy stylu, a pierwszą podporę przycina do początku platformy.
-Skoczni oryginału reguły nie dotyczą: ich wygląd pochodzi z pliku gry.
+The tests of the own hills require no problems of either level. The generator rejects a hill that breaks an
+admission rule (of the look or of the geometry), returns the style problems, and trims the first support to the
+start of the platform. The rules do not apply to the original's hills: their look comes from the game file.
 
-Zakresy reguł stylu to założenia projektu, a nie granice sprawdzone symulacją; to, co mają zapewniać, sprawdzają
-kontrole oparte na symulacji skoków (następna sekcja).
+The ranges of the style rules are assumptions of the project, not limits verified by simulation; what they are
+meant to ensure is checked by the checks based on simulated jumps (next section).
 
-## Kontrole symulacją
+## Simulation checks
 
-Geometria nie mówi, czy skocznia dobrze się skacze. Kontrole w `src/hills/hill-play.ts` puszczają prawdziwą
-symulację (`startTrainingJump`, `stepTrainingJump`) z botami z `src/hills/hill-players.ts` i porównują wyniki
-z progami `PLAY_RULES`. `playMeasures` zwraca same liczby, `playProblems` stosuje do nich progi (reguły `play.*`).
-Każda kontrola obejmuje wszystkie skocznie własne, więc nowa skocznia wchodzi do nich przez same dane.
+The geometry does not say whether a hill jumps well. The checks in `src/hills/hill-play.ts` run the real
+simulation (`startTrainingJump`, `stepTrainingJump`) with the bots from `src/hills/hill-players.ts` and compare
+the results with the thresholds of `PLAY_RULES`. `playMeasures` returns the numbers alone, `playProblems` applies
+the thresholds to them (rules `play.*`). Each check covers all own hills, so a new hill enters them through its
+data alone.
 
-Dawne boty grały według skryptu: cel wybicia z próbowania celów w symulacji, w locie jeden kąt ciała (0,3 rad)
-niezależnie od skoczni, wiatru i fazy lotu, lądowanie na stałej wysokości, bez czytania wiatru i bez wiedzy
-o punktach. Były wiarygodne tylko do K120, a na 38 skoczniach z prostszym botem rozrzut odległości na dużych
-skoczniach (40-60 m) pochodził od bota, a nie od skoczni. Teraz grają polityką gracza, którą wytrenowano,
-a wyrocznia mówi, ile da się ze skoczni wyciągnąć najwyżej.
+The former bots played by a script: the takeoff aim from trying aims in the simulation, in flight one body angle
+(0.3 rad) regardless of the hill, the wind and the phase of the flight, landing at a fixed height, without reading
+the wind and without knowing about points. They were reliable only up to K120, and on 38 hills with a simpler bot
+the spread of distances on large hills (40-60 m) came from the bot, not from the hill. Now they play by a player
+policy that was trained, and the oracle says how much can be got out of a hill at most.
 
-### Co widzi gracz
+### What the player sees
 
-`playerView` (`src/hills/player-view.ts`) zwraca z bieżącego stanu skoku tylko to, co widzi gracz: klatkę, fazę,
-prędkość, czas do krawędzi progu przy obecnej prędkości, wysokość nad terenem pod skoczkiem i tempo, w jakim maleje,
-kąt ciała, liczbę klatek od oderwania oraz wiatr wzdłuż skoczni tak, jak pokazuje go wskaźnik (składowa x
-z `displayedWindMPerS`, liczona deterministycznym cosinusem, żeby bot decydował tak samo w każdym silniku). Nie widzi
-wiatru z przyszłości ani danych skoczni poza terenem pod sobą i krawędzią przed sobą.
+`playerView` (`src/hills/player-view.ts`) returns from the current jump state only what the player sees: the
+frame, the phase, the speed, the time to the edge of the takeoff at the current speed, the height above the
+terrain under the jumper and the rate at which it falls, the body angle, the number of frames since leaving the
+takeoff and the wind along the hill as the indicator shows it (the x component of `displayedWindMPerS`, computed
+with a deterministic cosine so that the bot decides the same way in every engine). It does not see the wind from
+the future or the hill data beyond the terrain under it and the edge in front of it.
 
-### Polityka gracza
+### Player policy
 
-`PlayerPolicy` (`src/hills/player-policy.ts`) to 10 liczb z jednostką w nazwie:
+`PlayerPolicy` (`src/hills/player-policy.ts`) is 10 numbers with the unit in the name:
 
-- `takeoffAimS`: oba przyciski w przysiadzie, gdy czas do krawędzi spadnie do tej wartości; trzymane do oderwania;
-- `earlyFlightFrames`, `earlyLeanRad`: pochylenie (minus kąt ciała, do którego prowadzi sterowanie) w pierwszych
-  klatkach lotu;
-- `leanRad`, `leanPerSpeedRadPerMPerS`, `leanPerHeightRadPerM`, `leanPerTailWindRadPerMPerS`: pochylenie w reszcie
-  lotu, liniowe względem prędkości (od 25 m/s), wysokości nad terenem (od 3 m) i pokazanego wiatru w plecy;
-  ograniczone do -0,2..0,9 rad;
-- `landingHeightM`, `landingPerClosingS`: przy opadaniu prawy przycisk przez 4 klatki, gdy wysokość spadnie poniżej
-  `landingHeightM` plus tempo opadania razy `landingPerClosingS`;
-- `telemark`: lewy od 8. do 12. klatki po prawym (telemark) albo bez niego (na dwie nogi).
+- `takeoffAimS`: both buttons in the crouch when the time to the edge falls to this value; held until leaving the
+  takeoff;
+- `earlyFlightFrames`, `earlyLeanRad`: the lean (minus the body angle the control leads to) in the first frames of
+  the flight;
+- `leanRad`, `leanPerSpeedRadPerMPerS`, `leanPerHeightRadPerM`, `leanPerTailWindRadPerMPerS`: the lean in the rest
+  of the flight, linear in the speed (from 25 m/s), the height above the terrain (from 3 m) and the shown tail
+  wind; limited to -0.2..0.9 rad;
+- `landingHeightM`, `landingPerClosingS`: while descending the right button for 4 frames when the height falls
+  below `landingHeightM` plus the descent rate times `landingPerClosingS`;
+- `telemark`: the left one from the 8th to the 12th frame after the right one (telemark) or without it
+  (two-legged).
 
-Sterowanie w locie to poprawka 60 mikrokroków myszy na radian błędu kąta, obcięta do 40 na klatkę. Szum bota
-pochodzi z własnego, zasianego `BorlandRandom` (rozkład zbliżony do normalnego z sumy 12 liczb jednostajnych, bez
-funkcji przestępnych, więc wynik jest ten sam w każdym silniku).
+The control in flight is a correction of 60 mouse microsteps per radian of angle error, clipped to 40 per frame.
+The bot's noise comes from its own seeded `BorlandRandom` (a distribution close to normal from the sum of 12
+uniform numbers, without transcendental functions, so the result is the same in every engine).
 
-Trzy poziomy graczy (`PLAYER_LEVELS`) to wytrenowana polityka z ludzkim szumem:
+The three player levels (`PLAYER_LEVELS`) are the trained policy with human noise:
 
-- słaby: rozrzut wybicia 0,08 s, sterowanie 0,6 poprawki z szumem 8, lądowanie 0,7 m niżej niż polityka, +- 1 m;
-- średni: rozrzut 0,04 s, pełne sterowanie z szumem 4, lądowanie 0,2 m niżej, +- 0,5 m;
-- dobry: rozrzut 0,015 s, pełne sterowanie z szumem 2, lądowanie jak polityka, +- 0,2 m.
+- weak: takeoff spread 0.08 s, control 0.6 of the correction with noise 8, landing 0.7 m lower than the policy,
+  +- 1 m;
+- average: spread 0.04 s, full control with noise 4, landing 0.2 m lower, +- 0.5 m;
+- good: spread 0.015 s, full control with noise 2, landing as the policy, +- 0.2 m.
 
-`EXACT_PLAYER_LEVEL` to dobry gracz bez szumu, czyli sama polityka.
+`EXACT_PLAYER_LEVEL` is the good player without noise, that is the policy alone.
 
-### Trening
+### Training
 
-`node scripts/train-player.mjs [liczba ocen]` (domyślnie 400) trenuje politykę i wypisuje liczby oraz wyniki do
-przepisania do `TRAINED_PLAYER_POLICY` i `TRAINED_POLICY_SCORES`; niczego nie zapisuje. Skrypt, a nie plik testów:
-trening trwa minuty, a wynikiem są liczby do przejrzenia i przepisania, nie werdykt. Trening jest deterministyczny:
-ten sam kod daje te same liczby.
+`node scripts/train-player.mjs [liczba ocen]` (400 by default) trains the policy and prints the numbers and the
+results to copy into `TRAINED_PLAYER_POLICY` and `TRAINED_POLICY_SCORES`; it writes nothing. A script, not a test
+file: training takes minutes, and the result is numbers to review and copy, not a verdict. Training is
+deterministic: the same code gives the same numbers.
 
-Zbiór treningowy to zbiór wygenerowany (sekcja „Generator skoczni”): 27 skoczni od K45 do K260 o różnych
-zeskokach, garbach i rozbiegach. Generuje go skrypt bez reguł symulacji, bo te oceniają skocznię wytrenowanym
-graczem, którego trening zastępuje; reguły na zbiorze sprawdza test stabilności. Wcześniej zbiorem były warianty
-jedynej skoczni własnej, a warianty o innym kształcie zeskoku nie przechodziły reguł dopuszczenia, więc gracz nie
-widział innego kształtu i na skoczniach oryginału powyżej K120 zostawał daleko od wyroczni.
+The training set is the generated set (section "Hill generator"): 27 hills from K45 to K260 with different landing
+hills, knolls and inruns. A script generates it without the simulation rules, because those judge a hill with the
+trained player that the training replaces; the rules on the set are checked by the stability test. Previously the
+set was variants of the only own hill, and the variants with a different landing hill shape did not pass the
+admission rules, so the player saw no other shape and on the original's hills above K120 stayed far from the
+oracle.
 
-Na każdej skoczni, na dwóch najsilniejszych ziarnach każdej klasy wiatru, skaczą trzej gracze: bez szumu oraz
-średni i dobry z tym samym szumem własnych błędów, co w kontrolach (`PLAYER_LEVELS`). Wynik to średnia punktów gry,
-a upadek lub dyskwalifikacja liczy się jako -100 punktów. Rozsądny gracz chce punktów mimo własnych błędów: trening
-samego gracza bez szumu wybrał nacisk lądowania na 1,4 m, a średni gracz z tym szumem przewracał się wtedy na
-jednej trzeciej skoków skoczni K50.
+On each hill, on the two strongest seeds of each wind class, three players jump: one without noise, and the
+average and the good one with the same noise of their own errors as in the checks (`PLAYER_LEVELS`). The result is
+the mean of the game's points, and a fall or a disqualification counts as -100 points. A sensible player wants
+points despite their own errors: training the player without noise alone chose a landing press at 1.4 m, and the
+average player with this noise then fell on one third of the jumps of the K50 hill.
 
-Przeszukiwanie startuje od gracza odniesienia: najpierw strategia ewolucyjna (1+6) z zasianym generatorem (70%
-ocen; wszystkie liczby naraz, rozrzut w krokach zgrubnych, szerszy po zysku, węższy bez niego), potem przeszukiwanie
-po współrzędnych z krokami dokładnymi. Styl lądowania nie jest trenowany: gracz odniesienia lądujący na dwie nogi
-upadał tak często, że jego średnia spadała z 128 do 82 punktów.
+The search starts from a reference player: first a (1+6) evolution strategy with a seeded generator (70% of the
+evaluations; all numbers at once, a spread in coarse steps, wider after a gain, narrower without one), then a
+coordinate search with fine steps. The landing style is not trained: the reference player landing on two legs fell
+so often that its mean dropped from 128 to 82 points.
 
-Wynik: 137,35 punktu na zbiorze treningowym (gracz odniesienia 131,36), 118,06 na skoczniach własnych spoza zbioru
-(dziś sama Ćwiczebna), po 293
-ocenach, około 35 minut na tej maszynie. Część wczesna lotu wypadła (0 klatek), wiatr i prędkość nie weszły do
-pochylenia; zostały pochylenie 0,24 rad rosnące o 0,016 rad na metr wysokości, wybicie 0,2 s przed krawędzią
-i lądowanie na 2,2 m. Test jednostkowy sprawdza tylko, że liczby dają zapisany wynik na skoczniach własnych spoza zbioru: tani
-dowód, że ani polityka, ani symulacja się nie zmieniły.
+Result: 137.35 points on the training set (reference player 131.36), 118.06 on the own hills outside the set
+(today Ćwiczebna alone), after 293 evaluations, about 35 minutes on this machine. The early part of the flight
+dropped out (0 frames), the wind and the speed did not enter the lean; what remained is a lean of 0.24 rad growing
+by 0.016 rad per metre of height, a takeoff 0.2 s before the edge and a landing at 2.2 m. A unit test checks only
+that the numbers give the stored result on the own hills outside the set: cheap evidence that neither the policy
+nor the simulation has changed.
 
-Pokazany wiatr dobrze przewiduje odległość (gracz bez szumu, ziarna 1-64, składowa wiatru startowego wzdłuż
-skoczni: współczynnik korelacji od -0,88 przy K50 do -0,96 przy K150; od 0,75 m przy K50 do 2,9 m przy K185 mniej na
-każdy 1 m/s wiatru w plecy), ale pochylenie nie ma dźwigni, która by to odrobiła, więc czytanie wiatru w locie nic
-graczowi nie daje. Wiatr ma znaczenie dla oczekiwań co do odległości, nie dla sterowania.
+The shown wind predicts the distance well (the player without noise, seeds 1-64, the component of the starting
+wind along the hill: a correlation coefficient from -0.88 at K50 to -0.96 at K150; from 0.75 m at K50 to 2.9 m at
+K185 less for each 1 m/s of tail wind), but the lean has no lever that would make up for it, so reading the wind
+in flight gives the player nothing. The wind matters for the expectations about the distance, not for the control.
 
-### Wyrocznia
+### Oracle
 
-`oracleJump` (`src/hills/hill-oracle.ts`) zna skocznię i ziarno, więc i przyszły wiatr. Szuka zmian skoku
-wytrenowanego gracza, które dają najwięcej punktów: przesunięcia celu wybicia o całe klatki, pochylenia dodanego
-w czterech częściach lotu (do 35, 105 i 210 klatek od oderwania i dalej) i przesunięcia wysokości lądowania. To
-przeszukiwanie po współrzędnych z krokami 0,1 rad i 1 m, potem 0,04 rad i 0,4 m, najwyżej 60 skoków na ziarno;
-upadek i dyskwalifikacja to najgorszy wynik (-100 punktów). Startuje od skoku gracza, więc nigdy nie wypada
-gorzej od niego. Na skoczni Ćwiczebna cztery wyszukiwania (po jednym na klasę wiatru) to 141 skoków i około 1,3 s.
+`oracleJump` (`src/hills/hill-oracle.ts`) knows the hill and the seed, and so the future wind too. It looks for
+changes to the trained player's jump that give the most points: shifts of the takeoff aim by whole frames, a lean
+added in four parts of the flight (up to 35, 105 and 210 frames after leaving the takeoff, and beyond) and a shift
+of the landing height. It is a coordinate search with steps of 0.1 rad and 1 m, then 0.04 rad and 0.4 m, at most 60
+jumps per seed; a fall and a disqualification are the worst result (-100 points). It starts from the player's
+jump, so it never comes out worse than it. On the Ćwiczebna hill four searches (one per wind class) are 141 jumps
+and about 1.3 s.
 
-### Porównanie z wyrocznią na skoczniach oryginału
+### Comparison with the oracle on the original's hills
 
-Test lokalny (z `DSJ2_GAME_DIR`, patrz niżej) gra każdą z 37 skoczni oryginału wytrenowanym graczem i wyrocznią na
-najsilniejszym ziarnie każdej klasy wiatru. Odległość, którą dokłada wyrocznia, jako część K (średnia i 90. centyl
-w przedziale wielkości), pomiar z 2026-10-17 dla obecnej polityki:
+A local test (with `DSJ2_GAME_DIR`, see below) plays each of the 37 hills of the original with the trained player
+and with the oracle on the strongest seed of each wind class. The distance the oracle adds, as a share of K (mean
+and 90th percentile in the size band), measurement of 2026-10-17 for the current policy:
 
-| K | skoczni | średnio | 90. centyl | punkty średnio | upadki gracza |
+| K | hills | mean | 90th percentile | points mean | player falls |
 |---|---|---|---|---|---|
-| do 90 | 10 | 0,061 | 0,097 | 11,3 | 0 |
-| 90-120 | 7 | 0,073 | 0,102 | 15,7 | 0 |
-| 120-160 | 8 | 0,091 | 0,163 | 20,3 | 0 |
-| powyżej 160 | 12 | 0,071 | 0,162 | 17,2 | 0 |
+| up to 90 | 10 | 0.061 | 0.097 | 11.3 | 0 |
+| 90-120 | 7 | 0.073 | 0.102 | 15.7 | 0 |
+| 120-160 | 8 | 0.091 | 0.163 | 20.3 | 0 |
+| above 160 | 12 | 0.071 | 0.162 | 17.2 | 0 |
 
-Margines jest względny, w tym samym pomiarze tej samej polityki: przedział jest wiarygodny, gdy średnia i 90. centyl
-wynoszą najwyżej 1,25 raza tyle co w najmniejszym przedziale (do K90) i gracz nie upada. Polityka odporna na własne
-błędy celowo zostawia wyroczni odległość przy każdej wielkości, więc liczy się, czy bot jest na danej wielkości tak
-wiarygodny jak na wielkościach już uznanych. Liczba 1,25 daje dla wcześniejszej polityki ten sam werdykt co dawny
-margines bezwzględny (średnio 0,06 K, 90. centyl 0,12 K): 90-120 miało 1,12 i 0,97 raza (przechodzi), 120-160 1,47
-i 1,41 (nie przechodzi). Dla obecnej polityki 90-120 ma 1,20 i 1,05 raza, 120-160 1,49 i 1,68, powyżej 160 1,16
-i 1,67. Granica K120 (`botReliableMaxKPointM`) zostaje; test lokalny pilnuje marginesu do niej.
+The margin is relative, within the same measurement of the same policy: a band is reliable when the mean and the
+90th percentile are at most 1.25 times those of the smallest band (up to K90) and the player does not fall. A
+policy robust to its own errors deliberately leaves distance to the oracle at every size, so what counts is whether
+the bot is as reliable at a given size as at the sizes already accepted. The number 1.25 gives for the earlier
+policy the same verdict as the former absolute margin (mean 0.06 K, 90th percentile 0.12 K): 90-120 had 1.12 and
+0.97 times (passes), 120-160 1.47 and 1.41 (does not pass). For the current policy 90-120 has 1.20 and 1.05 times,
+120-160 1.49 and 1.68, above 160 1.16 and 1.67. The K120 limit (`botReliableMaxKPointM`) stays; the local test
+guards the margin up to it.
 
-Okno wybicia to liczba klatek celu (co 1/70 s), przy których skoczek bez błędów ląduje najwyżej 3 m przed
-najlepszym skokiem, bez upadku i dyskwalifikacji. Jedna klatka wybicia jest warta kilka metrów: to cecha fizyki
-gry, a nie skoczni, więc okno liczy się w klatkach.
+The takeoff window is the number of aim frames (every 1/70 s) at which a jumper without errors lands at most 3 m
+short of the best jump, without a fall or a disqualification. One takeoff frame is worth a few metres: that is a
+property of the game's physics, not of the hill, so the window is counted in frames.
 
-Najlepszy cel wybicia znajduje `takeoffAimSearch`, z lotem i lądowaniem wytrenowanego gracza bez szumu. Odległość w funkcji celu rośnie o 5-7 m na klatkę do jednego
-szczytu i za nim spada (z urwiskiem około 6 klatek za wcześnie), więc wyszukiwanie zaczyna od najlepszego celu
-poprzedniego ziarna (dla pierwszego od 14 klatek) i idzie w obie strony, aż na danej stronie dwa cele z rzędu
-wypadną ponad 3 m poniżej najlepszego albo skończą się upadkiem; strona, na której pojawia się nowy najlepszy,
-idzie dalej, więc najlepszy na brzegu poszerza wyszukiwanie. Zakres celów to od -10 do 30 klatek. Na skoczni
-Ćwiczebna wyszukiwanie zajmuje 7-9 skoków na ziarno zamiast 41. Test porównuje je z przeglądem wszystkich 41 celów
-(`src/hills/test-support/full-aim-sweep.ts`) na 8 ziarnach: najlepsza odległość, najlepszy cel i okno są równe.
+The best takeoff aim is found by `takeoffAimSearch`, with the flight and landing of the trained player without
+noise. The distance as a function of the aim grows by 5-7 m per frame up to a single peak and falls behind it
+(with a cliff about 6 frames too early), so the search starts from the best aim of the previous seed (for the
+first one from 14 frames) and goes both ways, until on a given side two aims in a row come out more than 3 m below
+the best or end with a fall; the side on which a new best appears goes on, so a best on the edge widens the
+search. The range of aims is from -10 to 30 frames. On the Ćwiczebna hill the search takes 7-9 jumps per seed
+instead of 41. A test compares it with a sweep of all 41 aims (`src/hills/test-support/full-aim-sweep.ts`) on 8
+seeds: the best distance, the best aim and the window are equal.
 
-### Klasy wiatru
+### Wind classes
 
-Wiatr startowy skoku zależy tylko od ziarna (`createStartWind`, wołane przez `startTrainingJump`), więc próba
-wybiera ziarna według wiatru, zanim skok się zacznie. `windClassSeeds` czyta wiatr startowy 256 kolejnych ziaren
-i dla każdej klasy (`WIND_CLASSES`) bierze ziarna o najwyższej ocenie, od najsilniejszego, bez powtórzeń między
-klasami (klasy wybierane w tej kolejności):
+The starting wind of a jump depends only on the seed (`createStartWind`, called by `startTrainingJump`), so the
+sample chooses seeds by wind before the jump begins. `windClassSeeds` reads the starting wind of 256 successive
+seeds and for each class (`WIND_CLASSES`) takes the seeds with the highest score, from the strongest, without
+repeats between classes (the classes chosen in this order):
 
-- `head`: najsilniejszy wiatr czołowy, najbardziej ujemna składowa wzdłuż skoczni (`xMPerS`);
-- `calm`: cisza, najmniejsza prędkość (`speedMPerS`);
-- `tail`: najsilniejszy wiatr w plecy, najbardziej dodatnia składowa wzdłuż skoczni;
-- `variable`: wiatr najbardziej zmienny, największa skala błądzenia losowego w czasie skoku (`variabilityMPerS`).
+- `head`: the strongest head wind, the most negative component along the hill (`xMPerS`);
+- `calm`: calm, the lowest speed (`speedMPerS`);
+- `tail`: the strongest tail wind, the most positive component along the hill;
+- `variable`: the most variable wind, the largest scale of the random walk during the jump (`variabilityMPerS`).
 
-Na ziarnach 1-256 są to na przykład `head` 122, 253, 23, 125 (składowa -4,5 m/s), `calm` 182, 185, 27, 226
-(0,04-0,53 m/s), `tail` 138, 202, 234, 10 (+4,5 m/s), `variable` 14, 33, 235, 102 (zmienność 0,44-0,47). Wiatr
-czołowy niesie dalej: najlepszy skok przy nim to około 100 m, przy wietrze w plecy około 86 m.
+On seeds 1-256 these are for example `head` 122, 253, 23, 125 (component -4.5 m/s), `calm` 182, 185, 27, 226
+(0.04-0.53 m/s), `tail` 138, 202, 234, 10 (+4.5 m/s), `variable` 14, 33, 235, 102 (variability 0.44-0.47). A head
+wind carries farther: the best jump with it is about 100 m, with a tail wind about 86 m.
 
-### Próba
+### Sample
 
-Reguły są mierzone na zasianych skokach. Próba (`PLAY_SAMPLE`):
+The rules are measured on seeded jumps. The sample (`PLAY_SAMPLE`):
 
-- 16 ziaren na klasę wiatru (razem 64), na których skacze każdy poziom gracza i bot bez błędów (sam wiatr);
-- 4 najsilniejsze ziarna na klasę (razem 16) w wyszukiwaniu celu wybicia;
-- najsilniejsze ziarno każdej klasy (razem 4) dla wyroczni, do 60 skoków każde;
-- 12 skoków zaprojektowanych na najsilniejszym ziarnie każdej klasy (razem 48);
-- 16 skoków z losowym sterowaniem (ziarna od 1) jako dodatkowe sprawdzenie na ślepo.
+- 16 seeds per wind class (64 in all), on which each player level and the bot without errors (wind alone) jump;
+- the 4 strongest seeds per class (16 in all) in the takeoff aim search;
+- the strongest seed of each class (4 in all) for the oracle, up to 60 jumps each;
+- 12 designed jumps on the strongest seed of each class (48 in all);
+- 16 jumps with random control (seeds from 1) as an extra blind check.
 
-Każda klasa jest więc w każdej części próby w równej części. `PlaySample` przyjmuje pierwsze ziarno przeglądu
-wiatru i skoków losowych, więc tę samą ocenę można powtórzyć na rozłącznej próbie. Jedna ocena to około 580
-skoków i około 5,3 s na tej maszynie, z czego wyrocznia 141 skoków i około 1,3 s (bez wyroczni około 440 skoków
-i 4 s, a jeszcze wcześniej 976 skoków i 7,8 s).
+Each class thus has an equal share in each part of the sample. `PlaySample` takes the first seed of the wind sweep
+and of the random jumps, so the same evaluation can be repeated on a disjoint sample. One evaluation is about 580
+jumps and about 5.3 s on this machine, of which the oracle is 141 jumps and about 1.3 s (without the oracle about
+440 jumps and 4 s, and earlier still 976 jumps and 7.8 s).
 
-### Skoki zaprojektowane
+### Designed jumps
 
-`DESIGNED_SCENARIOS`: skok dobrego gracza bez błędów przy celu z wyszukiwania (mediana najlepszych celów), w każdym
-jedna rzecz zmieniona: wybicie dużo za wcześnie (20 klatek), wcześnie (4), późno (-4 klatki), bez wybicia; poza
-w locie pochylona (kąt ciała 0,6 rad), wyprostowana (0 rad), zmieniana co 35 klatek (w pozostałych skokach lot
-prowadzi wytrenowana polityka, a lądowanie przychodzi na 1,8 m); lądowanie wcześnie (8 m nad
-zeskokiem), na dwie nogi (tylko prawy przycisk), bez lądowania; do tego jeden skok późny, ze zmienną pozą i bez
-lądowania. Każdy skok ma nazwę `<klasa>/<scenariusz>` (skoki losowe `random/<ziarno>`), a komunikat reguły podaje
-nazwę skoku, który ją złamał. Na skoczni Ćwiczebna upadają skoki bez wybicia (`fallType` 5) i bez lądowania
-(`fallType` 4); skoki losowe kończą się dyskwalifikacją z upadkiem typu 2, 3 albo 4.
+`DESIGNED_SCENARIOS`: a jump of the good player without errors at the aim from the search (the median of the best
+aims), with one thing changed in each: the takeoff much too early (20 frames), early (4), late (-4 frames), no
+takeoff; the flight pose leaning (body angle 0.6 rad), upright (0 rad), changed every 35 frames (in the other jumps
+the flight is led by the trained policy, and the landing comes at 1.8 m); landing early (8 m above the landing
+hill), on two legs (the right button only), no landing; in addition one jump that is late, with a changing pose and
+no landing. Each jump has a name `<klasa>/<scenariusz>` (random jumps `random/<ziarno>`), and a rule's message
+gives the name of the jump that broke it. On the Ćwiczebna hill the jumps without a takeoff (`fallType` 5) and
+without a landing (`fallType` 4) fall; the random jumps end in a disqualification with a fall of type 2, 3 or 4.
 
-Reguły:
+Rules:
 
-- `bot-unreliable`: skocznia powyżej K120 nie przechodzi kontroli, bo wytrenowany gracz trzyma się blisko wyroczni
-  tylko do tej wielkości (porównanie wyżej), a wyżej wynik zależy od bota, nie od skoczni;
-- `takeoff-window`: mediana okna wybicia po ziarnach przeglądu co najmniej 2 klatki, żeby nie trzeba było trafić
-  jednej klatki;
-- `takeoff-window-share`: okno co najmniej 2 klatki na co najmniej 75% ziaren przeglądu. Okno 1 klatki zdarza się
-  od czasu do czasu na każdej skoczni (krawędź progu wypada przy danym wietrze między dwiema klatkami), więc
-  minimum z kilku ziaren przechodziło albo oblewało przypadkiem: na skoczni Ćwiczebna minimum z 4 ziaren wynosiło
-  3 klatki na pięciu rozłącznych zbiorach i 1 klatkę na szóstym;
-- `takeoff-clean`: każde ziarno przeglądu ma co najmniej jedno czyste wybicie (okno co najmniej 1 klatka), bo
-  wiatr, przy którym nie da się czysto wybić, byłby nieuczciwy;
-- `good-median`: mediana dobrego gracza od K-20 do K+10 m, żeby skocznia skakała się na swój rozmiar;
-- `levels-ordered`: mediany rosną od słabego przez średniego do dobrego, bo umiejętność ma się opłacać;
-- `skill-wins`: dobry skacze dalej od średniego w co najmniej 70% par skoków przy tym samym wietrze;
-- `good-falls-in-class`: dobry gracz nie upada w żadnej klasie wiatru;
-- `fall-rate`: średni gracz przewraca się (lub jest dyskwalifikowany) najwyżej w 10% skoków, dobry najwyżej w 3%.
-  Próg średniego jest luźniejszy niż wcześniejsze 5% (przy 32 skokach): bot średni ląduje z rozrzutem wysokości
-  lądowania 0,5 m, więc pojedynczy upadek to błąd bota, a nie skoczni, a przy 5% jeden upadek więcej odwracał
-  werdykt (na skoczni Ćwiczebna 0, 1 i 1 upadek na 32 w trzech rozłącznych zbiorach). Dobry gracz prawie nigdy
-  nie powinien upaść. Skocznia Ćwiczebna spełnia także dawne 5%;
-- `best-short`: mediana najlepszych skoków (po ziarnach wiatru) co najmniej K-10 m, inaczej skoczni nie da się
-  doskoczyć do K; mediana, a nie najgorsze ziarno, żeby jeden silny wiatr czołowy nie oblał uczciwej skoczni;
-- `best-past-landing-area`: najdłuższy z najlepszych skoków wyroczni (po jednym na najsilniejszym ziarnie każdej
-  klasy wiatru), czyli skok w najkorzystniejszej klasie (komunikat ją podaje; na skoczni Ćwiczebna to wiatr czołowy,
-  102,5 m przy końcu strefy na 120,8 m), najwyżej 5 m za końcem strefy lądowania, żeby nikt jej nie przeskoczył.
-  Wcześniej mierzyło to wyszukiwanie celu wybicia, które zmieniało tylko cel, a wyrocznia szuka też lotu
-  i lądowania;
-- `flight-time`: mediana lotu dobrego gracza co najmniej 2,5 s, żeby był to prawdziwy lot;
-- `flight-height`: 90. centyl największej wysokości nad zeskokiem najwyżej 8 m, bo skoczek leci blisko stoku;
-- `takeoff-speed`: prędkość na progu od 50 do 120 km/h, w zakresie skoczni narciarskich;
-- `wind-spread`: odchylenie standardowe odległości bota bez błędów przy stałym celu (sam wiatr) najwyżej 8% K,
-  bo ten sam wiatr niesie dalej w dłuższym locie (na skoczni Ćwiczebna zmierzono 5,5% K);
-- `stress-ends`, `stress-finite`: skoki zaprojektowane i losowe kończą się przed limitem klatek i dają skończone
-  liczby;
-- `stress-within-scene`: każdy z nich zatrzymuje się przed 380 m, gdzie kończy się scena;
-- `stress-below-terrain`: punkt skoczka schodzi najwyżej 0,5 m pod teren (na skoczni Ćwiczebna zmierzono 0 m).
+- `bot-unreliable`: a hill above K120 does not pass the check, because the trained player stays close to the
+  oracle only up to this size (comparison above), and above it the result depends on the bot, not on the hill;
+- `takeoff-window`: the median of the takeoff window over the seeds of the sweep at least 2 frames, so that one
+  does not have to hit a single frame;
+  a single frame;
+- `takeoff-window-share`: a window of at least 2 frames on at least 75% of the seeds of the sweep. A 1-frame
+  window happens from time to time on every hill (the edge of the takeoff falls, with a given wind, between two
+  frames), so a minimum over a few seeds passed or failed by chance: on the Ćwiczebna hill the minimum over 4 seeds
+  was 3 frames on five disjoint sets and 1 frame on the sixth;
+- `takeoff-clean`: every seed of the sweep has at least one clean takeoff (a window of at least 1 frame), because a
+  wind with which a clean takeoff is impossible would be unfair;
+- `good-median`: the good player's median from K-20 to K+10 m, so that the hill jumps to its size;
+- `levels-ordered`: the medians grow from the weak through the average to the good player, because skill has to
+  pay off;
+- `skill-wins`: the good player jumps farther than the average one in at least 70% of the pairs of jumps with the
+  same wind;
+- `good-falls-in-class`: the good player does not fall in any wind class;
+- `fall-rate`: the average player falls (or is disqualified) in at most 10% of jumps, the good one in at most 3%.
+  The average player's threshold is looser than the earlier 5% (with 32 jumps): the average bot lands with a
+  landing height spread of 0.5 m, so a single fall is the bot's error, not the hill's, and at 5% one more fall
+  reversed the verdict (on the Ćwiczebna hill 0, 1 and 1 fall out of 32 in three disjoint sets). The good player
+  should almost never fall. The Ćwiczebna hill also meets the former 5%;
+- `best-short`: the median of the best jumps (over the wind seeds) at least K-10 m, otherwise the hill cannot be
+  jumped to K; the median, not the worst seed, so that one strong head wind does not fail a fair hill;
+- `best-past-landing-area`: the longest of the oracle's best jumps (one on the strongest seed of each wind class),
+  that is the jump in the most favourable class (the message names it; on the Ćwiczebna hill it is the head wind,
+  102.5 m with the end of the area at 120.8 m), at most 5 m behind the end of the landing area, so that nobody
+  jumps beyond it. Previously this was measured by the takeoff aim search, which changed only the aim, while the
+  oracle also searches the flight and the landing;
+- `flight-time`: the median of the good player's flight at least 2.5 s, so that it is a real flight;
+- `flight-height`: the 90th percentile of the greatest height above the landing hill at most 8 m, because the
+  jumper flies close to the slope;
+- `takeoff-speed`: the speed at the takeoff from 50 to 120 km/h, within the range of ski jumping hills;
+- `wind-spread`: the standard deviation of the distance of the bot without errors at a fixed aim (wind alone) at
+  most 8% of K, because the same wind carries farther in a longer flight (5.5% of K was measured on the Ćwiczebna
+  hill);
+- `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
+  numbers;
+- `stress-within-scene`: each of them stops before 380 m, where the scene ends;
+- `stress-below-terrain`: the jumper's point goes at most 0.5 m below the terrain (0 m was measured on the
+  Ćwiczebna hill).
 
-### Stabilność werdyktu
+### Verdict stability
 
-Reguła liczona z próby musi dać ten sam werdykt na innej próbie, inaczej mierzy próbę, a nie skocznię. Test
-w `src/hills/hill-play.stability.test.ts` ocenia każdą skocznię własną na trzech rozłącznych zbiorach ziaren
-(przegląd wiatru 1-256, 257-512, 513-768; skoki losowe 1-16, 17-32, 33-48) i wymaga tej samej listy reguł
-niespełnionych na każdym z nich.
+A rule computed from a sample must give the same verdict on another sample, otherwise it measures the sample, not
+the hill. The test in `src/hills/hill-play.stability.test.ts` evaluates each own hill on three disjoint sets of
+seeds (wind sweep 1-256, 257-512, 513-768; random jumps 1-16, 17-32, 33-48) and requires the same list of failed
+rules on each of them.
 
-Kontrole mają dwa poziomy. Zwykłe uruchomienie testów (i bramka przed PR) ocenia szczegółowo skocznię
-treningową (pierwszą skocznię własną), na próbie opisanej wyżej; `corepack pnpm test src/hills` trwa kilkanaście
-sekund. Test stabilności ocenia każdą skocznię własną (do granicy wiarygodności botów musi przejść wszystkie
-reguły) i cały zbiór wygenerowany, łącznie około 5 minut na tej maszynie, więc ma osobne polecenie,
-`corepack pnpm test:hills-stability` (zmienna `HILL_STABILITY=1` dołącza plik, który `vite.config.ts` poza nią
-pomija). Bramka przed PR zmiany w tych ścieżkach uruchamia je także lokalnie. CI uruchamia je w zadaniu `checks`, gdy zmiana dotyka
-`src/hills/`, `src/sim/`, `src/game/`, workflow, `package.json` albo `vite.config.ts`, a także gdy nie da się
-ustalić, co się zmieniło (ręczne uruchomienie, brak poprzedniego commita).
+The checks have two levels. The ordinary test run (and the gate before a PR) evaluates in detail the training hill
+(the first own hill), on the sample described above; `corepack pnpm test src/hills` takes a dozen or so seconds.
+The stability test evaluates each own hill (up to the limit of the bots' reliability it must pass all the rules)
+and the whole generated set, about 5 minutes in all on this machine, so it has a separate command,
+`corepack pnpm test:hills-stability` (the variable `HILL_STABILITY=1` includes the file, which `vite.config.ts`
+otherwise skips). The gate before a PR of a change in these paths also runs them locally. CI runs them in the
+`checks` job when a change touches `src/hills/`, `src/sim/`, `src/game/`, the workflow, `package.json` or
+`vite.config.ts`, and also when it cannot be established what changed (a manual run, no previous commit).
 
-### Równe szanse
+### Equal chances
 
-- Te same wejścia dają ten sam wynik na każdym urządzeniu: test sprawdza, że skok z tym samym ziarnem, graczem
-  i szumem daje ten sam skrót stanu końcowego, a z innym ziarnem inny.
-- Umiejętność ma ważyć więcej niż wiatr: dobry gracz wygrywa ze średnim w większości par, a sam wiatr przesuwa
-  skok o ograniczoną liczbę metrów.
-- Żadna skocznia nie może wymagać trafienia jednej klatki: okno wybicia ma zwykle co najmniej 2 klatki, a przy
-  każdym wietrze da się wybić czysto.
-- Żadna skocznia nie może pozwolić dobremu skoczkowi wylądować za strefą lądowania.
+- The same inputs give the same result on every device: a test checks that a jump with the same seed, player and
+  noise gives the same hash of the final state, and with another seed a different one.
+- Skill must weigh more than the wind: the good player beats the average one in most pairs, and the wind alone
+  moves a jump by a limited number of metres.
+- No hill may require hitting a single frame: the takeoff window usually has at least 2 frames, and a clean
+  takeoff is possible with any wind.
+- No hill may let a good jumper land beyond the landing area.
 
-Jedna klatka wybicia (1/70 s) jest warta kilka metrów odległości. To cecha fizyki gry, wspólna dla wszystkich
-skoczni, a nie wada konkretnej skoczni.
+One takeoff frame (1/70 s) is worth a few metres of distance. That is a property of the game's physics, common to
+all hills, not a flaw of a particular hill.
 
-## Kontrole obrazu
+## Picture checks
 
-Testy obrazu (`src/render`), które mówią coś o rysowaniu skoczni, przechodzą przez wszystkie skocznie własne
-(`OWN_HILLS`). Liczby biorą z danych skoczni: punkt K z `kPointM`, chwile wybicia jako udział klatek od startu
-rozbiegu do progu, miejsca z profilu. Nowa skocznia dostaje je bez zmian w testach.
+The picture tests (`src/render`) that say something about drawing hills go through all own hills (`OWN_HILLS`).
+They take the numbers from the hill data: the K point from `kPointM`, the moments of the takeoff as a share of the
+frames from the start of the inrun to the takeoff, the places from the profile. A new hill gets them without
+changes to the tests.
 
-- ruch obrazu (`scene-motion.test.ts`): rekwizyty, końce linii odległości, ptaki i księżyc trzymają się swoich
-  miejsc przez cały skok bota, bo każda skocznia ma inne miejsca tych rzeczy;
-- rekwizyty i linie (`scene-props.test.ts`, `scene-layers.test.ts`): rękawy, maszty, lampy rozbiegu i linia K
-  stoją na swoich powierzchniach i w swojej odległości, liczone z profilu tej skoczni;
-- sceneria (`scene-scenery.test.ts`): drzewa, ptaki, księżyc i światło reflektorów na danych tej skoczni, bo ziarno
-  drzew i profil zmieniają ich miejsca;
-- sceneria z dala od toru: żadne drzewo nie stoi na płaszczyźnie skoczka ani przed nią (drzewa są tylko na
-  warstwach za dalszą krawędzią zeskoku, z samej konstrukcji), a podpory rozbiegu kończą się najdalej na progu,
-  bo za nim stałyby w zeskoku;
-- figura skoczka (`jump-view.test.ts`): każda faza skoku rysowana bez pustych pikseli, figura na śniegu i w korycie
-  rozbiegu przy wybiciu za wcześnie, wcześnie, tuż przed progiem i bez wybicia, bo te przypadki zależą od długości
-  rozbiegu;
-- tytuł (`jump-view.test.ts`): w najwęższym obrazie (256 px) i przy przycisku pauzy przesuwającym tytuł najdalej
-  w prawo cały napis jest w obrazie i żaden jego piksel nie leży w kolumnach okna wiatru i światła startu;
-  sprawdza to rysunek, a nie tylko szerokość liczoną przy kontroli formatu;
-- budżet czasu klatki (`frame-time.budget.test.ts`): rysowanie najszerszego obrazu tej skoczni mieści się
-  w budżecie, bo sceneria każdej skoczni rysuje się inaczej;
-- migawka pikseli (`jump-view.pixels.test.ts`): pierwsza skocznia ma pełny zestaw, każda następna własne klucze
-  (momenty skoku z telemarkiem, 356 px, dzień, zmierzch i noc, bez śniegu i mgły); test na kopii skoczni z innym
-  niebem i drzewami sprawdza, że inny wygląd daje inne klatki.
+- picture motion (`scene-motion.test.ts`): props, ends of the distance lines, birds and the moon keep to their
+  places throughout a bot's jump, because each hill has different places for these things;
+- props and lines (`scene-props.test.ts`, `scene-layers.test.ts`): wind socks, masts, inrun lamps and the K line
+  stand on their surfaces and at their distance, computed from this hill's profile;
+- scenery (`scene-scenery.test.ts`): trees, birds, the moon and the floodlight light on this hill's data, because
+  the tree seed and the profile change their places;
+- scenery away from the track: no tree stands on the jumper's plane or in front of it (trees are only on the
+  layers behind the far edge of the landing hill, by construction), and the inrun supports end at the takeoff at
+  the latest, because behind it they would stand in the landing hill;
+- jumper figure (`jump-view.test.ts`): every phase of the jump drawn without empty pixels, the figure on the snow
+  and in the inrun track with a takeoff much too early, early, just before the takeoff and without a takeoff,
+  because these cases depend on the length of the inrun;
+- title (`jump-view.test.ts`): in the narrowest picture (256 px) and with the pause button moving the title
+  farthest to the right, the whole text is in the picture and none of its pixels lies in the columns of the wind
+  box and the start light; this is checked by the drawing, not only by the width computed in the format check;
+- frame time budget (`frame-time.budget.test.ts`): drawing this hill's widest picture fits in the budget, because
+  each hill's scenery draws differently;
+- pixel snapshot (`jump-view.pixels.test.ts`): the first hill has the full set, each next one its own keys
+  (moments of a jump with a telemark, 356 px, day, dusk and night, without snow and fog); a test on a copy of the
+  hill with a different sky and trees checks that a different look gives different frames.
 
-Testy, którym wystarcza dowolna skocznia (pasek, podpowiedzi, teksty, menu, dźwięk, powtórki, zapis), zostają na
-pierwszej skoczni własnej, żeby nie mnożyć czasu testów.
+Tests for which any hill will do (bar, hints, texts, menu, sound, replays, save) stay on the first own hill, so as
+not to multiply the test time.
 
-## Podobieństwo skoczni
+## Hill similarity
 
-`src/hills/hill-likeness.ts` mierzy, jak bardzo dwie skocznie są do siebie podobne, wyłącznie z ich danych.
-`hillShape` opisuje skocznię kilkoma liczbami: punkt K, spadek zeskoku poniżej progu w 12 równych odstępach
-poziomych od progu do końca obszaru lądowania (jako część K, więc skocznie różnej wielkości dają się porównać),
-długość poziomą tego odcinka jako część K, spadek rozbiegu, kąt progu i wysokość progu nad zeskokiem. Wygląd
-(niebo, teren, drzewa, podpory, ogrodzenia) się nie liczy: skocznia przemalowana to ta sama skocznia.
+`src/hills/hill-likeness.ts` measures how similar two hills are, from their data alone. `hillShape` describes a
+hill with a few numbers: the K point, the drop of the landing hill below the takeoff at 12 equal horizontal
+intervals from the takeoff to the end of the landing area (as a share of K, so hills of different sizes can be
+compared), the horizontal length of this section as a share of K, the drop of the inrun, the takeoff angle and the
+height of the takeoff above the landing hill. The look (sky, terrain, trees, supports, fences) does not count: a
+repainted hill is the same hill.
 
-`hillDistance` to średnia kwadratowa różnic tych składników, każdej podzielonej przez skalę z `LIKENESS_SCALES`
-(10 m punktu K, 0,02 K spadku zeskoku, 0,05 K długości zeskoku, 5 m spadku rozbiegu, 1° kąta progu, 0,5 m wysokości
-progu). Skala to różnica, którą skoczek odczuwa na skoczni, więc żaden składnik nie przeważa samą jednostką;
-punkty zeskoku tworzą jeden składnik, żeby profil nie przeważał liczbą punktów. Odległość wynosi 0 dla tej samej
-skoczni i jest symetryczna.
+`hillDistance` is the root mean square of the differences of these components, each divided by the scale from
+`LIKENESS_SCALES` (10 m of K point, 0.02 K of landing hill drop, 0.05 K of landing hill length, 5 m of inrun drop,
+1° of takeoff angle, 0.5 m of takeoff height). A scale is the difference a jumper feels on the hill, so no
+component dominates by its unit alone; the landing hill points form one component, so that the profile does not
+dominate by the number of points. The distance is 0 for the same hill and is symmetric.
 
-Skocznie bliższe niż `LIKENESS.tooAlike` (0,4) uznaje się za tę samą skocznię: kopia skoczni oryginału zostaje
-odrzucona, podobnie jak skocznia zbyt bliska już opublikowanej. Ponieważ każda skala to w przybliżeniu najmniejsza
-różnica, którą skoczek odczuwa, odległość poniżej 1 to różnica ledwie odczuwalna, a poniżej progu praktycznie żadna.
-Próg leży z zapasem poniżej odległości dwóch najbliższych różnych skoczni oryginału, więc te liczą się jako różne.
-Przesuwanie liczb profilu o procent ich wartości nie sprawdza kopii: 1% bezwzględnej wysokości przesuwa próg
-skoczni o metry, co daje już inną skocznię do skakania, ocenianą przez pozostałe reguły jak każda nowa.
+Hills closer than `LIKENESS.tooAlike` (0.4) are taken to be the same hill: a copy of a hill of the original is
+rejected, as is a hill too close to one already published. Since each scale is roughly the smallest difference a
+jumper feels, a distance below 1 is a barely perceptible difference, and below the threshold practically none. The
+threshold lies with a margin below the distance of the two nearest different hills of the original, so those
+count as different. Shifting the profile numbers by a percentage of their value does not test for copies: 1% of
+the absolute height moves the takeoff of a hill by metres, which already gives a different hill to jump on, judged
+by the other rules like any new one.
 
-### Porównanie ze skoczniami oryginału
+### Comparison with the original's hills
 
-`src/hills/original-hills.local.test.ts` porównuje skocznie własne ze skoczniami oryginału odczytanymi z plików
-gracza. Działa tylko z ustawionym `DSJ2_GAME_DIR` (jak testy porównawcze), nigdy w CI; z ustawioną zmienną i bez
-plików kończy się błędem, a nie pominięciem. Nic odczytanego z plików gry nie trafia do repozytorium ani na dysk.
-Sprawdza, że żadna skocznia własna nie jest za bardzo podobna do skoczni oryginału, że każda gra w zakresie
-skoczni oryginału o punkcie K w granicach 15 m od swojego (najlepsza odległość i mediana dobrego gracza względem K,
-prędkość na progu, czas lotu, okno wybicia, rozrzut od wiatru jako część K; zakres poszerzony o margines
-rozrzutu pomiaru), że skocznie oryginału przechodzą kontrolę formatu oraz że wytrenowany gracz trzyma się marginesu
-wyroczni na skoczniach do granicy `botReliableMaxKPointM` (porównanie z wyrocznią wyżej; tabelę przedziałów podaje
-komunikat, gdy test nie przechodzi). Całość trwa około 2,5 minuty.
+`src/hills/original-hills.local.test.ts` compares the own hills with the original's hills read from the player's
+files. It works only with `DSJ2_GAME_DIR` set (like the golden tests), never in CI; with the variable set and
+without the files it ends with an error, not a skip. Nothing read from the game files goes into the repository or
+to the disk. It checks that no own hill is too similar to a hill of the original, that each plays within the range
+of the original's hills with a K point within 15 m of its own (the best distance and the good player's median
+relative to K, the speed at the takeoff, the flight time, the takeoff window, the spread from the wind as a share
+of K; the range widened by a margin for the spread of the measurement), that the original's hills pass the format
+check, and that the trained player keeps within the oracle margin on hills up to the limit
+`botReliableMaxKPointM` (comparison with the oracle above; the table of bands is given by the message when the
+test fails). The whole takes about 2.5 minutes.
 
 ```sh
 DSJ2_GAME_DIR=<katalog gry> corepack pnpm test src/hills/original-hills.local.test.ts
 ```
 
-## Odcisk geometrii i identyfikator
+## Geometry fingerprint and identifier
 
-`hillFingerprint` (`src/hills/hill-fingerprint.ts`) to skrót FNV-1a (32 bity, 8 cyfr szesnastkowych) z punktu K
-i 20 liczb zbudowanego profilu, każdej jako 4 bajtów wartości pojedynczej precyzji (little-endian). Wygląd do
-niego nie wchodzi. Test przypina odcisk każdej skoczni własnej. Zmiana geometrii oznacza nowy identyfikator,
-a stary trafia do `RETIRED_OWN_HILL_IDS` (`src/game/hill-choice.ts`): rekordy i powtórki zostają przy starym
-kształcie i nigdy nie spotykają nowego.
+`hillFingerprint` (`src/hills/hill-fingerprint.ts`) is an FNV-1a hash (32 bits, 8 hexadecimal digits) of the K
+point and the 20 numbers of the built profile, each as 4 bytes of a single-precision value (little-endian). The
+look does not enter it. A test pins the fingerprint of each own hill. A change of the geometry means a new
+identifier, and the old one goes to `RETIRED_OWN_HILL_IDS` (`src/game/hill-choice.ts`): records and replays stay
+with the old shape and never meet the new one.
 
-Skocznia „Ćwiczebna” ma obecnie identyfikator `own-3`; `own-1` i `own-2` to jej wcześniejsze kształty. Na `own-2`
-rozbieg był krótszy (`startXM` 11,4 i `flatEndXM` 10 zamiast 10,6 i 9,2) i najlepszy skok lądował w okolicy punktu
-K; na `own-3` ląduje kilka metrów za nim, jak na skoczniach podobnej wielkości.
+The hill "Ćwiczebna" currently has the identifier `own-3`; `own-1` and `own-2` are its earlier shapes. On `own-2`
+the inrun was shorter (`startXM` 11.4 and `flatEndXM` 10 instead of 10.6 and 9.2) and the best jump landed around
+the K point; on `own-3` it lands a few metres beyond it, as on hills of a similar size.
 
-## Generator skoczni
+## Hill generator
 
-`generateHill(character, seed)` (`src/hills/hill-generator.ts`) robi skocznię z kilku wartości zrozumiałych dla
-człowieka zamiast czternastu liczb profilu. Służy do treningu gracza i do testów; jest też podstawą przyszłego
-edytora skoczni dla graczy. Dziesięć skoczni zbioru do K120 jest w grze (`own-14` do `own-23`, każda o innym
-położeniu belki, płaskiej części, wysokości progu, stromości rozbiegu i celu najlepszego skoku; wcześniejsze
-`own-4` do `own-13` miały jedno ustawienie belki, jeden wygląd rozbiegu i jeden cel dla wszystkich, więc zastąpiły
-je nowe pod nowymi identyfikatorami, a stare są wycofane): ich dane są skopiowane do `own-hills.ts` z własnym
-ziarnem scenerii, a `SET_HILLS_IN_GAME`
-(`src/hills/test-support/generated-hills.ts`) wiąże charaktery zbioru z tymi skoczniami. Zbiór bierze je takie,
-jakie są w grze (`keptHill`: pomiar najlepszego skoku i te same kontrole co przy generowaniu, bez wyszukiwania),
-zamiast generować je na nowo, bo późniejsza zmiana konstrukcji nie może zmienić skoczni, którą gra już ma
-(rekordy i powtórki należą do odcisku; odciski przypina `hill-fingerprint.test.ts`). W kontroli podobieństwa
-liczą się jak pozostałe skocznie zbioru. Większe skocznie zbioru czekają na bota, który gra na nich wiarygodnie. Droga do gry jest ta sama co
-dla każdej skoczni własnej (sekcja „Dodanie skoczni”: dane do `own-hills.ts`, nowy `id`, kontrole, migawka, odbiór
-na urządzeniu).
+`generateHill(character, seed)` (`src/hills/hill-generator.ts`) makes a hill from a few values a person can
+understand instead of fourteen profile numbers. It serves the player training and the tests; it is also the basis
+of a future hill editor for players. Ten hills of the set up to K120 are in the game (`own-14` to `own-23`, each
+with a different gate position, flat part, takeoff height, inrun steepness and best jump target; the earlier
+`own-4` to `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers
+replaced them, and the old ones are retired): their data is copied into `own-hills.ts` with its own scenery seed,
+and `SET_HILLS_IN_GAME` (`src/hills/test-support/generated-hills.ts`) binds the characters of the set to these
+hills. The set takes them as they are in the game (`keptHill`: a measurement of the best jump and the same checks
+as when generating, without the search), instead of generating them anew, because a later change of the
+construction must not change a hill the game already has (records and replays belong to the fingerprint; the
+fingerprints are pinned by `hill-fingerprint.test.ts`). In the similarity check they count like the other hills
+of the set. The larger hills of the set wait for a bot that plays reliably on them. The way into the game is the
+same as for every own hill (section "Adding a hill": data into `own-hills.ts`, a new `id`, checks, snapshot,
+acceptance on a device).
 
-### Charakter skoczni
+### Hill character
 
 `HillCharacter`:
 
-- `kPointM`: wielkość skoczni, punkt K;
-- `landingSteepnessDeg`: największe nachylenie zeskoku;
-- `landingAreaPastKShare`: jak daleko za K sięga strefa lądowania, jako część K (szerszy zeskok przy większej);
-- `knoll`: `short`, `medium` albo `long`: jak długo zeskok za progiem się zaokrągla, zanim stanie się stromy;
-- `inrunSteepnessDeg`: nachylenie prostej części rozbiegu;
-- `takeoffAngleDeg`: kąt progu;
-- `look`: motyw nieba (`day`, `dusk`, `winter`); wygląd nie zmienia skakania, a położenia podpór, drzew
-  i znaczników odległości wynikają z profilu;
-- opcjonalnie (`CHARACTER_LIMITS`): `gateXM`, gdzie stoi belka startowa (początek rozbiegu, 6..34 m, domyślnie 10);
-  `flatBehindGateM`, długość płaskiej części za belką (0,5..7 m, domyślnie 1,4); `bestPastKM`, cel najlepszego
-  skoku wyroczni w ciszy (od K+3 do najwyżej K+18, szerokość co najmniej 3 m, koniec co najmniej 2 m przed końcem
-  strefy lądowania z charakteru, żeby reguła „najlepszy skok za strefą lądowania” nie zawiodła; domyślnie K+3..K+8); `tableHeightM`, wysokość progu nad zeskokiem (1,2..2,6 m w granicach reguły 1..3 m, domyślnie 2).
-  Charakter poza tymi zakresami to błąd (`characterProblems`, reguła `generator.character`). Charakter z którąś
-  z tych wartości ma identyfikator ze skrótem FNV-1a wszystkich liczb charakteru (`gen-k<K>-<skrót>-<motyw><ziarno>`),
-  bo pełny zapis przekroczyłby 40 znaków formatu; charaktery bez nich zachowują dotychczasowy zapis.
+- `kPointM`: the size of the hill, the K point;
+- `landingSteepnessDeg`: the greatest slope of the landing hill;
+- `landingAreaPastKShare`: how far beyond K the landing area reaches, as a share of K (a wider landing hill with a
+  larger one);
+- `knoll`: `short`, `medium` or `long`: how long the landing hill rounds off behind the takeoff before it becomes
+  steep;
+- `inrunSteepnessDeg`: the slope of the straight part of the inrun;
+- `takeoffAngleDeg`: the takeoff angle;
+- `look`: the sky theme (`day`, `dusk`, `winter`); the look does not change the jumping, and the positions of the
+  supports, trees and distance marks follow from the profile;
+- optionally (`CHARACTER_LIMITS`): `gateXM`, where the start gate stands (the start of the inrun, 6..34 m, 10 by
+  default); `flatBehindGateM`, the length of the flat part behind the gate (0.5..7 m, 1.4 by default);
+  `bestPastKM`, the target of the oracle's best jump in calm (from K+3 to at most K+18, a width of at least 3 m,
+  the end at least 2 m before the end of the landing area from the character, so that the rule "best jump past
+  the landing area" does not fail; K+3..K+8 by default); `tableHeightM`, the height of the takeoff above the
+  landing hill (1.2..2.6 m within the rule's 1..3 m, 2 by default). A character outside these ranges is an error
+  (`characterProblems`, rule `generator.character`). A character with any of these values has an identifier with
+  an FNV-1a hash of all the character's numbers (`gen-k<K>-<skrót>-<motyw><ziarno>`), because the full notation
+  would exceed the format's 40 characters; characters without them keep the existing notation.
 
-`seed` ustala kolory (ściany najazdu z 7 ramp palety sceny, belka startowa z 6, bandy z 8; `LOOK_COLOURS`, listy
-różnej długości dają sąsiednim ziarnom różne zestawienia), losuje z `LOOK_RANGES` podpory (jedna pod pomostem,
-szeroka pod końcem rozbiegu, kończąca się 0,1 do 0,8 m przed progiem, jak na każdej skoczni oryginału, i do trzech
-cienkich albo szerokich między nimi), wysokości ścian nad torem i pod nim, długość pomostu (pomost z płaską częścią
-zajmuje 3,5 do 9% K; dłuższy na małej skoczni wygląda jak molo), wysokość terenu, liczbę drzew i początek band, a także końcówkę identyfikatora; profil zależy tylko od charakteru. Identyfikator
-(`generatedHillId`) jest zapisem charakteru, więc ten sam charakter daje ten sam identyfikator.
+`seed` fixes the colours (the inrun walls from 7 ramps of the scene palette, the start gate from 6, the fences
+from 8; `LOOK_COLOURS`, lists of different lengths give neighbouring seeds different combinations), draws from
+`LOOK_RANGES` the supports (one under the deck, a wide one under the end of the inrun, ending 0.1 to 0.8 m before
+the takeoff, as on every hill of the original, and up to three thin or wide ones between them), the heights of the
+walls above and below the track, the length of the deck (the deck with the flat part takes 3.5 to 9% of K; a
+longer one on a small hill looks like a pier), the height of the terrain, the number of trees and the start of
+the fences, and also the end of the identifier; the profile depends only on the character. The identifier
+(`generatedHillId`) is a notation of the character, so the same character gives the same identifier.
 
-### Konstrukcja
+### Construction
 
-Wszystkie stałe są w jednym obiekcie `GENERATOR` (z jednostką w nazwie). Dobrano je z fizyki i celów gry, a nie
-z liczb skoczni oryginału.
+All constants are in one object `GENERATOR` (with the unit in the name). They were chosen from the physics and
+the game's goals, not from the numbers of the original's hills.
 
-- Rozbieg zaczyna się na belce (`gateXM`, domyślnie 10 m), z płaską częścią za nią (domyślnie 1,4 m), biegnie prosto pod kątem z charakteru
-  i przechodzi parabolą w kąt progu. Promień łuku rośnie z wielkością skoczni (0,25 K), bo szybszy skoczek
-  potrzebuje łagodniejszego łuku przy tym samym nacisku na narty, najwyżej do 40 m (od K160): na dużej skoczni
-  łuk 0,25 K zajmuje tyle sceny, że prostej nie zostaje miejsca na prędkość, której skocznia potrzebuje; i najmniej
-  19 m: 0,25 K dawał małej skoczni łuk tak ciasny, że przy niższej prędkości dociskał skoczka mocniej niż na
-  większych skoczniach. Rozbieg zaczyna się na belce z charakteru (domyślnie 10 m) z płaską częścią za nią. Złącza są gładkie z samej budowy profilu
-  (`buildHillProfile` wylicza współczynniki łuku i wybiegu).
-- Próg leży na wysokości 200 m, zeskok zaczyna się pod nim o wysokość progu z charakteru (domyślnie 2 m, w środku zakresu reguły wysokości progu).
-- Zeskok to krzywa tanh formatu, `y = cY - A tanh((x - cX) / w)`. Największe nachylenie to `A / w`, więc
-  `A = w tan(nachylenia)`. Próg leży o liczbę szerokości zależną od garbu (1,2, 1,35 albo 1,5) przed środkiem.
-- Wybieg dołącza do krzywej 0,3 szerokości za jej środkiem, gdy zeskok jest jeszcze stromy, i wypłaszcza się
-  parabolą o krzywiźnie `tan 32° / (2 · 40 m)`: najniższy punkt leży 40 m (w poziomie) za końcem strefy lądowania,
-  czyli za miejscem, gdzie parabola staje się łagodniejsza niż 32° (reguła wymaga 30 m). Jedna reguła dla każdej
-  wielkości: strefa lądowania kończy się na łuku wybiegu, a nie daleko na wolno wypłaszczającej się krzywej tanh,
-  co wyprowadzało duże skocznie poza scenę. Gdy zeskok jest tak łagodny, że krzywa osiąga 32° przed tym miejscem,
-  wybieg dołącza tam.
-- Nachylenie w miejscu złączenia, a więc i parabola do 32° oraz jej łuk, zależą tylko od nachylenia zeskoku. Łuk
-  krzywej tanh między dwoma miejscami odległymi od środka o stałą liczbę szerokości jest proporcjonalny do
-  szerokości, więc szerokość wynika z jednego dzielenia: łuk krzywej od progu do złączenia plus łuk paraboli do
-  końca strefy lądowania ma długość K razy jeden plus część z charakteru. Punkt K to miejsce, gdzie łuk od progu
-  osiąga K.
-- Gdy K wypada dalej od najbardziej stromego miejsca niż 0,8 granicy reguły stylu (`max(12 m, 0,096 K)`),
-  ustępuje strefa lądowania: jej długość jest wyliczana tak, żeby K leżał dokładnie w tej odległości. Garb nie
-  ustępuje, bo długi, płaski garb wyrzuca skoczka wysoko nad stok (tak wypadło w próbach: wysokie loty, duży
-  rozrzut od wiatru).
-- Długość prostej części rozbiegu ustala krótkie, deterministyczne wyszukiwanie: najlepszy skok wyroczni na
-  najspokojniejszym ziarnie (`CALM_SEED`) rośnie z długością rozbiegu, więc metoda siecznych z przedziałem
-  (wariant Illinois) między rozbiegiem najkrótszym (1 m prostej) a najdłuższym, na jaki pozwalają format
-  (koniec prostej najdalej na 150 m) i scena (najniższy punkt wybiegu najdalej na 379 m), szuka skoku w celu z charakteru
-  (domyślnie od K+3 do K+8 m). Wyrocznia startuje od gracza odniesienia (`REFERENCE_PLAYER_POLICY`), a nie od wytrenowanego, więc
-  skocznie nie zmieniają się po kolejnym treningu.
-- Liczby profilu są zaokrąglane (długości do 0,01 m, nachylenia do 0,0001, współczynniki łuków do 0,000001),
-  a funkcje przestępne pochodzą z `deterministic-math.ts`, więc wynik jest ten sam w każdym silniku.
+- The inrun begins at the gate (`gateXM`, 10 m by default), with a flat part behind it (1.4 m by default), runs
+  straight at the angle from the character and passes with a parabola into the takeoff angle. The radius of the
+  curve grows with the size of the hill (0.25 K), because a faster jumper needs a gentler curve for the same
+  pressure on the skis, at most up to 40 m (from K160): on a large hill a 0.25 K curve takes so much of the scene
+  that no room is left on the straight for the speed the hill needs; and at least 19 m: 0.25 K gave a small hill a
+  curve so tight that at a lower speed it pressed the jumper harder than on larger hills. The inrun begins at the
+  gate from the character (10 m by default) with a flat part behind it. The joins are smooth by the construction
+  of the profile itself (`buildHillProfile` computes the coefficients of the curve and of the outrun).
+- The takeoff lies at a height of 200 m, the landing hill begins below it by the takeoff height from the character
+  (2 m by default, in the middle of the range of the takeoff height rule).
+- The landing hill is the format's tanh curve, `y = cY - A tanh((x - cX) / w)`. The greatest slope is `A / w`, so
+  `A = w tan(nachylenia)`. The takeoff lies a number of widths depending on the knoll (1.2, 1.35 or 1.5) before the
+  centre.
+- The outrun joins the curve 0.3 widths beyond its centre, while the landing hill is still steep, and flattens out
+  with a parabola of curvature `tan 32° / (2 · 40 m)`: the lowest point lies 40 m (horizontally) beyond the end of
+  the landing area, that is beyond the place where the parabola becomes gentler than 32° (the rule requires 30 m).
+  One rule for every size: the landing area ends on the curve of the outrun, not far out on the slowly flattening
+  tanh curve, which led large hills out of the scene. When the landing hill is so gentle that the curve reaches 32°
+  before this place, the outrun joins there.
+- The slope at the join, and so the parabola down to 32° and its arc, depend only on the slope of the landing
+  hill. The arc of the tanh curve between two places a fixed number of widths from the centre is proportional to
+  the width, so the width follows from a single division: the arc of the curve from the takeoff to the join plus
+  the arc of the parabola to the end of the landing area has the length K times one plus the share from the
+  character. The K point is the place where the arc from the takeoff reaches K.
+- When K falls farther from the steepest place than 0.8 of the style rule's limit (`max(12 m, 0,096 K)`), the
+  landing area gives way: its length is computed so that K lies exactly at this distance. The knoll does not give
+  way, because a long, flat knoll throws the jumper high above the slope (this came out in trials: high flights, a
+  large spread from the wind).
+- The length of the straight part of the inrun is set by a short deterministic search: the oracle's best jump on
+  the calmest seed (`CALM_SEED`) grows with the length of the inrun, so the secant method with a bracket (the
+  Illinois variant) between the shortest inrun (1 m of straight) and the longest the format (the end of the
+  straight at most at 150 m) and the scene (the lowest point of the outrun at most at 379 m) allow looks for a
+  jump within the target from the character (from K+3 to K+8 m by default). The oracle starts from the reference
+  player (`REFERENCE_PLAYER_POLICY`), not from the trained one, so the hills do not change after another training.
+- The profile numbers are rounded (lengths to 0.01 m, slopes to 0.0001, curve coefficients to 0.000001), and the
+  transcendental functions come from `deterministic-math.ts`, so the result is the same in every engine.
 
-### Cele i raport
+### Targets and report
 
-Cele (`GENERATOR_TARGETS` i reguły gry): najlepszy skok wyroczni w ciszy w celu z charakteru (domyślnie od K+3 do K+8 m), każda reguła
-dopuszczenia, każda reguła stylu, każda reguła symulacji (dla skoczni do granicy wiarygodności botów) i odległość
-podobieństwa co najmniej `LIKENESS.tooAlike` od każdej skoczni katalogu (`catalog`, domyślnie skocznie własne)
-i od skoczni podanych w `others`.
+Targets (`GENERATOR_TARGETS` and the game rules): the oracle's best jump in calm within the target from the
+character (from K+3 to K+8 m by default), every admission rule, every style rule, every simulation rule (for
+hills up to the limit of the bots' reliability) and a similarity distance of at least `LIKENESS.tooAlike` from
+every hill of the catalogue (`catalog`, the own hills by default) and from the hills given in `others`.
 
-`generateHill` zwraca dane skoczni i raport: najlepszy skok w ciszy i jego odległość od K, długość prostej
-rozbiegu, liczbę uruchomień wyroczni, część K strefy lądowania, problemy reguł stylu, czy cel skoku osiągnięto,
-czy oceniły ją reguły symulacji i najbliższą skocznię. Kontrole (`checkGeneratedHill`) idą od najtańszej: format,
-reguły dopuszczenia, podobieństwo, reguły symulacji. Skocznia, która nie przechodzi formatu, reguły dopuszczenia,
-reguły symulacji albo jest za bardzo podobna do innej, to błąd (`HillGenerationError` z listą problemów), nigdy
-cichy wynik. Reguły stylu i zakres najlepszego skoku to cele: raport mówi, czy je osiągnięto.
+`generateHill` returns the hill data and a report: the best jump in calm and its distance from K, the length of
+the inrun straight, the number of oracle runs, the share of K of the landing area, the problems of the style
+rules, whether the jump target was reached, whether the simulation rules judged it and the nearest hill. The
+checks (`checkGeneratedHill`) go from the cheapest: format, admission rules, similarity, simulation rules. A hill
+that does not pass the format, an admission rule, a simulation rule or is too similar to another is an error
+(`HillGenerationError` with the list of problems), never a silent result. The style rules and the range of the
+best jump are targets: the report says whether they were reached.
 
-### Zbiór wygenerowany
+### Generated set
 
-`src/hills/test-support/generated-hills.ts`: stała lista 27 charakterów od K45 do K260 (trochę poniżej
-najmniejszej i powyżej największej skoczni oryginału), generowana po kolei, każda skocznia sprawdzana z poprzednimi,
-więc żadne dwie nie są tą samą skocznią. Dziesięć skoczni będących w grze zbiór bierze takie, jakie są
-(`SET_HILLS_IN_GAME`; w tabeli 0 uruchomień wyroczni przy wyszukiwaniu, a część K strefy lądowania zmierzona).
+`src/hills/test-support/generated-hills.ts`: a fixed list of 27 characters from K45 to K260 (a little below the
+smallest and above the largest hill of the original), generated in turn, each hill checked against the previous
+ones, so no two are the same hill. The ten hills that are in the game are taken by the set as they are
+(`SET_HILLS_IN_GAME`; in the table 0 oracle runs in the search, and the share of K of the landing area measured).
 
-Liczby z raportu (bez reguł symulacji, tak jak generuje go trening): nachylenie zeskoku, strefa lądowania za K
-z charakteru (w nawiasie: po ustąpieniu do punktu K), położenie belki (m), płaska część za nią (m), cel najlepszego skoku (m za K), wysokość progu nad zeskokiem (m), garb, rozbieg, próg, długość prostej rozbiegu z wyszukiwania (m),
-najlepszy skok w ciszy minus K (m), uruchomienia wyroczni, odległość podobieństwa do najbliższej skoczni:
+Numbers from the report (without the simulation rules, as the training generates it): the slope of the landing
+hill, the landing area beyond K from the character (in brackets: after giving way to the K point), the gate
+position (m), the flat part behind it (m), the best jump target (m beyond K), the height of the takeoff above the
+landing hill (m), the knoll, the inrun, the takeoff, the length of the inrun straight from the search (m), the
+best jump in calm minus K (m), oracle runs, the similarity distance to the nearest hill:
 
-| K | zeskok | strefa za K | garb | rozbieg | próg | belka | płaskie | cel skoku | wys. progu | prosta | najlepszy - K | wyrocznia | podobieństwo |
+| K | landing hill | area past K | knoll | inrun | takeoff | gate | flat | jump target | takeoff height | straight | best - K | oracle | similarity |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 45 | 37° | 0,25 (0,25) | medium | 46° | 10° | 7,0 | 0,8 | 4..8 | 1,6 | 5,4 | 7,2 | 6 | 2,52 |
-| 50 | 39° | 0,30 (0,30) | long | 44° | 11° | 8,0 | 2,5 | 3..7 | 1,6 | 8,9 | 6,3 | 0 | 0,64 |
-| 60 | 38° | 0,26 (0,26) | long | 50° | 11° | 12,0 | 2,5 | 5..9 | 2,4 | 7,6 | 6,2 | 5 | 0,99 |
-| 60 | 36° | 0,24 (0,24) | medium | 52° | 10° | 18,0 | 0,8 | 3..6 | 2,4 | 5,5 | 5,5 | 0 | 0,47 |
-| 70 | 38° | 0,26 (0,26) | medium | 38° | 9° | 11,0 | 5,0 | 3..7 | 2,0 | 24,3 | 7,0 | 0 | 0,79 |
-| 75 | 37° | 0,28 (0,28) | short | 55° | 9° | 20,0 | 1,5 | 3..7 | 1,3 | 5,0 | 6,6 | 0 | 0,65 |
-| 85 | 41° | 0,20 (0,20) | medium | 47° | 8° | 9,0 | 6,0 | 3..7 | 2,2 | 11,1 | 4,3 | 0 | 1,05 |
-| 95 | 39° | 0,24 (0,24) | short | 53° | 10° | 15,0 | 3,5 | 7..11 | 1,3 | 8,6 | 9,7 | 7 | 1,13 |
-| 95 | 38° | 0,25 (0,25) | short | 42° | 11° | 14,0 | 2,0 | 7..11 | 1,8 | 29,0 | 9,8 | 0 | 0,66 |
-| 100 | 39° | 0,26 (0,26) | medium | 50° | 10° | 28,0 | 3,5 | 6..9 | 2,5 | 15,9 | 6,5 | 0 | 0,76 |
-| 105 | 42° | 0,18 (0,21) | medium | 45° | 9° | 7,0 | 1,0 | 4..8 | 1,5 | 18,6 | 5,7 | 0 | 0,71 |
-| 115 | 37° | 0,28 (0,28) | short | 53° | 10° | 20,0 | 4,5 | 5..8 | 2,1 | 17,2 | 7,7 | 0 | 1,18 |
-| 120 | 39° | 0,26 (0,26) | short | 48° | 9° | 12,0 | 2,8 | 4..8 | 2,0 | 22,1 | 7,0 | 0 | 0,76 |
-| 135 | 38° | 0,20 (0,20) | medium | 50° | 10° | 20,0 | 5,0 | 10..14 | 2,2 | 33,1 | 10,3 | 7 | 1,76 |
-| 140 | 36° | 0,30 (0,30) | long | 43° | 8° | 8,0 | 6,0 | 10..13 | 1,8 | 98,8 | 11,4 | 5 | 3,86 |
-| 150 | 40° | 0,25 (0,25) | short | 45° | 9° | 25,0 | 1,0 | 6..10 | 2,6 | 37,1 | 8,0 | 7 | 1,57 |
-| 160 | 37° | 0,18 (0,18) | long | 42° | 11° | 14,0 | 4,5 | 9..12 | 1,4 | 130,7 | 9,7 | 2 | 2,82 |
-| 170 | 39° | 0,20 (0,20) | medium | 55° | 10° | 30,0 | 2,0 | 8..12 | 2,1 | 29,9 | 10,8 | 8 | 2,18 |
-| 185 | 39° | 0,20 (0,20) | short | 45° | 10° | 18,0 | 7,0 | 11..15 | 1,2 | 71,1 | 13,1 | 6 | 1,20 |
-| 200 | 40° | 0,18 (0,18) | short | 47° | 10° | 9,0 | 3,0 | 15..18 | 2,5 | 60,5 | 15,6 | 7 | 1,29 |
-| 200 | 41° | 0,20 (0,20) | medium | 48° | 11° | 22,0 | 0,5 | 4..9 | 1,7 | 63,3 | 5,8 | 4 | 0,91 |
-| 215 | 42° | 0,15 (0,19) | short | 48° | 11° | 16,0 | 5,5 | 9..13 | 2,3 | 50,7 | 11,0 | 5 | 1,04 |
-| 230 | 41° | 0,15 (0,17) | short | 50° | 10° | 13,0 | 1,8 | 13..17 | 1,5 | 60,4 | 14,4 | 6 | 1,44 |
-| 230 | 43° | 0,12 (0,17) | medium | 52° | 9° | 11,0 | 4,0 | 6..9 | 1,9 | 45,1 | 8,6 | 8 | 0,97 |
-| 245 | 43° | 0,12 (0,19) | short | 52° | 10° | 9,5 | 2,8 | 3..7 | 2,6 | 41,4 | 5,2 | 5 | 1,21 |
-| 260 | 45° | 0,12 (0,20) | short | 58° | 9° | 6,5 | 6,5 | 8..12 | 1,3 | 16,8 | 9,5 | 5 | 1,48 |
-| 260 | 47° | 0,12 (0,20) | medium | 56° | 10° | 7,5 | 3,2 | 14..18 | 2,2 | 22,0 | 17,6 | 10 | 0,87 |
+| 45 | 37° | 0.25 (0.25) | medium | 46° | 10° | 7.0 | 0.8 | 4..8 | 1.6 | 5.4 | 7.2 | 6 | 2.52 |
+| 50 | 39° | 0.30 (0.30) | long | 44° | 11° | 8.0 | 2.5 | 3..7 | 1.6 | 8.9 | 6.3 | 0 | 0.64 |
+| 60 | 38° | 0.26 (0.26) | long | 50° | 11° | 12.0 | 2.5 | 5..9 | 2.4 | 7.6 | 6.2 | 5 | 0.99 |
+| 60 | 36° | 0.24 (0.24) | medium | 52° | 10° | 18.0 | 0.8 | 3..6 | 2.4 | 5.5 | 5.5 | 0 | 0.47 |
+| 70 | 38° | 0.26 (0.26) | medium | 38° | 9° | 11.0 | 5.0 | 3..7 | 2.0 | 24.3 | 7.0 | 0 | 0.79 |
+| 75 | 37° | 0.28 (0.28) | short | 55° | 9° | 20.0 | 1.5 | 3..7 | 1.3 | 5.0 | 6.6 | 0 | 0.65 |
+| 85 | 41° | 0.20 (0.20) | medium | 47° | 8° | 9.0 | 6.0 | 3..7 | 2.2 | 11.1 | 4.3 | 0 | 1.05 |
+| 95 | 39° | 0.24 (0.24) | short | 53° | 10° | 15.0 | 3.5 | 7..11 | 1.3 | 8.6 | 9.7 | 7 | 1.13 |
+| 95 | 38° | 0.25 (0.25) | short | 42° | 11° | 14.0 | 2.0 | 7..11 | 1.8 | 29.0 | 9.8 | 0 | 0.66 |
+| 100 | 39° | 0.26 (0.26) | medium | 50° | 10° | 28.0 | 3.5 | 6..9 | 2.5 | 15.9 | 6.5 | 0 | 0.76 |
+| 105 | 42° | 0.18 (0.21) | medium | 45° | 9° | 7.0 | 1.0 | 4..8 | 1.5 | 18.6 | 5.7 | 0 | 0.71 |
+| 115 | 37° | 0.28 (0.28) | short | 53° | 10° | 20.0 | 4.5 | 5..8 | 2.1 | 17.2 | 7.7 | 0 | 1.18 |
+| 120 | 39° | 0.26 (0.26) | short | 48° | 9° | 12.0 | 2.8 | 4..8 | 2.0 | 22.1 | 7.0 | 0 | 0.76 |
+| 135 | 38° | 0.20 (0.20) | medium | 50° | 10° | 20.0 | 5.0 | 10..14 | 2.2 | 33.1 | 10.3 | 7 | 1.76 |
+| 140 | 36° | 0.30 (0.30) | long | 43° | 8° | 8.0 | 6.0 | 10..13 | 1.8 | 98.8 | 11.4 | 5 | 3.86 |
+| 150 | 40° | 0.25 (0.25) | short | 45° | 9° | 25.0 | 1.0 | 6..10 | 2.6 | 37.1 | 8.0 | 7 | 1.57 |
+| 160 | 37° | 0.18 (0.18) | long | 42° | 11° | 14.0 | 4.5 | 9..12 | 1.4 | 130.7 | 9.7 | 2 | 2.82 |
+| 170 | 39° | 0.20 (0.20) | medium | 55° | 10° | 30.0 | 2.0 | 8..12 | 2.1 | 29.9 | 10.8 | 8 | 2.18 |
+| 185 | 39° | 0.20 (0.20) | short | 45° | 10° | 18.0 | 7.0 | 11..15 | 1.2 | 71.1 | 13.1 | 6 | 1.20 |
+| 200 | 40° | 0.18 (0.18) | short | 47° | 10° | 9.0 | 3.0 | 15..18 | 2.5 | 60.5 | 15.6 | 7 | 1.29 |
+| 200 | 41° | 0.20 (0.20) | medium | 48° | 11° | 22.0 | 0.5 | 4..9 | 1.7 | 63.3 | 5.8 | 4 | 0.91 |
+| 215 | 42° | 0.15 (0.19) | short | 48° | 11° | 16.0 | 5.5 | 9..13 | 2.3 | 50.7 | 11.0 | 5 | 1.04 |
+| 230 | 41° | 0.15 (0.17) | short | 50° | 10° | 13.0 | 1.8 | 13..17 | 1.5 | 60.4 | 14.4 | 6 | 1.44 |
+| 230 | 43° | 0.12 (0.17) | medium | 52° | 9° | 11.0 | 4.0 | 6..9 | 1.9 | 45.1 | 8.6 | 8 | 0.97 |
+| 245 | 43° | 0.12 (0.19) | short | 52° | 10° | 9.5 | 2.8 | 3..7 | 2.6 | 41.4 | 5.2 | 5 | 1.21 |
+| 260 | 45° | 0.12 (0.20) | short | 58° | 9° | 6.5 | 6.5 | 8..12 | 1.3 | 16.8 | 9.5 | 5 | 1.48 |
+| 260 | 47° | 0.12 (0.20) | medium | 56° | 10° | 7.5 | 3.2 | 14..18 | 2.2 | 22.0 | 17.6 | 10 | 0.87 |
 
-Każda skocznia spoza gry ma własne położenie belki, płaską część, wysokość progu i cel najlepszego skoku (belka 6,5..30 m, płaska część 0,5..7 m, próg 1,2..2,6 m, cele od K+3..K+7 do K+15..K+18). Rozbiegi mają od 30° do 58°; strome (45° i więcej) są w każdej wielkości: K45 (46°), K60 (50°), K95 (53°), K135 (50°), K150, K170 (55°), K185 i wszystkie od K200. Wszystkie są w celu, bez problemów reguł stylu, a te do K120 przechodzą reguły symulacji; najbliższa para jest
-0,51 od siebie (dwie K260). Druga skocznia K120 ma krótki garb: ze średnim garbem nie przechodziła reguły rozrzutu
-od wiatru (10,8 m przy dopuszczalnych 9,6 m); reguły nie poluzowano. Duże skocznie mieszczą się w scenie dzięki
-wybiegowi dołączającemu na stromej części i łukowi rozbiegu najwyżej 40 m; K260 potrzebują stromego zeskoku
-(45..47°) i rozbiegu (56..58°), a prostej zostaje im 16..21 m. Przy łagodniejszych charakterach K200..K260 scena nie
-mieści rozbiegu dość długiego, żeby najlepszy skok sięgnął K (raport podaje chybiony cel).
+Each hill outside the game has its own gate position, flat part, takeoff height and best jump target (gate
+6.5..30 m, flat part 0.5..7 m, takeoff 1.2..2.6 m, targets from K+3..K+7 to K+15..K+18). The inruns have from 30°
+to 58°; steep ones (45° and more) are at every size: K45 (46°), K60 (50°), K95 (53°), K135 (50°), K150, K170 (55°),
+K185 and all from K200. All are within the target, without style rule problems, and those up to K120 pass the
+simulation rules; the nearest pair is 0.51 apart (two K260). The second K120 hill has a short knoll: with a medium
+knoll it did not pass the rule of the spread from the wind (10.8 m with 9.6 m allowed); the rule was not loosened.
+The large hills fit in the scene thanks to the outrun joining on the steep part and an inrun curve of at most
+40 m; the K260 ones need a steep landing hill (45..47°) and inrun (56..58°), and 16..21 m of straight is left for
+them. With gentler characters K200..K260 the scene does not hold an inrun long enough for the best jump to reach K
+(the report gives the missed target).
 
-Test jednostkowy generuje najmniejszą skocznię zbioru (z regułami symulacji) i jedną za dużą na scenę (raport
-z chybionym celem i strefą lądowania, która ustąpiła). Cały zbiór z regułami symulacji generuje test stabilności
-(`corepack pnpm test:hills-stability`).
+A unit test generates the smallest hill of the set (with the simulation rules) and one too large for the scene (a
+report with a missed target and a landing area that gave way). The whole set with the simulation rules is
+generated by the stability test (`corepack pnpm test:hills-stability`).
 
-## Dodanie skoczni
+## Adding a hill
 
-1. Skopiować dane istniejącej skoczni w `src/hills/own-hills.ts`, nadać nowy `id` i nazwę, zmienić liczby.
-2. `corepack pnpm test src/hills`: format, reguły geometrii, kontrole symulacją i odcisk (nowy odcisk dopisać do tabeli w teście);
-   potem `corepack pnpm test:hills-stability`: ten sam werdykt na rozłącznych próbach.
-3. `corepack pnpm test src/render`: kontrole obrazu; nowe klucze migawki pikseli dla nowej skoczni zapisuje
-   `corepack pnpm test -u src/render/jump-view.pixels.test.ts`, a w diffie mają się pojawić tylko one.
-4. Przejrzeć migawkę pikseli i testy przeglądarkowe, które wskazują skocznię wbudowaną (`e2e/support/app.ts`;
-   czasy naciśnięć w `e2e/support/jump-timing.ts` zmierzono na tej skoczni; test
-   `src/game/scripted-jump-timing.test.ts` sprawdza, że nadal dają czyste lądowanie z zapasem 0,1 s).
-5. Skoczyć na komputerze i na telefonie.
-6. Podnieść wersję jak przy każdej zmianie gry.
+1. Copy the data of an existing hill in `src/hills/own-hills.ts`, give it a new `id` and name, change the numbers.
+2. `corepack pnpm test src/hills`: format, geometry rules, simulation checks and fingerprint (add the new
+   fingerprint to the table in the test); then `corepack pnpm test:hills-stability`: the same verdict on disjoint
+   samples.
+3. `corepack pnpm test src/render`: picture checks; the new pixel snapshot keys for the new hill are written by
+   `corepack pnpm test -u src/render/jump-view.pixels.test.ts`, and only they should appear in the diff.
+4. Review the pixel snapshot and the browser tests that point to the built-in hill (`e2e/support/app.ts`; the
+   press times in `e2e/support/jump-timing.ts` were measured on this hill; the test
+   `src/game/scripted-jump-timing.test.ts` checks that they still give a clean landing with a margin of 0.1 s).
+5. Jump on a computer and on a phone.
+6. Raise the version as with every change to the game.
