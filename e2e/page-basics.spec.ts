@@ -12,8 +12,8 @@ const TITLES: Readonly<Record<string, string>> = {
   replays: "Powtórki · Telemark",
   "hill list": "Wybór skoczni · Telemark",
   jump: "Skok: Ćwiczebna K90 · Telemark",
-  "competition setup": "Konkurs · Telemark",
-  "competition board": "Konkurs: Ćwiczebna K90 · Telemark",
+  "competition setup": "Zawody · Telemark",
+  "competition board": "Zawody: Ćwiczebna K90 · Telemark",
   // Opening the controls of the jump screen does not change where the player is.
   "jump with the controls open": "Skok: Ćwiczebna K90 · Telemark",
 };

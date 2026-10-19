@@ -10,12 +10,13 @@ Telemark is a working title.
 
 ## Status
 
-As of 2026-10-18: in active development.
+As of 2026-10-19: in active development.
 
 - Playable: training mode on 11 built-in hills (K50 to K120) and on the 37 original hills, a replay of the last jump
-  (pause, half and quarter speed), the original's `.rpl` replays from your own copy of the game, and a single
-  competition of two rounds against up to eight computer jumpers with the original's levels and steering.
-- Not there yet: the World Cup (a series of hills with a classification and a saved state) and team competitions.
+  (pause, half and quarter speed), the original's `.rpl` replays from your own copy of the game, and competitions
+  of two rounds against up to eight computer jumpers with the original's levels and steering: one hill, or a World
+  Cup over several hills (also the original's double cup) with cup points, standings and a podium.
+- Not there yet: saving and resuming a World Cup, and team competitions.
 - Playable at <https://telemark.visvaya.workers.dev> since 2026-10-13. The page can be installed and works
   offline after the first visit; every change on the default branch is published there once its checks pass
   (`docs/deployment.md`). Checked by hand on one iPhone and in one desktop browser; not yet on Android.
