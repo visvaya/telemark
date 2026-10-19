@@ -84,6 +84,7 @@ export function competitionCupPoints(competition: CompetitionState): number[] {
   });
 }
 
+/** A competition running, the cup standings due before the next one, or the cup over (one hill: after it). */
 export function cupPhase(state: CupState): CupPhase {
   if (!state.competition.finished) return "competition";
   return state.index + 1 < state.schedule.length ? "standings" : "over";
@@ -115,6 +116,11 @@ function withNewForms(entrants: readonly Competitor[], rng: BorlandRandom): Comp
   return entrants.map((e) => (e.kind === "cpu" ? { ...e, record: { ...e.record, ...drawCpuForm(rng) } } : e));
 }
 
+/**
+ * The cup after an action: a jump scored in the current competition (its cup points recorded when it finishes), or
+ * the next competition, with new forms and the start list from the cup standings; the latter only between
+ * competitions.
+ */
 export function cupReducer(state: CupState, action: CupAction): CupState {
   if (action.type === "scored") {
     if (state.competition.finished) return state;

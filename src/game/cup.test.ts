@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { BorlandRandom } from "../sim/borland-random";
+import { drawCpuForm } from "../sim/cpu-pilot";
 import {
   DEFAULT_COMPETITION_SETTINGS,
   competitionReducer,
@@ -151,7 +153,11 @@ describe("a cup", () => {
     const old = cpus(before);
     const now = cpus(s.competition.competitors);
     expect(now.map((r) => [r.talent1, r.talent2, r.level])).toEqual(old.map((r) => [r.talent1, r.talent2, r.level]));
-    expect(now.map((r) => [r.form1, r.form2])).not.toEqual(old.map((r) => [r.form1, r.form2]));
+    // The forms are drawn from the competition's seed, one computer jumper after another in entrant order.
+    const rng = new BorlandRandom(77);
+    const drawn = old.map(() => drawCpuForm(rng));
+    expect(now.map((r) => ({ form1: r.form1, form2: r.form2 }))).toEqual(drawn);
+    expect(drawn).not.toEqual(old.map((r) => ({ form1: r.form1, form2: r.form2 })));
     expect(s.entrants).toEqual(s.competition.competitors);
   });
 
