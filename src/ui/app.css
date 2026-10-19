@@ -403,7 +403,8 @@ h2 {
 
 /*
  * Every choice answers the pointer the same way: pointed at, its text turns white and a frame lightens; pressed,
- * it sinks by a pixel. The keyboard's focus keeps the yellow frame.
+ * a button or a box sinks by a pixel (a list opens instead, so it stays put). The keyboard's focus keeps the yellow
+ * frame.
  */
 @media (hover: hover) {
   .screen .settings-check:hover {
@@ -417,7 +418,7 @@ h2 {
   }
 }
 
-:is(.pixel-button, .hill-item, .settings-check, .pixel-select):active {
+:is(.pixel-button, .hill-item, .settings-check):active {
   translate: 0 1px;
 }
 
