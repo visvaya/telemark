@@ -16,8 +16,6 @@
   --tone-yellow-quiet: #a8a85a;
   --tone-white: #e8e8f0;
   --tone-violet: #c8a8ff;
-  /* A result just in: a jump made since the competition's board was last shown. */
-  --tone-green: #7ce08a;
   /* A player's name in the competition's table, as the original colours its human jumpers. */
   --tone-cyan: #40e8ec;
   /* A disqualification in the competition's table; light enough to read on black and on the panel. */
@@ -29,6 +27,8 @@
   --screen-title-px: 32px;
   /* One character of that font at the size of the choices (6 of its 8 pixels), the unit of the screens' indent. */
   --screen-char: calc(0.75 * var(--screen-item-px));
+  /* The arrow of a list to choose from, two of the font's pixels to a line at the size of the choices. */
+  --select-arrow-px: 10px;
   /* The column the choices start in, two characters in; a framed button starts its frame so far before it. */
   --item-column: calc(2 * var(--screen-char));
   --item-pad: calc(var(--screen-char) / 2);
@@ -361,11 +361,13 @@ h2 {
   margin-left: 36px;
 }
 
+/* The whole box with its text takes the click, as one target. */
 .settings-check {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
+  cursor: pointer;
 }
 
 /* A box framed like the buttons; a square in the colour of the accent marks it. */
@@ -397,6 +399,30 @@ h2 {
 .settings-check input[type="checkbox"]:focus-visible {
   outline: none;
   border-color: var(--accent);
+}
+
+/*
+ * Every choice answers the pointer the same way: pointed at, its text turns white and a frame lightens; pressed,
+ * it sinks by a pixel. The keyboard's focus keeps the yellow frame.
+ */
+@media (hover: hover) {
+  .screen .settings-check:hover {
+    color: var(--tone-white);
+    font-palette: --tone-white;
+  }
+
+  .settings-check:hover input[type="checkbox"]:not(:focus-visible),
+  .pixel-select:hover:not(:focus-visible) {
+    border-color: var(--muted);
+  }
+}
+
+:is(.pixel-button, .hill-item, .settings-check, .pixel-select):active {
+  translate: 0 1px;
+}
+
+.pixel-button[aria-disabled="true"]:active {
+  translate: none;
 }
 
 /* The replays among the settings: the buttons as wide as the others, the boxes and fields under them. */
@@ -1470,15 +1496,33 @@ h2 {
   }
 }
 
-/* A list to choose from (the hill and the levels of a competition), framed like the fields of the settings. */
+/*
+ * A list to choose from (the hill and the levels of a competition), framed like the fields of the settings. Its
+ * arrow is drawn in the pixels of the game, with room on both sides, instead of the system's at the very edge.
+ */
 .pixel-select {
+  appearance: none;
   max-width: 100%;
   min-height: 44px;
-  padding: 0 10px;
+  padding: 0 calc(10px + var(--select-arrow-px) + 12px) 0 10px;
+  cursor: pointer;
+  /* Five squares of two pixels, drawn with gradients: no image, which the content policy of one engine refuses. */
+  background-image:
+    linear-gradient(var(--muted), var(--muted)), linear-gradient(var(--muted), var(--muted)),
+    linear-gradient(var(--muted), var(--muted)), linear-gradient(var(--muted), var(--muted)),
+    linear-gradient(var(--muted), var(--muted));
+  background-repeat: no-repeat;
+  background-size: 2px 2px;
+  background-position:
+    right 20px top calc(50% - 3px),
+    right 18px top calc(50% - 1px),
+    right 16px top calc(50% + 1px),
+    right 14px top calc(50% - 1px),
+    right 12px top calc(50% - 3px);
   font: inherit;
   font-size: var(--screen-item-px);
   color: var(--text);
-  background: var(--bg);
+  background-color: var(--bg);
   border: 3px solid var(--line);
   border-radius: 0;
 }
@@ -1486,6 +1530,55 @@ h2 {
 .pixel-select:focus-visible {
   outline: none;
   border-color: var(--accent);
+}
+
+/*
+ * Where the browser lets a page draw the open list (Chromium's customizable select), it takes the game's colours:
+ * the option pointed at on the panel's colour, the chosen one marked in yellow. Elsewhere the system's list stays.
+ */
+@supports (appearance: base-select) {
+  .pixel-select,
+  .pixel-select::picker(select) {
+    appearance: base-select;
+  }
+
+  /* The chosen option stands in the middle of the field's height, as in the system's list. */
+  .pixel-select {
+    display: flex;
+    align-items: center;
+  }
+
+  .pixel-select::picker-icon {
+    display: none;
+  }
+
+  .pixel-select::picker(select) {
+    padding: 0;
+    color: var(--text);
+    background: var(--bg);
+    border: 3px solid var(--line);
+  }
+
+  .pixel-select option {
+    min-height: 40px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
+  .pixel-select option:hover,
+  .pixel-select option:focus-visible {
+    outline: none;
+    color: var(--tone-white);
+    background: var(--panel);
+  }
+
+  .pixel-select option:checked {
+    color: var(--accent);
+  }
+
+  .pixel-select option::checkmark {
+    color: var(--accent);
+  }
 }
 
 /* A contrast theme replaces the border's colour with its own: the focus shows as an outline instead. This comes
@@ -1688,8 +1781,8 @@ h2 {
   color: var(--tone-cyan);
 }
 
-/* The next jumper's row stands on the panel's colour; its mark and a new jump's each have a colour of their own. */
-.contest-next > * {
+/* A player's row stands on the panel's colour, however it ranks: the game is the player's; a computer's never. */
+.contest-player > * {
   background: var(--panel);
   /* Cells end at fractions of a pixel: each covers the seam to the next with a pixel of its own colour. */
   box-shadow: 1px 0 0 var(--panel);
@@ -1710,18 +1803,11 @@ h2 {
   display: block;
   margin-top: 2px;
   font-size: 0.8em;
-}
-
-.contest-mark-new {
-  color: var(--tone-green);
+  color: var(--tone-violet);
 }
 
 .contest-mark-short {
   display: none;
-}
-
-.contest-mark-next {
-  color: var(--tone-violet);
 }
 
 .contest-distance,

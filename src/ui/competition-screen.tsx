@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
-import { boardRows, freshCompetitors } from "../game/competition-board";
+import { boardRows } from "../game/competition-board";
 import { roundJustEnded, type CompetitionRun } from "../game/competition-run";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
@@ -37,10 +37,10 @@ function Fitted({ long, short }: { long: string; short: string }) {
   );
 }
 
-/** A row's mark under the name, in its colour; a shorter word where the table has least room. */
-function Mark({ kind, long, short }: { kind: "new" | "next"; long: string; short: string }) {
+/** The next jumper's mark under the name; a shorter word where the table has least room. */
+function Mark({ long, short }: { long: string; short: string }) {
   return (
-    <span className={`contest-mark contest-mark-${kind}`}>
+    <span className="contest-mark">
       <span className="contest-mark-long">{long}</span>
       <span className="contest-mark-short" aria-hidden="true">
         {short}
@@ -97,7 +97,7 @@ function JumpCell({ score, penalty }: { score: JumpScore | null; penalty: boolea
 }
 
 /** The competitor's name: the full one, and the short one that takes its place on a narrow screen. */
-function NameCell({ competitor, mark }: { competitor: Competitor | undefined; mark: "new" | "next" | null }) {
+function NameCell({ competitor, next }: { competitor: Competitor | undefined; next: boolean }) {
   const full = competitorName(competitor);
   const short = competitorShortName(competitor);
   return (
@@ -107,8 +107,7 @@ function NameCell({ competitor, mark }: { competitor: Competitor | undefined; ma
         {competitor?.kind === "cpu" && <FlagIcon country={competitorCountry(competitor)} />}
         {short === full ? <span>{full}</span> : <Fitted long={full} short={short} />}
       </span>
-      {mark === "new" && <Mark kind="new" long={T.newJump} short={T.newJumpShort} />}
-      {mark === "next" && <Mark kind="next" long={T.nextJumper} short={T.nextJumperShort} />}
+      {next && <Mark long={T.nextJumper} short={T.nextJumperShort} />}
     </th>
   );
 }
@@ -130,7 +129,6 @@ function Board({ run }: { run: CompetitionRun }) {
   const { state } = run;
   const next = currentJumper(state);
   const rows = boardRows(state);
-  const fresh = freshCompetitors(rows, new Set(run.log.map((j) => j.competitor)));
   return (
     <table className={state.competitors.length >= MANY_COMPETITORS ? "contest-table contest-many" : "contest-table"}>
       <caption>{captionOf(run)}</caption>
@@ -155,12 +153,11 @@ function Board({ run }: { run: CompetitionRun }) {
       <tbody>
         {rows.map((row) => {
           const c = state.competitors[row.competitor];
-          const mark = row.competitor === next ? "next" : fresh.has(row.competitor) ? "new" : null;
-          const classes = ["contest-row", c?.kind === "player" && "contest-player", mark === "next" && "contest-next"];
+          const classes = ["contest-row", c?.kind === "player" && "contest-player"];
           return (
             <tr key={row.competitor} className={classes.filter(Boolean).join(" ")}>
               <td className="contest-place">{row.place === null ? "" : T.place(row.place)}</td>
-              <NameCell competitor={c} mark={mark} />
+              <NameCell competitor={c} next={row.competitor === next} />
               {row.scores.map((s, i) => (
                 // oxlint-disable-next-line react/no-array-index-key -- one cell per round, in round order
                 <JumpCell key={i} score={s} penalty={state.disqualification === "original"} />

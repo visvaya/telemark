@@ -22,7 +22,7 @@ async function expectBoard(page: Page, rows: number): Promise<void> {
     await expect(page.getByRole("columnheader", { name: header, exact: true })).toBeVisible();
   }
   await expect(page.locator(".contest-row")).toHaveCount(rows);
-  await expect(page.getByText(/^Rekord skoczni: /)).toBeVisible();
+  await expect(page.getByText(/^Rekord na tym urządzeniu: /)).toBeVisible();
 }
 
 /** Sets the boxes of the setup: which players and which computer jumpers take part, and watching. */
@@ -64,7 +64,7 @@ test("the setup of a competition is remembered after the page is loaded again", 
   // The rule of a disqualification: the original's by default, the one of real competitions to choose.
   const rule = page.getByRole("combobox", { name: "Dyskwalifikacja" });
   await expect(rule).toHaveValue("original");
-  await rule.selectOption({ label: "jak w zawodach: odpada" });
+  await rule.selectOption({ label: "odpada z konkursu" });
 
   await openMenu(page);
   await openCompetitionSetup(page, traits);
@@ -103,7 +103,7 @@ test("a competition of one player and computer jumpers not watched runs to its r
     await expect(jumpCanvas(page)).toBeVisible();
     await playJump(page, traits);
     await goOnAfterJump(page, traits);
-    // The jump just made stands in its row (marked as new only beside older results, which depends on the draw).
+    // The jump just made stands in its row.
     await expect(rowOf(page, "Gracz 1").locator(".contest-distance").nth(jumps)).toHaveText(DISTANCE);
     if (jumps === 0) {
       // The rest of the first round is computed at once; its results come before the second round.
@@ -146,13 +146,12 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
     await expect(page.locator("p[aria-live]")).not.toHaveText("", { timeout: 10_000 });
     if (traits.desktop && round === 2) await page.keyboard.press("Enter");
     else await press(button(page, SKIP), traits);
-    // Alone on the board, the new jump is not marked: there is nothing older to set it apart from.
+    // The skipped jump is scored and stands in its row.
     await expect(
       rowOf(page, "Aatu Lehtovaara")
         .locator(".contest-distance")
         .nth(round - 1),
     ).toHaveText(DISTANCE);
-    await expect(rowOf(page, "Aatu Lehtovaara")).not.toContainText("nowy skok");
     if (round === 1) await press(button(page, NEXT_ROUND), traits);
   }
   await expect(page.getByRole("table", { name: FINAL })).toBeVisible();

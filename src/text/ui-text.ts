@@ -74,8 +74,8 @@ export const UI_TEXT = {
     /** The rule for a disqualified jump, chosen in the setup; the original's first, as the default. */
     disqualificationRule: "Dyskwalifikacja",
     disqualificationRules: {
-      original: "jak w DSJ2: punkty karne",
-      fis: "jak w zawodach: odpada",
+      original: "punkty karne (DSJ2)",
+      fis: "odpada z konkursu",
     },
     start: "Rozpocznij konkurs",
     nobody: "Włącz co najmniej jednego zawodnika.",
@@ -112,16 +112,13 @@ export const UI_TEXT = {
     disqualified: "dyskwalifikacja",
     place: (place: number) => `${place}.`,
     noJump: "-",
-    /** Marks of a row: a jump made since the board was last shown, and the competitor who jumps next. */
-    newJump: "nowy skok",
+    /** The mark of the competitor who jumps next, and its shorter word where the table has least room (below 350 px). */
     nextJumper: "skacze teraz",
-    /** The marks where the table has least room (below 350 px). */
-    newJumpShort: "nowy",
     nextJumperShort: "skacze",
-    /** The hill record under the table, with its holder when the record keeps one. */
+    /** The record the game keeps for the hill on this device, under the table, with its holder when kept. */
     hillRecord: (distance: string, holder: string | undefined) =>
-      `Rekord skoczni: ${distance} m${holder === undefined ? "" : ` · ${holder}`}`,
-    noHillRecord: "Rekord skoczni: -",
+      `Rekord na tym urządzeniu: ${distance} m${holder === undefined ? "" : ` · ${holder}`}`,
+    noHillRecord: "Rekord na tym urządzeniu: -",
     /** The next jumper in the second round, with the place after the first. */
     nextWithPlace: (name: string, place: number) => `Dalej: skacze ${name} (${place}.)`,
     /** The bar of the jump view: the jumper and the round, in the picture's capitals. */
