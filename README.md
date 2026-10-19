@@ -93,6 +93,8 @@ The notes in `docs` are in English.
 |---|---|
 | `docs/physics-spec.md` | How does the original move the jumper on the inrun, in flight and on landing? |
 | `docs/hill-format.md` | Where does the original keep its hills and how are they read? |
+| `docs/hills.md` | How are the game's own hills described, which rules must they pass, and how are they generated? |
+| `docs/jump-scene.md` | How does the original draw the jump scene, and where does the port differ? |
 | `docs/jumper-figure.md` | How is the jumper drawn from a pose? |
 | `docs/replay-format.md` | How are the original `.rpl` replays encoded? |
 | `docs/testing.md` | Which tests exist, what do they need and how are they run? |

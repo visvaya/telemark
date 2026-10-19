@@ -15,7 +15,8 @@ published as a new version, and the report is credited unless you ask otherwise.
 
 ## Scope
 
-The game runs entirely in the browser. It has no server, no accounts and makes no network requests of its own.
+The game runs entirely in the browser. It has no server of its own beyond the static site, no accounts, and talks
+to nothing but that site: it fetches its own files and, from time to time, the record of the latest release.
 Files of the original game picked by the player are read and stored locally (IndexedDB) and are never uploaded.
 
 In scope:
