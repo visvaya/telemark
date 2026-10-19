@@ -33,7 +33,10 @@ the bend `arccos(i/100)`, where `i` is the segment length in percent of the maxi
 `x_ekr = (x − 0,15·z)·14`, `y_ekr = 200 − (y − 0,5·z)·14·200/240`: 14 px/m horizontally and 11.67 px/m
 vertically on a 320×200 screen with a 4:3 aspect ratio, that is 11.67 px/m on both axes after correcting the
 aspect ratio (our renderer uses this scale). 16 bones in a fixed order (far half, torso and head, near half);
-each has a part of the outfit (suit, trousers, sleeves, gloves, helmet, skis) and a shade. A 2×2 pixel brush or
+each has a part of the outfit (suit, trousers, sleeves, gloves, helmet, skis) and a shade. The torso ("suit") has
+a colour slot of its own (byte 0x13 of the jumper record, 1cb6:2232): 0x0D, light grey, for everybody, and 0x0E,
+the yellow of computer jumpers' names, for the leader of a World Cup from the second hill on (003f:56ad..56ff);
+the outfit editor sets only the other five slots. A 2×2 pixel brush or
 a 4×4 blot for thick bones; a bone from a point to itself is a dot (hands, head, ski tips).
 
 The shadow (1cb6:1d2a) is the same bones in one colour (index 24), cast onto the terrain plane under the jumper:

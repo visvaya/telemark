@@ -49,6 +49,8 @@ export interface JumpViewModel {
   scenery?: Scenery;
   /** The jumper's colours; the original's player 1 when absent. */
   outfit?: Outfit;
+  /** The jumper leads a World Cup and wears the leader's yellow torso; absent otherwise. */
+  leader?: boolean;
   /** Accumulated drift of the displayed wind, in metres, for the falling snow. */
   windDriftM?: { x: number; y: number };
   /**
