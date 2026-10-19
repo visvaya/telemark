@@ -64,7 +64,7 @@ test("the setup of a competition is remembered after the page is loaded again", 
   // The rule of a disqualification: the original's by default, the one of real competitions to choose.
   const rule = page.getByRole("combobox", { name: "Dyskwalifikacja" });
   await expect(rule).toHaveValue("original");
-  await rule.selectOption({ label: "jak w zawodach: odpada" });
+  await rule.selectOption({ label: "odpada z konkursu" });
 
   await openMenu(page);
   await openCompetitionSetup(page, traits);

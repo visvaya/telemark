@@ -74,8 +74,8 @@ export const UI_TEXT = {
     /** The rule for a disqualified jump, chosen in the setup; the original's first, as the default. */
     disqualificationRule: "Dyskwalifikacja",
     disqualificationRules: {
-      original: "jak w DSJ2: punkty karne",
-      fis: "jak w zawodach: odpada",
+      original: "punkty karne (DSJ2)",
+      fis: "odpada z konkursu",
     },
     start: "Rozpocznij konkurs",
     nobody: "Włącz co najmniej jednego zawodnika.",

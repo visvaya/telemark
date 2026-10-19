@@ -1506,10 +1506,19 @@ h2 {
   min-height: 44px;
   padding: 0 calc(10px + var(--select-arrow-px) + 12px) 0 10px;
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' shape-rendering='crispEdges'%3E%3Cpath fill='%23a0a8c0' d='M0 0h2v2H0zM2 2h2v2H2zM4 4h2v2H4zM6 2h2v2H6zM8 0h2v2H8z'/%3E%3C/svg%3E");
+  /* Five squares of two pixels, drawn with gradients: no image, which the content policy of one engine refuses. */
+  background-image:
+    linear-gradient(var(--muted), var(--muted)), linear-gradient(var(--muted), var(--muted)),
+    linear-gradient(var(--muted), var(--muted)), linear-gradient(var(--muted), var(--muted)),
+    linear-gradient(var(--muted), var(--muted));
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: var(--select-arrow-px) calc(var(--select-arrow-px) * 0.6);
+  background-size: 2px 2px;
+  background-position:
+    right 20px top calc(50% - 3px),
+    right 18px top calc(50% - 1px),
+    right 16px top calc(50% + 1px),
+    right 14px top calc(50% - 1px),
+    right 12px top calc(50% - 3px);
   font: inherit;
   font-size: var(--screen-item-px);
   color: var(--text);
