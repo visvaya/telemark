@@ -6,7 +6,7 @@ import { f32 } from "./physics-constants";
 import { randomCentered } from "./wind";
 
 /**
- * Computer jumpers of the original (docs/physics-spec.md, "Skoczkowie komputerowi"): the per-jump setup
+ * Computer jumpers of the original (docs/physics-spec.md, "Computer jumpers"): the per-jump setup
  * 0baf:8aeb, the per-frame pilot 0baf:8ee4 that replaces the mouse, and the draws of their talent (cup start)
  * and form (competition start). Every value the original keeps in a Single is rounded with f32 where it is
  * stored; intermediate results stay in doubles, as in the rest of the port.

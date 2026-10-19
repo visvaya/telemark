@@ -24,7 +24,7 @@ import {
 /**
  * Per-frame jump logic (0baf:9c52 of the original without drawing, sound and
  * text): phases, takeoff, flight control, landing, distance and judges.
- * See docs/physics-spec.md, section "Fazy skoku".
+ * See docs/physics-spec.md, section "Jump phases and control".
  */
 
 export const PHASE = {
