@@ -487,6 +487,23 @@ test("when the browser has dropped the store, the network answers", async () => 
   assert.deepEqual([...world.caches.stores.keys()], [], "answering does not create an empty store");
 });
 
+test("a request the network fails is answered with a network error, never a broken promise", async () => {
+  // A reload stops the requests of the page it leaves, and a device can lose its network: the worker then says
+  // the load failed as the network would, instead of failing itself (Firefox reports that as a worker's error).
+  const world = { caches: makeCacheStorage(), network: makeNetwork(RELEASE_A) };
+  const worker = await installed(RELEASE_A, world);
+  world.caches.stores.clear();
+  world.network.offline = true;
+  for (const [path, mode] of [
+    ["/", "navigate"],
+    ["/assets/index-AAAAAAAA.js", "cors"],
+    ["/not-a-release-file.png", "cors"],
+  ]) {
+    const response = await worker.fetch(path, { mode });
+    assert.equal(response?.type, "error", `${path} answered with a network error`);
+  }
+});
+
 test("a page learns which release the worker holds and whether all of it is stored", async () => {
   const world = { caches: makeCacheStorage(), network: makeNetwork(RELEASE_A) };
   const worker = await installed(RELEASE_A, world);
