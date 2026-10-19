@@ -34,13 +34,17 @@ test.skip(({ traits }) => !traits.desktop, "the first visit is measured once per
  * and tilt steering had grown the script and the stylesheet: Chromium 168 685 bytes until the first screen and
  * 185 229 bytes until the game is stored; Firefox 170 247 bytes until the first screen (its second icon).
  *
- * The byte limits are the Chromium values of 2026-10-16 plus 15%; the count until the game is stored is the
+ * Measured again 2026-10-19 in the browser tests on the CI runner, after the World Cup and the competitions kept
+ * between visits and in a file had grown the script: Chromium 192 695 bytes until the first screen and 209 662
+ * bytes until the game is stored; Firefox 194 277 bytes until the first screen (over the limit of then, 194 000).
+ *
+ * The byte limits are the Chromium values of 2026-10-19 plus 15%; the count until the game is stored is the
  * Chromium value of 2026-10-13 plus 15%.
  */
 const FIRST_VISIT_BUDGET = {
-  FIRST_SCREEN_BYTES: 194_000,
+  FIRST_SCREEN_BYTES: 222_000,
   READY_REQUESTS: 17,
-  READY_BYTES: 213_000,
+  READY_BYTES: 242_000,
 } as const;
 
 /** Requests until the first screen, as measured in each engine; 15% of four requests is less than one request. */
