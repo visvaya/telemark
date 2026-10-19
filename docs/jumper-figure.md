@@ -1,47 +1,48 @@
-# Figura skoczka (v2.10P)
+# Jumper figure (v2.10P)
 
-Oryginał nie ma sprite'ów skoczka: rysuje go z pozy (`src/sim/pose.ts`) jako szkielet 3D w rzucie ukośnym.
-Port: `src/render/jumper-skeleton.ts`, rysowanie: `src/render/jump-view-jumper.ts`.
+The original has no jumper sprites: it draws the jumper from the pose (`src/sim/pose.ts`) as a 3D skeleton in
+oblique projection. Port: `src/render/jumper-skeleton.ts`, drawing: `src/render/jump-view-jumper.ts`.
 
-## Znaczenie pól pozy
+## Meaning of the pose fields
 
-Każda „noga” w `PoseState` to połowa ciała (0 i 1):
+Each "leg" in `PoseState` is one half of the body (0 and 1):
 
-| Pole | Znaczenie |
+| Field | Meaning |
 |---|---|
-| odcinek 0 | noga, biodro do stopy (do 1,08 m) |
-| odcinek 1 | ręka, bark do dłoni (do 0,74 m) |
-| staw 0 | rozchylenie narty (V) |
-| staw 1 | kąt narty |
-| stawy 2, 3 | kierunek nogi i jej odchylenie w bok |
-| stawy 6, 7 | kierunek ręki i jej odchylenie w bok |
-| staw 4 (połowa 0) | tułów |
-| staw 5 (połowa 0) | głowa |
-| staw 8 (połowa 0) | obrót całej figury |
+| segment 0 | leg, hip to foot (up to 1.08 m) |
+| segment 1 | arm, shoulder to hand (up to 0.74 m) |
+| joint 0 | ski spread (V) |
+| joint 1 | ski angle |
+| joints 2, 3 | direction of the leg and its sideways deflection |
+| joints 6, 7 | direction of the arm and its sideways deflection |
+| joint 4 (half 0) | torso |
+| joint 5 (half 0) | head |
+| joint 8 (half 0) | rotation of the whole figure |
 
-## Kinematyka (1cb6:1418)
+## Kinematics (1cb6:1418)
 
-21 punktów (z w bok, x w przód, y w górę) względem stopy nogi przedniej (`DS:4CDC` = noga przednia + 1),
-zapisywanych od `DS:4456` co 12 bajtów. Miednica leży na końcu nogi przedniej; tułów 0,49 m, barki ±0,22 m,
-głowa 0,24 m od szyi; narty: 1 m za wiązaniem, 1,628 m przed nim, czubek 1,648 m odgięty o 0,04 rad.
-Kolano i łokieć: połowa odcinka (0,54 i 0,37 m) pod kątem kierunku kończyny minus albo plus zgięcie
-`arccos(i/100)`, gdzie `i` to długość odcinka w procentach maksimum (tablica `DS:42C2`, wypełniana przez
+21 points (z sideways, x forward, y up) relative to the foot of the front leg (`DS:4CDC` = front leg + 1),
+stored from `DS:4456` every 12 bytes. The pelvis lies at the end of the front leg; torso 0.49 m, shoulders
+±0.22 m, head 0.24 m from the neck; skis: 1 m behind the binding, 1.628 m in front of it, tip 1.648 m bent by
+0.04 rad. Knee and elbow: half the segment (0.54 and 0.37 m) at the angle of the limb direction minus or plus
+the bend `arccos(i/100)`, where `i` is the segment length in percent of the maximum (table `DS:42C2`, filled by
 1cb6:2291).
 
-## Rzut i rysowanie (1cb6:20e1, 1f8b:00dc)
+## Projection and drawing (1cb6:20e1, 1f8b:00dc)
 
-`x_ekr = (x − 0,15·z)·14`, `y_ekr = 200 − (y − 0,5·z)·14·200/240`: 14 px/m w poziomie i 11,67 px/m w pionie
-na ekranie 320×200 o proporcjach 4:3, czyli po wyrównaniu proporcji 11,67 px/m w obu osiach (tę skalę
-przyjmuje nasz renderer). 16 kości w stałej kolejności (dalsza połowa, tułów i głowa, bliższa połowa); każda
-ma część stroju (kombinezon, spodnie, rękawy, rękawice, kask, narty) i odcień. Pędzel 2×2 piksele albo
-plamka 4×4 dla kości grubych; kość z punktu do niego samego to kropka (dłonie, głowa, czubki nart).
+`x_ekr = (x − 0,15·z)·14`, `y_ekr = 200 − (y − 0,5·z)·14·200/240`: 14 px/m horizontally and 11.67 px/m
+vertically on a 320×200 screen with a 4:3 aspect ratio, that is 11.67 px/m on both axes after correcting the
+aspect ratio (our renderer uses this scale). 16 bones in a fixed order (far half, torso and head, near half);
+each has a part of the outfit (suit, trousers, sleeves, gloves, helmet, skis) and a shade. A 2×2 pixel brush or
+a 4×4 blot for thick bones; a bone from a point to itself is a dot (hands, head, ski tips).
 
-Cień (1cb6:1d2a) to te same kości jednym kolorem (indeks 24), rzucone na płaszczyznę terenu pod skoczkiem:
-kolumna 147 zamiast 148, wiersz obniżony o round((y_skoczka − y_terenu)·1,33·14) i pochylony z nachyleniem
-terenu; przy progu rysowane są dwa cienie (na najeździe i na zeskoku), każdy obcięty na krawędzi progu.
+The shadow (1cb6:1d2a) is the same bones in one colour (index 24), cast onto the terrain plane under the jumper:
+column 147 instead of 148, row lowered by round((y_jumper − y_terrain)·1.33·14) and sheared with the slope of the
+terrain; at the takeoff two shadows are drawn (on the inrun and on the landing hill), each clipped at the edge
+of the takeoff.
 
-## Weryfikacja
+## Verification
 
-**[pomiar]** Punkty liczone przez port z pozy zapisanej w śladzie zgadzają się z punktami zapisanymi przez
-oryginał we wszystkich klatkach 11 śladów (różnica poniżej 0,1 mm; `jumper-skeleton.golden.test.ts`).
-Kolory stroju są własne. Jak figura i cień stoją w scenie: `jump-scene.md`.
+**[measurement]** The points the port computes from the pose stored in a trace match the points stored by the
+original in all frames of 11 traces (difference below 0.1 mm; `jumper-skeleton.golden.test.ts`). The outfit
+colours are our own. How the figure and the shadow sit in the scene: `jump-scene.md`.
