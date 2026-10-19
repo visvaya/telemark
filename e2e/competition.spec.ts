@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { OWN_HILL_SPECS } from "../src/hills/own-hills";
 import { button, jumpCanvas, openCompetitionSetup, openMenu, press, storedSave, TEXT } from "./support/app";
 import { expect, test, type DeviceTraits } from "./support/fixtures";
 import { centerOf, playJump } from "./support/jump";
@@ -181,4 +182,83 @@ test("leaving a competition jump asks first", async ({ page, traits }) => {
   await press(button(page, TEXT.toMainMenu), traits);
   await press(button(page, TEXT.contestAbandonYes), traits);
   await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
+});
+
+/** A hill's box in the setup, by the hill's name. */
+const hillBox = (page: Page, name: string) =>
+  page.getByRole("checkbox", { name: new RegExp(String.raw`^${name} K\d+$`) });
+
+test("the hills of the setup and the double cup are remembered after the page is loaded again", async ({
+  page,
+  traits,
+}) => {
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  // Nothing chosen yet: the first hill, one competition.
+  await expect(hillBox(page, OWN_HILL_SPECS[0]?.name ?? "?")).toBeChecked();
+  await expect(page.getByText("1 konkurs", { exact: true })).toBeVisible();
+  await press(button(page, "Wyczyść"), traits);
+  await expect(button(page, TEXT.contestStart)).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByText("Zaznacz co najmniej jedną skocznię.")).toBeVisible();
+  await press(button(page, "Zaznacz wszystkie"), traits);
+  await expect(page.getByText(`Puchar Świata: ${OWN_HILL_SPECS.length} konkursów`)).toBeVisible();
+  await press(button(page, "Wyczyść"), traits);
+  await press(hillBox(page, OWN_HILL_SPECS[1]?.name ?? "?"), traits);
+  await press(hillBox(page, OWN_HILL_SPECS[2]?.name ?? "?"), traits);
+  await press(page.getByRole("checkbox", { name: "Podwójny Puchar" }), traits);
+  await expect(page.getByText("Puchar Świata: 4 konkursy")).toBeVisible();
+
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  await expect(hillBox(page, OWN_HILL_SPECS[0]?.name ?? "?")).not.toBeChecked();
+  await expect(hillBox(page, OWN_HILL_SPECS[1]?.name ?? "?")).toBeChecked();
+  await expect(hillBox(page, OWN_HILL_SPECS[2]?.name ?? "?")).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Podwójny Puchar" })).toBeChecked();
+  await expect(page.getByText("Puchar Świata: 4 konkursy")).toBeVisible();
+});
+
+test("a world cup of two hills runs from the start list to its podium", async ({ page, traits }) => {
+  const [first, second] = OWN_HILL_SPECS;
+  if (!first || !second) throw new Error("two own hills expected");
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  await setUp(page, traits, { "Gracz 1": false });
+  await press(button(page, "Zaznacz wszystkie"), traits);
+  await press(button(page, "Wyczyść"), traits);
+  await press(hillBox(page, first.name), traits);
+  await press(hillBox(page, second.name), traits);
+  await expect(page.getByText("Puchar Świata: 2 konkursy")).toBeVisible();
+  await press(button(page, TEXT.contestStart), traits);
+
+  for (const [n, hill] of [first, second].entries()) {
+    // The computer jumpers' first round is computed at once; the board says which competition of the cup it is.
+    await expect(page.getByText(`Konkurs ${n + 1} z 2`)).toBeVisible();
+    await expect(page.getByText(new RegExp(String.raw`^${hill.name} K\d+$`))).toBeVisible();
+    await expect(page.getByRole("table", { name: "Wyniki po 1. serii" })).toBeVisible();
+    await expect(button(page, NEXT_ROUND)).toBeFocused();
+    await press(button(page, NEXT_ROUND), traits);
+    await expect(page.getByRole("table", { name: FINAL })).toBeVisible();
+    if (n === 0) {
+      await expect(button(page, "Dalej: klasyfikacja Pucharu")).toBeFocused();
+      await press(button(page, "Dalej: klasyfikacja Pucharu"), traits);
+      await expect(page.getByRole("heading", { name: "Puchar Świata", level: 1 })).toBeVisible();
+      await expect(page.getByRole("table", { name: "Klasyfikacja po 1 z 2 konkursach" })).toBeVisible();
+      await expect(page.locator(".contest-row")).toHaveCount(4);
+      await expect(page.locator(".contest-row").first()).toContainText("lider");
+      const next = button(page, new RegExp(String.raw`^Dalej: ${second.name} K\d+ \(konkurs 2 z 2\)$`));
+      await expect(next).toBeFocused();
+      await press(next, traits);
+    }
+  }
+  await expect(button(page, "Wyniki końcowe")).toBeFocused();
+  await press(button(page, "Wyniki końcowe"), traits);
+  await expect(page.getByText("Wyniki końcowe · 2 konkursy")).toBeVisible();
+  const podium = page.getByRole("list", { name: "Podium" });
+  await expect(podium).toBeVisible();
+  await expect(podium.getByText(/^1\. miejsce: .+, \d+ pkt$/).first()).toBeAttached();
+  // No sideways scroll on the end screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(button(page, "Nowe zawody")).toBeFocused();
+  await press(button(page, "Nowe zawody"), traits);
+  await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
 });

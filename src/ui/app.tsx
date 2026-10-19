@@ -37,6 +37,7 @@ import { useRecordGhost, useReplayShelf } from "./use-replay-shelf";
 import { useCompetition } from "./use-competition";
 import { CompetitionSetupScreen } from "./competition-setup-screen";
 import { CompetitionScreen } from "./competition-screen";
+import { CupEndScreen, CupStandingsScreen } from "./cup-screens";
 
 type Screen =
   | { kind: "menu" }
@@ -53,7 +54,11 @@ type Screen =
   /** The board of the competition between its jumps. */
   | { kind: "contest"; hill: HillChoice }
   /** A jump of the competition. */
-  | { kind: "contest-jump"; hill: HillChoice };
+  | { kind: "contest-jump"; hill: HillChoice }
+  /** The cup standings between two competitions of a world cup. */
+  | { kind: "cup-standings" }
+  /** The end of a world cup: the podium and the final standings. */
+  | { kind: "cup-end" };
 
 interface SideProps {
   kind: "howto" | "install" | "about" | "settings";
@@ -237,14 +242,31 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
       />
     );
   }
-  if (screen.kind === "contest" && c.contest.run) {
+  const run = c.contest.run;
+  if (screen.kind === "cup-standings" && run) {
+    return (
+      <CupStandingsScreen
+        run={run}
+        onNext={c.contest.nextCompetition}
+        onMenu={c.contest.abandon}
+        focusOnEntry={c.navigated}
+      />
+    );
+  }
+  if (screen.kind === "cup-end" && run) {
+    return <CupEndScreen run={run} onAgain={c.contest.again} onMenu={c.contest.abandon} focusOnEntry={c.navigated} />;
+  }
+  if (screen.kind === "contest" && run) {
+    const state = run.cup.competition;
     return (
       <CompetitionScreen
-        key={`${c.contest.run.state.round}-${c.contest.run.state.position}-${c.contest.run.log.length}`}
-        run={c.contest.run}
-        record={c.save.records[c.contest.run.hill.id]}
+        key={`${run.cup.index}-${state.round}-${state.position}-${run.log.length}`}
+        run={run}
+        record={c.save.records[run.hill.id]}
         onNext={c.contest.next}
         onAgain={c.contest.again}
+        onStandings={c.contest.standings}
+        onEnd={c.contest.end}
         onMenu={c.contest.abandon}
         focusOnEntry={c.navigated}
       />
@@ -256,7 +278,7 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         hills={c.hills}
         settings={c.save.settings.competition}
         onChange={(competition) => c.onSettings({ competition })}
-        onStart={(hill) => c.contest.start(hill, c.save.settings.competition)}
+        onStart={(hills) => c.contest.start(hills, c.save.settings.competition)}
         onBack={() => c.show({ kind: "menu" })}
         focusOnEntry={c.navigated}
       />
