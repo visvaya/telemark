@@ -16,7 +16,7 @@ import { LAYOUT_SLACK_PX, scrollState } from "./support/geometry";
 /** The picture's logical size (src/render/jump-view.ts). */
 const VIEW_HEIGHT_PX = 200;
 const VIEW_MIN_WIDTH_PX = 256;
-const VIEW_MAX_WIDTH_PX = 432;
+const VIEW_MAX_WIDTH_PX = 480;
 /** A drawn frame has sky, snow, the hill, the jumper and text; a blank or failed one has a single colour. */
 const MIN_COLOURS_IN_A_FRAME = 8;
 

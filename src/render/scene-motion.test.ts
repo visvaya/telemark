@@ -73,7 +73,7 @@ interface Picture {
 }
 
 const PICTURES: readonly Picture[] = [
-  { name: "432 square", widthPx: VIEW_MAX_WIDTH_PX, pixelWidth: SQUARE_PIXEL_WIDTH },
+  { name: `${VIEW_MAX_WIDTH_PX} square`, widthPx: VIEW_MAX_WIDTH_PX, pixelWidth: SQUARE_PIXEL_WIDTH },
   { name: "356 square", widthPx: 356, pixelWidth: SQUARE_PIXEL_WIDTH },
   { name: "the original's 320", widthPx: 320, pixelWidth: 1 },
 ];
