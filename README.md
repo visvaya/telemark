@@ -16,7 +16,8 @@ As of 2026-10-19: in active development.
   (pause, half and quarter speed), the original's `.rpl` replays from your own copy of the game, and competitions
   of two rounds against up to eight computer jumpers with the original's levels and steering: one hill, or a World
   Cup over several hills (also the original's double cup) with cup points, standings and a podium.
-- Not there yet: saving and resuming a World Cup, and team competitions.
+- A competition is kept on the device between visits and can be saved to a file and read on another device.
+- Not there yet: team competitions.
 - Playable at <https://telemark.visvaya.workers.dev> since 2026-10-13. The page can be installed and works
   offline after the first visit; every change on the default branch is published there once its checks pass
   (`docs/deployment.md`). Checked by hand on one iPhone and in one desktop browser; not yet on Android.
