@@ -14,7 +14,9 @@ describe("page title of a screen", () => {
     expect(screenTitle({ kind: "settings" })).toBe("Ustawienia · Telemark");
     expect(screenTitle({ kind: "outfit" })).toBe("Strój · Telemark");
     expect(screenTitle({ kind: "replays" })).toBe("Powtórki · Telemark");
-    expect(screenTitle({ kind: "contest-setup" })).toBe("Konkurs · Telemark");
+    expect(screenTitle({ kind: "contest-setup" })).toBe("Zawody · Telemark");
+    expect(screenTitle({ kind: "cup-standings" })).toBe("Puchar Świata: klasyfikacja · Telemark");
+    expect(screenTitle({ kind: "cup-end" })).toBe("Puchar Świata: wyniki końcowe · Telemark");
   });
 
   it("names the hill of a jump with its K point", () => {
@@ -22,7 +24,7 @@ describe("page title of a screen", () => {
       "Skok: Ćwiczebna K90 · Telemark",
     );
     expect(screenTitle({ kind: "contest", hill: { name: "Ćwiczebna", kPointM: 90 } })).toBe(
-      "Konkurs: Ćwiczebna K90 · Telemark",
+      "Zawody: Ćwiczebna K90 · Telemark",
     );
   });
 });

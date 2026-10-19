@@ -5,10 +5,10 @@ import { expect, type DeviceTraits } from "./fixtures";
 export const TEXT = {
   menuHeading: "Główne menu",
   training: "Trening",
-  competition: "Konkurs",
-  contestStart: "Rozpocznij konkurs",
+  competition: "Zawody",
+  contestStart: "Rozpocznij zawody",
   contestNext: /^Dalej: skacze /,
-  contestAbandon: "Przerwij konkurs",
+  contestAbandon: "Przerwij zawody",
   contestAbandonYes: "Tak, przerwij",
   replays: "Powtórki",
   outfit: "Strój",

@@ -8,6 +8,7 @@ import {
   type DisqualificationRule,
 } from "../game/competition";
 import { RIVALS } from "../game/competition-rivals";
+import { cupSchedule } from "../game/cup";
 import type { HillChoice } from "../game/hill-choice";
 import { UI_TEXT } from "../text/ui-text";
 import { FlagIcon } from "./flag-icon";
@@ -19,15 +20,19 @@ interface Props {
   hills: readonly HillChoice[];
   settings: CompetitionSettings;
   onChange: (settings: CompetitionSettings) => void;
-  onStart: (hill: HillChoice) => void;
+  /** Starts a competition on each of the hills, in this order. */
+  onStart: (hills: HillChoice[]) => void;
   onBack: () => void;
   focusOnEntry: boolean;
 }
 
-/** The hill the settings name, or the first on the list when it is not there (the original's files went). */
-function chosenHill(hills: readonly HillChoice[], hillId: string | null): HillChoice | undefined {
-  return hills.find((h) => h.id === hillId) ?? hills[0];
-}
+/** The ticked hills' ids in the order of the list; none ticked yet shows the first hill ticked. */
+const tickedIds = (hills: readonly HillChoice[], hillIds: readonly string[] | null): string[] =>
+  cupSchedule(
+    hillIds,
+    hills.map((h) => h.id),
+    false,
+  );
 
 const replaced = <T,>(list: readonly T[], at: number, value: T): T[] => list.map((v, i) => (i === at ? value : v));
 
@@ -73,36 +78,104 @@ function DisqualificationChoice({
   );
 }
 
+/** One group of hills, each with its box, under a small heading when there are two groups. */
+function HillGroup({
+  title,
+  hills,
+  ticked,
+  onTick,
+}: {
+  title: string | null;
+  hills: readonly HillChoice[];
+  ticked: readonly string[];
+  onTick: (id: string, on: boolean) => void;
+}) {
+  if (hills.length === 0) return null;
+  return (
+    <div className="contest-hill-group">
+      {title !== null && <h3 className="contest-hill-group-title">{title}</h3>}
+      {hills.map((h) => (
+        <Check
+          key={h.id}
+          label={UI_TEXT.hillLabel(h.name, h.kPointM)}
+          checked={ticked.includes(h.id)}
+          onChange={(on) => onTick(h.id, on)}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** The hills of the competitions, own and original apart, with the buttons for the whole list and the double cup. */
+function HillsChoice({
+  hills,
+  settings,
+  ticked,
+  onChange,
+}: {
+  hills: readonly HillChoice[];
+  settings: CompetitionSettings;
+  ticked: readonly string[];
+  onChange: (settings: CompetitionSettings) => void;
+}) {
+  const tick = (id: string, on: boolean) => {
+    const next = on ? [...ticked, id] : ticked.filter((t) => t !== id);
+    onChange({ ...settings, hillIds: hills.map((h) => h.id).filter((h) => next.includes(h)) });
+  };
+  const own = hills.filter((h) => h.source === "own");
+  const original = hills.filter((h) => h.source === "original");
+  const grouped = own.length > 0 && original.length > 0;
+  return (
+    <section className="settings-group" aria-labelledby="contest-hill">
+      <h2 className="hill-section-title" id="contest-hill">
+        {T.hills}
+      </h2>
+      <div className="contest-hill-actions">
+        <button
+          type="button"
+          className="pixel-button"
+          onClick={() => onChange({ ...settings, hillIds: hills.map((h) => h.id) })}
+        >
+          {T.selectAllHills}
+        </button>
+        <button type="button" className="pixel-button" onClick={() => onChange({ ...settings, hillIds: [] })}>
+          {T.clearHills}
+        </button>
+      </div>
+      <HillGroup title={grouped ? T.ownHills : null} hills={own} ticked={ticked} onTick={tick} />
+      <HillGroup title={grouped ? T.originalHills : null} hills={original} ticked={ticked} onTick={tick} />
+      <Check
+        label={T.doubleCup}
+        checked={settings.doubleCup}
+        onChange={(doubleCup) => onChange({ ...settings, doubleCup })}
+      />
+      <p className="note contest-hill-note">{T.doubleCupNote}</p>
+    </section>
+  );
+}
+
 /** The setup of a competition: the hill, who takes part, and whether the computer jumpers are watched. */
 export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onBack, focusOnEntry }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEntryFocus(headingRef, focusOnEntry);
-  const hill = chosenHill(hills, settings.hillId);
-  const start = hill !== undefined && participantCount(settings) > 0 ? () => onStart(hill) : undefined;
-  const ready = start !== undefined;
+  const ticked = tickedIds(hills, settings.hillIds);
+  const schedule = cupSchedule(
+    ticked,
+    hills.map((h) => h.id),
+    settings.doubleCup,
+  );
+  const scheduled = schedule.flatMap((id) => hills.filter((h) => h.id === id));
+  const nobody = participantCount(settings) === 0;
+  const noHill = scheduled.length === 0;
+  const ready = !nobody && !noHill;
+  const start = ready ? () => onStart(scheduled) : undefined;
   return (
     <main className="screen">
       <h1 className="screen-title" tabIndex={-1} ref={headingRef}>
         {T.setupTitle}
       </h1>
       <hr className="rule" />
-      <section className="settings-group" aria-labelledby="contest-hill">
-        <h2 className="hill-section-title" id="contest-hill">
-          {T.hill}
-        </h2>
-        <select
-          className="pixel-select"
-          aria-labelledby="contest-hill"
-          value={hill?.id ?? ""}
-          onChange={(e) => onChange({ ...settings, hillId: e.currentTarget.value })}
-        >
-          {hills.map((h) => (
-            <option key={h.id} value={h.id}>
-              {UI_TEXT.hillLabel(h.name, h.kPointM)}
-            </option>
-          ))}
-        </select>
-      </section>
+      <HillsChoice hills={hills} settings={settings} ticked={ticked} onChange={onChange} />
       <section className="settings-group" aria-labelledby="contest-players">
         <h2 className="hill-section-title" id="contest-players">
           {T.players}
@@ -169,10 +242,22 @@ export function CompetitionSetupScreen({ hills, settings, onChange, onStart, onB
         onChange={(disqualification) => onChange({ ...settings, disqualification })}
       />
       <div className="menu">
-        <button type="button" className="pixel-button" aria-disabled={!ready} onClick={start}>
+        <button
+          type="button"
+          className="pixel-button"
+          aria-disabled={!ready}
+          aria-describedby={noHill ? undefined : "contest-summary"}
+          onClick={start}
+        >
           {T.start}
         </button>
-        {!ready && <p className="note error">{T.nobody}</p>}
+        {!noHill && (
+          <p className="note" id="contest-summary">
+            {T.summary(schedule.length)}
+          </p>
+        )}
+        {nobody && <p className="note error">{T.nobody}</p>}
+        {noHill && <p className="note error">{T.noHill}</p>}
         <button type="button" className="pixel-button" onClick={onBack}>
           {UI_TEXT.back}
         </button>

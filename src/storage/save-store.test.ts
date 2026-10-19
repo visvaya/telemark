@@ -71,7 +71,8 @@ describe("save data", () => {
       replays: { recentCount: 10, maxAgeDays: 30, maxSizeKb: 2000, slider: false },
       recordGhost: false,
       competition: {
-        hillId: "own-3",
+        hillIds: ["own-3", "own-5"],
+        doubleCup: true,
         players: [true, true, false, false, false, false, false, true],
         cpus: DEFAULT_SETTINGS.competition.cpus.map((_c, i) => ({ on: i % 2 === 0, level: 5 })),
         watchCpu: true,

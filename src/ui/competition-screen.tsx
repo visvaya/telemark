@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
 import { boardRows } from "../game/competition-board";
-import { roundJustEnded, type CompetitionRun } from "../game/competition-run";
+import { competitionOf, isCup, roundJustEnded, type CompetitionRun } from "../game/competition-run";
+import { cupPhase } from "../game/cup";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { competitorCountry, competitorName, competitorShortName } from "./competition-names";
@@ -23,6 +24,10 @@ interface Props {
   /** Goes on: the next jump, or the next round. */
   onNext: () => void;
   onAgain: () => void;
+  /** After a competition of a cup with more to come: the cup standings. */
+  onStandings: () => void;
+  /** After the last competition of a cup: the end screen. */
+  onEnd: () => void;
   onMenu: () => void;
   focusOnEntry: boolean;
 }
@@ -116,7 +121,7 @@ function NameCell({ competitor, next }: { competitor: Competitor | undefined; ne
 
 /** What the table is: the start list, the results during or after a round, or the final classification. */
 function captionOf(run: CompetitionRun): string {
-  const { state } = run;
+  const state = competitionOf(run);
   if (state.finished) return T.finalTitle;
   if (roundJustEnded(run)) return T.afterRound(state.round - 1);
   const jumped = state.scores.some((round) => round.some((s) => s !== null));
@@ -128,7 +133,7 @@ function captionOf(run: CompetitionRun): string {
  * no place. The jumps since the board was last shown and the next jumper are marked in words, not colour alone.
  */
 function Board({ run }: { run: CompetitionRun }) {
-  const { state } = run;
+  const state = competitionOf(run);
   const next = currentJumper(state);
   const rows = boardRows(state);
   return (
@@ -177,7 +182,7 @@ function Board({ run }: { run: CompetitionRun }) {
 
 /** The label of the board's button: the next round, or the next jumper with the place in the second round. */
 function nextLabel(run: CompetitionRun): string {
-  const { state } = run;
+  const state = competitionOf(run);
   if (roundJustEnded(run)) return T.nextRound(state.round);
   const next = currentJumper(state);
   const name = competitorName(state.competitors[next ?? -1]);
@@ -190,15 +195,18 @@ function nextLabel(run: CompetitionRun): string {
  * goes to the way on (the next jump or round, or a new competition at the end), so the keyboard goes through a
  * competition with Enter alone; the button is described by the table's caption, which a screen reader says with it.
  */
-export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusOnEntry }: Props) {
+export function CompetitionScreen({ run, record, onNext, onAgain, onStandings, onEnd, onMenu, focusOnEntry }: Props) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   useEntryFocus(primaryRef, focusOnEntry);
-  const { state, hill } = run;
+  const { hill, cup } = run;
+  const state = competitionOf(run);
+  const cupNext = cupPhase(cup) === "standings";
   return (
     <main className="screen">
       <header className="contest-header">
         <h1 className="screen-title">{T.boardTitle}</h1>
         <p className="note">{UI_TEXT.hillLabel(hill.name, hill.kPointM)}</p>
+        {isCup(run) && <p className="note">{T.competitionOf(cup.index + 1, cup.schedule.length)}</p>}
       </header>
       <hr className="rule" />
       <section className="contest-section">
@@ -208,7 +216,21 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusO
         </p>
       </section>
       <div className="menu">
-        {state.finished ? (
+        {state.finished && isCup(run) ? (
+          <>
+            <button
+              type="button"
+              className="pixel-button"
+              onClick={cupNext ? onStandings : onEnd}
+              ref={primaryRef}
+              aria-describedby={CAPTION_ID}
+            >
+              {cupNext ? T.toCupStandings : T.toCupEnd}
+            </button>
+            {/* After the last competition nothing is left to abandon: the way on is the end screen. */}
+            {cupNext && <AbandonChoice label={T.abandon} onAbandon={onMenu} />}
+          </>
+        ) : state.finished ? (
           <>
             <button
               type="button"

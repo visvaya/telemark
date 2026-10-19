@@ -1,4 +1,5 @@
 import type { CountryCode } from "../render/flags";
+import { pluralForm } from "./plural";
 
 /**
  * Every text the player sees or hears, in Polish, grouped by where it appears. Texts with a value in them are
@@ -6,6 +7,9 @@ import type { CountryCode } from "../render/flags";
  * in a frame carry the marks of `typeset` (src/ui/typeset.ts): "|" where a word may be divided, "~" after a
  * one-letter word; ui-text.test.ts lists them.
  */
+const COMPETITION_WORD = { one: "konkurs", few: "konkursy", many: "konkursów" } as const;
+const competitions = (count: number): string => `${count} ${COMPETITION_WORD[pluralForm(count)]}`;
+
 export const UI_TEXT = {
   appName: "Telemark",
   version: (version: string) => `wersja ${version}`,
@@ -21,8 +25,10 @@ export const UI_TEXT = {
     about: "O grze",
     settings: "Ustawienia",
     replays: "Powtórki",
-    competitionSetup: "Konkurs",
-    competition: (hillLabel: string) => `Konkurs: ${hillLabel}`,
+    competitionSetup: "Zawody",
+    competition: (hillLabel: string) => `Zawody: ${hillLabel}`,
+    cupStandings: "Puchar Świata: klasyfikacja",
+    cupEnd: "Puchar Świata: wyniki końcowe",
     jump: (hillLabel: string) => `Skok: ${hillLabel}`,
     /** The screen first, the name of the game after it. */
     withApp: (screen: string, app: string) => `${screen} · ${app}`,
@@ -35,7 +41,7 @@ export const UI_TEXT = {
     homage: "Nawiązuje do Deluxe Ski Jump 2 (Mediamond, Jussi Koskela)",
     navigation: "Główne menu",
     training: "Trening",
-    competition: "Konkurs",
+    competition: "Zawody",
     replays: "Powtórki",
     outfit: "Strój",
     settings: "Ustawienia",
@@ -59,10 +65,36 @@ export const UI_TEXT = {
     replaysNotStored: "Nie udało się zapisać powtórek: nowe mogą zniknąć po zamknięciu strony.",
   },
 
-  /** A single competition: its setup, the board between jumps and the results. */
+  /** Competitions: the setup, the board between jumps, the results, and a world cup of several. */
   competition: {
-    setupTitle: "Konkurs",
-    hill: "Skocznia",
+    setupTitle: "Zawody",
+    hills: "Skocznie",
+    ownHills: "Własne",
+    originalHills: "Z DSJ2",
+    selectAllHills: "Zaznacz wszystkie",
+    clearHills: "Wyczyść",
+    noHill: "Zaznacz co najmniej jedną skocznię.",
+    doubleCup: "Podwójny Puchar",
+    doubleCupNote: "Cała seria skoczni odbywa się dwa razy.",
+    /** What the start button starts: one competition, or a world cup of several. */
+    summary: (count: number) => (count === 1 ? "1 konkurs" : `Puchar Świata: ${competitions(count)}`),
+    competitionOf: (n: number, of: number) => `Konkurs ${n} z ${of}`,
+    toCupStandings: "Dalej: klasyfikacja Pucharu",
+    toCupEnd: "Wyniki końcowe",
+    cupTitle: "Puchar Świata",
+    cupAfter: (n: number, of: number) => `Klasyfikacja po ${n} z ${of} konkursach`,
+    cupEndSubtitle: (count: number) => `Wyniki końcowe · ${competitions(count)}`,
+    cupNext: (hillLabel: string, n: number, of: number) => `Dalej: ${hillLabel} (konkurs ${n} z ${of})`,
+    cupPoints: "Punkty",
+    cupLastPoints: "Ostatni",
+    cupGained: (points: number) => `+${points}`,
+    leader: "lider",
+    newCompetitions: "Nowe zawody",
+    podium: "Podium",
+    /** The podium read out: a place and the competitor on it. */
+    podiumEntry: (place: number, name: string, points: number) => `${place}. miejsce: ${name}, ${points} pkt`,
+    cupPointsText: (points: number) => `${points} pkt`,
+    playerPlace: (name: string, place: number) => `${name} · ${place}. miejsce`,
     players: "Gracze",
     playerName: (number: number) => `Gracz ${number}`,
     cpus: "Rywale komputerowi",
@@ -77,7 +109,7 @@ export const UI_TEXT = {
       original: "punkty karne (DSJ2)",
       fis: "odpada z konkursu",
     },
-    start: "Rozpocznij konkurs",
+    start: "Rozpocznij zawody",
     nobody: "Włącz co najmniej jednego zawodnika.",
     boardTitle: "Konkurs",
     round: (round: number) => `${round}. seria`,
@@ -87,8 +119,8 @@ export const UI_TEXT = {
     nextRound: (round: number) => `Rozpocznij ${round}. serię`,
     again: "Jeszcze raz",
     menu: "Menu",
-    abandon: "Przerwij konkurs",
-    abandonQuestion: "Przerwać konkurs? Wyniki tego konkursu przepadną.",
+    abandon: "Przerwij zawody",
+    abandonQuestion: "Przerwać zawody? Wyniki tych zawodów przepadną.",
     abandonYes: "Tak, przerwij",
     abandonNo: "Nie, wróć",
     /** The captions of the board's table: before the first jump, during a round, after it, at the end. */

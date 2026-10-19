@@ -1,13 +1,6 @@
-import {
-  competitionReducer,
-  currentJumper,
-  placeOf,
-  startCompetition,
-  type CompetitionSettings,
-  type CompetitionState,
-  type JumpScore,
-} from "./competition";
+import { currentJumper, placeOf, type CompetitionSettings, type CompetitionState, type JumpScore } from "./competition";
 import { cpuCompetitionJump } from "./competition-jump";
+import { cupReducer, startCup, type CupState } from "./cup";
 import type { HillChoice } from "./hill-choice";
 
 /** A jump as the board between jumps tells it: who, the score, and the place after it. */
@@ -18,30 +11,45 @@ interface LoggedJump {
   place: number;
 }
 
-/** A competition being run: its hill and settings, its state, and the jumps since the board was last shown. */
+/**
+ * The competitions being run: a single one, or a world cup of several. Its hills (one per competition), settings,
+ * the cup's state with the current competition in it, and the jumps since the board was last shown.
+ */
 export interface CompetitionRun {
+  /** The hill of each competition, in the order they run. */
+  hills: readonly HillChoice[];
+  /** The hill of the current competition. */
   hill: HillChoice;
   settings: CompetitionSettings;
-  state: CompetitionState;
+  cup: CupState;
   log: readonly LoggedJump[];
   /** False from the end of a round until the board starts the next one. */
   roundStarted: boolean;
 }
 
+/** The current competition of the run. */
+export const competitionOf = (run: CompetitionRun): CompetitionState => run.cup.competition;
+
+/** Whether the run is a world cup: more than one competition. */
+export const isCup = (run: CompetitionRun): boolean => run.cup.schedule.length > 1;
+
 /** The run after the jump of the current jumper scored `score`, with the jump in the log. */
 export function withScore(run: CompetitionRun, score: JumpScore): CompetitionRun {
-  const competitor = currentJumper(run.state);
+  const before = competitionOf(run);
+  const competitor = currentJumper(before);
   if (competitor === null) return run;
-  const state = competitionReducer(run.state, { type: "scored", score });
+  const cup = cupReducer(run.cup, { type: "scored", score });
+  const state = cup.competition;
   const place = placeOf(state, competitor) ?? 0;
-  const log = [...run.log, { competitor, round: run.state.round, score, place }];
-  return { ...run, state, log, roundStarted: state.round === run.state.round };
+  const log = [...run.log, { competitor, round: before.round, score, place }];
+  return { ...run, cup, log, roundStarted: state.round === before.round };
 }
 
 /** Whether the next jumper is a computer jumper. */
 export function cpuNext(run: CompetitionRun): boolean {
-  const next = currentJumper(run.state);
-  return next !== null && run.state.competitors[next]?.kind === "cpu";
+  const state = competitionOf(run);
+  const next = currentJumper(state);
+  return next !== null && state.competitors[next]?.kind === "cpu";
 }
 
 /**
@@ -52,7 +60,8 @@ export function cpuNext(run: CompetitionRun): boolean {
 export function withUnwatchedJumps(run: CompetitionRun, nextSeed: () => number): CompetitionRun {
   let out = run;
   while (!out.settings.watchCpu && cpuNext(out) && out.roundStarted) {
-    const competitor = out.state.competitors[currentJumper(out.state) ?? -1];
+    const state = competitionOf(out);
+    const competitor = state.competitors[currentJumper(state) ?? -1];
     if (competitor?.kind !== "cpu") break;
     out = withScore(out, cpuCompetitionJump(out.hill, competitor.record, nextSeed()).score);
   }
@@ -61,7 +70,7 @@ export function withUnwatchedJumps(run: CompetitionRun, nextSeed: () => number):
 
 /** Whether a round has just ended: the board shows its results before the next one starts. */
 export function roundJustEnded(run: CompetitionRun): boolean {
-  return run.state.finished || !run.roundStarted;
+  return competitionOf(run).finished || !run.roundStarted;
 }
 
 /** The run with the next round started, as the board's button starts it, and the log cleared. */
@@ -69,17 +78,35 @@ export function withNextRound(run: CompetitionRun): CompetitionRun {
   return { ...run, roundStarted: true, log: [] };
 }
 
-/** A new competition on the hill, drawn from `seed`, with the computer jumpers before the first player done. */
+/**
+ * New competitions on the hills, one per hill in this order, drawn from `seed`, with the computer jumpers before
+ * the first player done. Null without a hill.
+ */
 export function startRun(
-  hill: HillChoice,
+  hills: readonly HillChoice[],
   settings: CompetitionSettings,
   seed: number,
   nextSeed: () => number,
-): CompetitionRun {
-  return withUnwatchedJumps(
-    { hill, settings, state: startCompetition(settings, seed), log: [], roundStarted: true },
-    nextSeed,
+): CompetitionRun | null {
+  const hill = hills[0];
+  if (hill === undefined) return null;
+  const cup = startCup(
+    settings,
+    hills.map((h) => h.id),
+    seed,
   );
+  return withUnwatchedJumps({ hills, hill, settings, cup, log: [], roundStarted: true }, nextSeed);
+}
+
+/**
+ * The run with the next competition of the cup opened from `seed` (new forms, the start list from the cup
+ * standings) and the computer jumpers before the first player done; the run as it is when no competition is due.
+ */
+export function withNextCompetition(run: CompetitionRun, seed: number, nextSeed: () => number): CompetitionRun {
+  const cup = cupReducer(run.cup, { type: "nextCompetition", seed });
+  const hill = run.hills[cup.index];
+  if (cup === run.cup || hill === undefined) return run;
+  return withUnwatchedJumps({ ...run, hill, cup, log: [], roundStarted: true }, nextSeed);
 }
 
 /** The run with the log cleared, as the board shows it after its button is pressed. */

@@ -29,8 +29,13 @@ interface CpuSlotSetting {
 }
 
 export interface CompetitionSettings {
-  /** The hill, by HillChoice.id; null (or a hill no longer there) means the first on the list. */
-  hillId: string | null;
+  /**
+   * The chosen hills, by HillChoice.id: one for a single competition, more for a cup. Null means never chosen (the
+   * first hill on the list); a hill no longer on the list is left out.
+   */
+  hillIds: readonly string[] | null;
+  /** The original's "double cup": the series of chosen hills runs twice. */
+  doubleCup: boolean;
   /** Whether each of the players "Gracz 1" to "Gracz 8" takes part. */
   players: readonly boolean[];
   cpus: readonly CpuSlotSetting[];
@@ -42,7 +47,8 @@ export interface CompetitionSettings {
 const DEFAULT_CPU_LEVELS: readonly CpuLevelSetting[] = [2, 3, 1, 4, 2, 2, 2, 2];
 
 export const DEFAULT_COMPETITION_SETTINGS: CompetitionSettings = {
-  hillId: null,
+  hillIds: null,
+  doubleCup: false,
   players: Array.from({ length: COMPETITION_SLOT_COUNT }, (_v, i) => i === 0),
   cpus: DEFAULT_CPU_LEVELS.map((level, i) => ({ on: i < 4, level })),
   watchCpu: false,
@@ -52,18 +58,39 @@ export const DEFAULT_COMPETITION_SETTINGS: CompetitionSettings = {
 const fieldOf = (v: unknown, key: string): unknown =>
   typeof v === "object" && v !== null ? Reflect.get(v, key) : undefined;
 
+/** Bounds of the stored hill choice, so a hostile save cannot make it large. */
+const MAX_CHOSEN_HILL_COUNT = 64;
+const MAX_HILL_ID_CHARS = 64;
+
+const isHillId = (v: unknown): v is string => typeof v === "string" && v.length > 0 && v.length <= MAX_HILL_ID_CHARS;
+
+/** The chosen hills: a list of ids (unique, bounded), an older single `hillId`, or null when neither is readable. */
+function parseHillIds(hillIds: unknown, hillId: unknown): string[] | null {
+  if (Array.isArray(hillIds)) {
+    const unique = new Set<string>();
+    for (const id of hillIds as unknown[]) {
+      if (unique.size >= MAX_CHOSEN_HILL_COUNT) break;
+      if (isHillId(id)) unique.add(id);
+    }
+    return [...unique];
+  }
+  if (hillIds === undefined && isHillId(hillId)) return [hillId];
+  return null;
+}
+
 const levelOf = (v: unknown): CpuLevelSetting | undefined => CPU_LEVEL_SETTINGS.find((level) => level === v);
 
 /** Reads stored competition settings; whatever is missing or unreadable takes its default. */
 export function parseCompetitionSettings(v: unknown): CompetitionSettings {
   const D = DEFAULT_COMPETITION_SETTINGS;
-  const hillId = fieldOf(v, "hillId");
+  const doubleCup = fieldOf(v, "doubleCup");
   const players = fieldOf(v, "players");
   const cpus = fieldOf(v, "cpus");
   const watchCpu = fieldOf(v, "watchCpu");
   const disqualification = DISQUALIFICATION_RULES.find((rule) => rule === fieldOf(v, "disqualification"));
   const parsed: CompetitionSettings = {
-    hillId: typeof hillId === "string" ? hillId : null,
+    hillIds: parseHillIds(fieldOf(v, "hillIds"), fieldOf(v, "hillId")),
+    doubleCup: typeof doubleCup === "boolean" ? doubleCup : D.doubleCup,
     players: D.players.map((dflt, i) => {
       const on = Array.isArray(players) ? (players[i] as unknown) : undefined;
       return typeof on === "boolean" ? on : dflt;
@@ -133,11 +160,10 @@ function shuffled(count: number, rng: BorlandRandom): number[] {
 }
 
 /**
- * A new competition from the settings, drawn from `seed`: the computer jumpers' talents (as at the start of a cup
- * in the original), then their forms (as at the start of a competition), then the start list of the first round.
+ * The entrants of a competition or a cup, drawn from `rng`: players first, then the computer jumpers with their
+ * talents (as at the start of a cup in the original), then their forms (as at the start of a competition).
  */
-export function startCompetition(settings: CompetitionSettings, seed: number): CompetitionState {
-  const rng = new BorlandRandom(seed);
+export function drawEntrants(settings: CompetitionSettings, rng: BorlandRandom): Competitor[] {
   const players: Competitor[] = [];
   settings.players.forEach((on, slot) => {
     if (on) players.push({ kind: "player", slot });
@@ -150,8 +176,15 @@ export function startCompetition(settings: CompetitionSettings, seed: number): C
     slot,
     record: { ...drawCpuForm(rng), ...t },
   }));
-  const competitors = [...players, ...cpus];
-  const order = shuffled(competitors.length, rng);
+  return [...players, ...cpus];
+}
+
+/** A competition of these competitors, whose first round runs in `order` (indexes into `competitors`). */
+export function openCompetition(
+  competitors: readonly Competitor[],
+  order: readonly number[],
+  disqualification: DisqualificationRule,
+): CompetitionState {
   const noScores = competitors.map(() => null);
   return {
     competitors,
@@ -160,9 +193,24 @@ export function startCompetition(settings: CompetitionSettings, seed: number): C
     position: 0,
     scores: Array.from({ length: ROUND_COUNT }, () => noScores),
     startOrder: order,
-    disqualification: settings.disqualification,
+    disqualification,
     finished: competitors.length === 0,
   };
+}
+
+/** A competition of these competitors with a start list drawn from `rng`. */
+export function openDrawnCompetition(
+  competitors: readonly Competitor[],
+  disqualification: DisqualificationRule,
+  rng: BorlandRandom,
+): CompetitionState {
+  return openCompetition(competitors, shuffled(competitors.length, rng), disqualification);
+}
+
+/** A new competition from the settings, drawn from `seed`: the entrants, then the start list of the first round. */
+export function startCompetition(settings: CompetitionSettings, seed: number): CompetitionState {
+  const rng = new BorlandRandom(seed);
+  return openDrawnCompetition(drawEntrants(settings, rng), settings.disqualification, rng);
 }
 
 /** The index of the competitor who jumps next; null once the competition is over. */

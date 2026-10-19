@@ -14,6 +14,8 @@ export type TitledScreen =
   | { kind: "settings" }
   | { kind: "replays" }
   | { kind: "contest-setup" }
+  | { kind: "cup-standings" }
+  | { kind: "cup-end" }
   | { kind: "contest"; hill: { name: string; kPointM: number } }
   | { kind: "jump"; hill: { name: string; kPointM: number } };
 
@@ -31,6 +33,8 @@ export function screenTitle(screen: TitledScreen): string {
   if (screen.kind === "settings") return withApp(T.settings);
   if (screen.kind === "replays") return withApp(T.replays);
   if (screen.kind === "contest-setup") return withApp(T.competitionSetup);
+  if (screen.kind === "cup-standings") return withApp(T.cupStandings);
+  if (screen.kind === "cup-end") return withApp(T.cupEnd);
   if (screen.kind === "contest")
     return withApp(T.competition(UI_TEXT.hillLabel(screen.hill.name, screen.hill.kPointM)));
   return withApp(T.jump(UI_TEXT.hillLabel(screen.hill.name, screen.hill.kPointM)));
