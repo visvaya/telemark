@@ -50,15 +50,17 @@ export interface CupStandingRow {
 
 /**
  * The competitions of a cup: the chosen hills that are on the list, in the order of the list (the original runs
- * its hills in that order, whatever order they were ticked in); null chooses the first hill of the list. A double
- * cup runs the whole series twice.
+ * its hills in that order, whatever order they were ticked in); null chooses the first hill of the list, and so does
+ * a choice none of whose hills is on the list any more (the original's files went). Only an empty choice (the
+ * player cleared it) chooses none. A double cup runs the whole series twice.
  */
 export function cupSchedule(
   chosen: readonly string[] | null,
   listIds: readonly string[],
   doubleCup: boolean,
 ): string[] {
-  const series = chosen === null ? listIds.slice(0, 1) : listIds.filter((id) => chosen.includes(id));
+  const found = chosen === null ? [] : listIds.filter((id) => chosen.includes(id));
+  const series = found.length === 0 && chosen?.length !== 0 ? listIds.slice(0, 1) : found;
   return doubleCup ? [...series, ...series] : series;
 }
 

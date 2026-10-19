@@ -1975,21 +1975,21 @@ h2 {
   grid-column: 2;
   grid-row: 1;
   --step-colour: var(--podium-gold);
-  --step-h: 96px;
+  --step-h: calc(var(--screen-title-px) + 64px);
 }
 
 .cup-step-2 {
   grid-column: 1;
   grid-row: 1;
   --step-colour: var(--podium-silver);
-  --step-h: 68px;
+  --step-h: calc(var(--screen-title-px) + 36px);
 }
 
 .cup-step-3 {
   grid-column: 3;
   grid-row: 1;
   --step-colour: var(--podium-bronze);
-  --step-h: 44px;
+  --step-h: calc(var(--screen-title-px) + 14px);
 }
 
 .cup-step-names {
@@ -2011,7 +2011,11 @@ h2 {
   min-width: 0;
 }
 
-.cup-step-who .contest-who {
+.cup-step-who .flag-icon {
+  margin-bottom: 4px;
+}
+
+.cup-step-name {
   display: block;
   max-width: 100%;
   overflow: hidden;
@@ -2019,7 +2023,7 @@ h2 {
   text-overflow: ellipsis;
 }
 
-.cup-step-who.contest-player .contest-who {
+.cup-step-who.contest-player .cup-step-name {
   color: var(--tone-cyan);
 }
 

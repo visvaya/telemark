@@ -17,12 +17,12 @@ const MANY_ENTRANTS = 10;
 
 const tableClass = (count: number): string => (count >= MANY_ENTRANTS ? "contest-table contest-many" : "contest-table");
 
-/** A competitor's name with the flag of a computer jumper; the short name where room is short. */
-function Who({ competitor, short = false }: { competitor: Competitor | undefined; short?: boolean }) {
+/** A competitor's name with the flag of a computer jumper. */
+function Who({ competitor }: { competitor: Competitor | undefined }) {
   return (
     <span className="contest-who" data-ellipsis="">
       {competitor?.kind === "cpu" && <FlagIcon country={competitorCountry(competitor)} />}
-      <span>{short ? competitorShortName(competitor) : competitorName(competitor)}</span>
+      <span>{competitorName(competitor)}</span>
     </span>
   );
 }
@@ -54,7 +54,8 @@ export function CupStandingsScreen({ run, onNext, onMenu, focusOnEntry }: Standi
   const { cup } = run;
   const rows = cupStandings(cup);
   const total = cup.schedule.length;
-  const nextHill = run.hills[cup.index + 1];
+  // The standings show only between competitions, so a next hill is always there.
+  const nextHill = run.hills[cup.index + 1] ?? run.hill;
   return (
     <main className="screen">
       <h1 className="screen-title">{T.cupTitle}</h1>
@@ -103,9 +104,7 @@ export function CupStandingsScreen({ run, onNext, onMenu, focusOnEntry }: Standi
           ref={primaryRef}
           aria-describedby={STANDINGS_CAPTION_ID}
         >
-          {nextHill === undefined
-            ? T.toCupStandings
-            : T.cupNext(UI_TEXT.hillLabel(nextHill.name, nextHill.kPointM), cup.index + 2, total)}
+          {T.cupNext(UI_TEXT.hillLabel(nextHill.name, nextHill.kPointM), cup.index + 2, total)}
         </button>
         <AbandonChoice label={T.abandon} onAbandon={onMenu} />
       </div>
@@ -165,8 +164,10 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
                 return (
                   <li key={r.entrant} className={c?.kind === "player" ? "cup-step-who contest-player" : "cup-step-who"}>
                     <span className="sr-only">{T.podiumEntry(step.place, competitorShortName(c), r.totalPoints)}</span>
+                    {/* The flag over the name, so the name has the whole width of its step. */}
                     <span aria-hidden="true">
-                      <Who competitor={c} short />
+                      {c?.kind === "cpu" && <FlagIcon country={competitorCountry(c)} />}
+                      <span className="cup-step-name">{competitorShortName(c)}</span>
                       <span className="cup-step-points">{T.cupPointsText(r.totalPoints)}</span>
                     </span>
                   </li>
@@ -187,11 +188,17 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
       ))}
       {rest.length > 0 && (
         <table className={tableClass(rows.length)}>
-          <thead className="sr-only">
+          {/* Visible headers, as on the standings: a phone's fixed table takes its column widths from them. */}
+          <thead>
             <tr>
-              <th scope="col">{T.columns.place}</th>
+              <th scope="col" className="contest-place">
+                <span aria-hidden="true">{T.columns.placeShort}</span>
+                <span className="sr-only">{T.columns.place}</span>
+              </th>
               <th scope="col">{T.columns.name}</th>
-              <th scope="col">{T.cupPoints}</th>
+              <th scope="col" className="contest-total">
+                {T.cupPoints}
+              </th>
             </tr>
           </thead>
           <tbody>

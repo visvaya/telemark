@@ -227,7 +227,8 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onStandings, o
             >
               {cupNext ? T.toCupStandings : T.toCupEnd}
             </button>
-            <AbandonChoice label={T.abandon} onAbandon={onMenu} />
+            {/* After the last competition nothing is left to abandon: the way on is the end screen. */}
+            {cupNext && <AbandonChoice label={T.abandon} onAbandon={onMenu} />}
           </>
         ) : state.finished ? (
           <>

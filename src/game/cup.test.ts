@@ -55,8 +55,13 @@ describe("the cup schedule", () => {
 
   it("leaves out hills no longer on the list", () => {
     expect(cupSchedule(["x", "b"], list, false)).toEqual(["b"]);
-    expect(cupSchedule(["x"], list, true)).toEqual([]);
     expect(cupSchedule([], list, false)).toEqual([]);
+  });
+
+  it("falls back to the first hill when none of the chosen hills is on the list any more", () => {
+    // The original's files went, and with them every hill chosen: as if nothing had been chosen.
+    expect(cupSchedule(["x"], list, false)).toEqual(["a"]);
+    expect(cupSchedule(["x", "y"], list, true)).toEqual(["a", "a"]);
   });
 
   it("chooses the first hill of the list when nothing was ever chosen", () => {
