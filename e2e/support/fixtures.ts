@@ -66,11 +66,51 @@ function fakeMotionSensor(kind: MotionSensor): void {
   }, 50);
 }
 
+/** How long the page may take to move the focus on its own (a new screen focuses its target in an effect). */
+const FOCUS_SETTLE_MS = 300;
+
+/**
+ * Runs in the page before its scripts: reports, as a console error the test then fails on, a focus lost to the
+ * page's body because the element holding it was removed or hidden (a button replaced by a question, a panel
+ * closed) and nothing took the focus within `FOCUS_SETTLE_MS`. A click on the background, which moves the focus to
+ * the body on purpose, leaves its element in place and is not reported.
+ */
+function watchFocusLoss(settleMs: number): void {
+  let last: Element | null = null;
+  let pending = false;
+  const gone = (el: Element) => !el.isConnected || el.getClientRects().length === 0;
+  const describe = (el: Element) =>
+    `<${el.tagName.toLowerCase()}> "${(el.getAttribute("aria-label") ?? el.textContent).trim().slice(0, 40)}"`;
+  const check = () => {
+    const lost = last;
+    if (pending || lost === null || !gone(lost)) return;
+    pending = true;
+    setTimeout(() => {
+      pending = false;
+      const active = document.activeElement;
+      if (last === lost && (active === null || active === document.body)) {
+        // oxlint-disable-next-line no-console -- the test's watch on console errors turns this into a failure
+        console.error(`focus lost: ${describe(lost)} was removed or hidden while it had the focus`);
+        last = null;
+      }
+    }, settleMs);
+  };
+  document.addEventListener("focusin", (e) => {
+    last = e.target instanceof Element && e.target !== document.body ? e.target : null;
+  });
+  // Mouse presses on the background move the focus to the body on purpose: forget the element then.
+  document.addEventListener("pointerdown", () => {
+    if (last !== null && !gone(last)) setTimeout(() => (last = document.activeElement === document.body ? null : last));
+  });
+  new MutationObserver(check).observe(document, { childList: true, subtree: true, attributes: true });
+}
+
 export const test = base.extend<Fixtures & Options>({
   expectedProblems: [null, { option: true }],
   motionSensor: ["none", { option: true }],
   context: async ({ context, motionSensor }, provide) => {
     await context.addInitScript(fakeMotionSensor, motionSensor);
+    await context.addInitScript(watchFocusLoss, FOCUS_SETTLE_MS);
     if (REFUSE_MOUSE_CAPTURE) {
       await context.addInitScript(() => {
         Element.prototype.requestPointerLock = () =>
