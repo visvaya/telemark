@@ -1,11 +1,13 @@
 import { useRef } from "react";
 import type { Competitor } from "../game/competition";
 import type { CompetitionRun } from "../game/competition-run";
+import { keptOf } from "../game/contest-save";
 import { cupStandings, type CupStandingRow } from "../game/cup";
 import { cupPodium, cupRest } from "../game/cup-podium";
 import { UI_TEXT } from "../text/ui-text";
 import { AbandonChoice } from "./abandon-question";
 import { competitorCountry, competitorName, competitorShortName } from "./competition-names";
+import { ContestFileButton } from "./contest-file-button";
 import { FlagIcon } from "./flag-icon";
 import { useEntryFocus } from "./use-entry-focus";
 
@@ -40,7 +42,9 @@ function shownPlace(rows: readonly CupStandingRow[], at: number): string {
 interface StandingsProps {
   run: CompetitionRun;
   onNext: () => void;
-  onMenu: () => void;
+  /** To the menu with the cup kept, or the cup ended. */
+  onLeave: () => void;
+  onFinish: () => void;
   focusOnEntry: boolean;
 }
 
@@ -48,7 +52,7 @@ interface StandingsProps {
  * The cup standings between two competitions: place, competitor, the cup points so far and those of the last
  * competition. The way on starts the next competition; the focus waits on it, so Enter goes through a cup.
  */
-export function CupStandingsScreen({ run, onNext, onMenu, focusOnEntry }: StandingsProps) {
+export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntry }: StandingsProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   useEntryFocus(primaryRef, focusOnEntry);
   const { cup } = run;
@@ -106,7 +110,8 @@ export function CupStandingsScreen({ run, onNext, onMenu, focusOnEntry }: Standi
         >
           {T.cupNext(UI_TEXT.hillLabel(nextHill.name, nextHill.kPointM), cup.index + 2, total)}
         </button>
-        <AbandonChoice label={T.abandon} onAbandon={onMenu} />
+        <AbandonChoice label={T.abandon} onLeave={onLeave} onEnd={onFinish} />
+        <ContestFileButton contest={keptOf(run, "standings")} />
       </div>
     </main>
   );

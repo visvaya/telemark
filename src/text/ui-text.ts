@@ -49,6 +49,8 @@ export const UI_TEXT = {
     install: "Gra jako aplikacja",
     about: "O grze",
     loadFiles: "Wczytaj pliki gry",
+    /** Above "Zawody" while a competition is kept, with a line under it that tells which one. */
+    resumeCompetition: "Wznów zawody",
     quit: "Wyłącz grę",
     /** A framed note: "|" and "~" are the marks of `typeset` (src/ui/typeset.ts). */
     quitRefused:
@@ -120,9 +122,37 @@ export const UI_TEXT = {
     again: "Jeszcze raz",
     menu: "Menu",
     abandon: "Przerwij zawody",
-    abandonQuestion: "Przerwać zawody? Wyniki tych zawodów przepadną.",
-    abandonYes: "Tak, przerwij",
-    abandonNo: "Nie, wróć",
+    abandonQuestion: "Wyjść z zawodów?",
+    abandonLeave: "Wyjdź do menu (zawody zostaną zapisane)",
+    abandonEnd: "Zakończ zawody (zapis zostanie usunięty)",
+    abandonBack: "Wróć",
+    /** A kept competition, told in one line: its parts joined. */
+    keptLine: (parts: readonly string[]) => parts.join(" · "),
+    keptCompetition: (n: number, of: number) => `konkurs ${n} z ${of}`,
+    keptStandings: (n: number, of: number) => `klasyfikacja po ${n} z ${of}`,
+    keptOver: "wyniki końcowe",
+    keptFinal: "klasyfikacja końcowa",
+    /** A hill of the original by its number, when its name is not known on this device. */
+    originalHillsByNumber: (numbers: readonly number[]) =>
+      numbers.length === 1 ? `skocznia z DSJ2 nr ${numbers.join("")}` : `skocznie z DSJ2 nr ${numbers.join(", ")}`,
+    missingHills: (hills: string) =>
+      `Brakuje skoczni tych zawodów: ${hills}. Najpierw wczytaj pliki gry w menu głównym; zapisane zawody czekają.`,
+    replaceQuestion: (kept: string) => `Masz zapisane zawody (${kept}). Rozpocząć nowe? Zapisane zostaną zastąpione.`,
+    replaceYes: "Tak, rozpocznij nowe",
+    replaceNo: "Nie, wróć",
+    saveToFile: "Zapisz zawody do pliku",
+    fileTitle: "Zawody z gry Telemark",
+    fileSaved: {
+      shared: "Udostępniono plik zawodów.",
+      downloaded: "Zapisano plik zawodów.",
+      cancelled: "",
+    },
+    loadFromFile: "Wczytaj zawody z pliku",
+    fileRefused: {
+      notContest: "To nie jest plik zawodów Telemarku.",
+      newer: "Ten plik zapisała nowsza wersja gry.",
+      damaged: "Plik zawodów jest uszkodzony albo niepełny.",
+    },
     /** The captions of the board's table: before the first jump, during a round, after it, at the end. */
     startList: "Lista startowa",
     duringRound: (round: number) => `Wyniki w trakcie ${round}. serii`,

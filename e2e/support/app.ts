@@ -9,7 +9,7 @@ export const TEXT = {
   contestStart: "Rozpocznij zawody",
   contestNext: /^Dalej: skacze /,
   contestAbandon: "Przerwij zawody",
-  contestAbandonYes: "Tak, przerwij",
+  contestAbandonYes: "Zakończ zawody (zapis zostanie usunięty)",
   replays: "Powtórki",
   outfit: "Strój",
   howTo: "Jak skakać",

@@ -3,12 +3,20 @@ import { UI_TEXT } from "../text/ui-text";
 
 const T = UI_TEXT.competition;
 
+interface Props {
+  label: string;
+  /** Goes to the menu; the competition stays kept, to be resumed. */
+  onLeave: () => void;
+  /** Ends the competition: it is no longer kept. */
+  onEnd: () => void;
+}
+
 /**
- * The way out of a competition: a button, and in its place the question before leaving, as what the competition has
- * so far is not kept. The question takes the focus on its safe answer, so a key pressed by habit does not end the
- * competition; answered no, the focus returns to the button, never to the page's body.
+ * The way out of a competition: a button, and in its place the question before leaving: to the menu with the
+ * competition kept, or the competition ended. The question takes the focus on its safe answer (back), so a key
+ * pressed by habit changes nothing; answered so, the focus returns to the button, never to the page's body.
  */
-export function AbandonChoice({ label, onAbandon }: { label: string; onAbandon: () => void }) {
+export function AbandonChoice({ label, onLeave, onEnd }: Props) {
   const [asking, setAsking] = useState(false);
   const exitRef = useRef<HTMLButtonElement>(null);
   const noRef = useRef<HTMLButtonElement>(null);
@@ -32,8 +40,11 @@ export function AbandonChoice({ label, onAbandon }: { label: string; onAbandon: 
       <p className="note" id="abandon-question-text">
         {T.abandonQuestion}
       </p>
-      <button type="button" className="pixel-button" onClick={onAbandon}>
-        {T.abandonYes}
+      <button type="button" className="pixel-button" onClick={onLeave}>
+        {T.abandonLeave}
+      </button>
+      <button type="button" className="pixel-button" onClick={onEnd}>
+        {T.abandonEnd}
       </button>
       <button
         type="button"
@@ -44,7 +55,7 @@ export function AbandonChoice({ label, onAbandon }: { label: string; onAbandon: 
           setAsking(false);
         }}
       >
-        {T.abandonNo}
+        {T.abandonBack}
       </button>
     </div>
   );
