@@ -87,12 +87,14 @@ skipped. See `docs/testing.md`.
 
 ## Documentation
 
-The notes in `docs` are mostly in Polish.
+The notes in `docs` are in English.
 
 | File | Question it answers |
 |---|---|
 | `docs/physics-spec.md` | How does the original move the jumper on the inrun, in flight and on landing? |
 | `docs/hill-format.md` | Where does the original keep its hills and how are they read? |
+| `docs/hills.md` | How are the game's own hills described, which rules must they pass, and how are they generated? |
+| `docs/jump-scene.md` | How does the original draw the jump scene, and where does the port differ? |
 | `docs/jumper-figure.md` | How is the jumper drawn from a pose? |
 | `docs/replay-format.md` | How are the original `.rpl` replays encoded? |
 | `docs/testing.md` | Which tests exist, what do they need and how are they run? |
@@ -100,16 +102,14 @@ The notes in `docs` are mostly in Polish.
 
 ## Contributing
 
-`master` changes only through pull requests merged by squash; the pull request title follows Conventional Commits
-and becomes the commit. CI runs the checks above, including the search for unused code (`pnpm check:unused`)
-and for duplicates (`pnpm check:duplicates`), verifies the formatting (`pnpm format:check`) and the links and paths in the documentation
-(`node scripts/check-doc-links.mjs`), tests the build scripts
-(`pnpm test:scripts`), checks the build output for foreign files and bundle size (`pnpm check:dist`), runs the built game in Chromium,
-Firefox and WebKit on desktop, phone and tablet profiles (`pnpm test:browser`), and adds a dependency audit, a secret scan, an audit of its own workflows (actionlint, zizmor) and a check for em
-dashes and emoji. On `master`, the same run can then publish the package it has just tested (`docs/deployment.md`).
-`git blame` skips the commit that formatted the whole tree after
-`git config blame.ignoreRevsFile .git-blame-ignore-revs` (GitHub does so by itself).
-Security reports: see `SECURITY.md`.
+Contributions are welcome; how to report a bug, propose a change and open a pull request is described in
+[CONTRIBUTING.md](CONTRIBUTING.md). `master` changes only through pull requests merged by squash, and the pull
+request title (Conventional Commits) becomes the commit. CI runs the checks listed under "Development", plus
+`pnpm format:check`, a dependency audit, a secret scan, an audit of its own workflows (actionlint, zizmor) and a
+check for em dashes and emoji; on `master` the same run can then publish the package it has just tested
+(`docs/deployment.md`). `git blame` skips the commit that formatted the whole tree after
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` (GitHub does so by itself). Security reports: see
+`SECURITY.md`.
 
 ## Credits
 
