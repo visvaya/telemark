@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { currentJumper, type CompetitionSettings, type JumpScore } from "../game/competition";
 import { contestJumpHud } from "../game/competition-board";
 import { cpuCompetitionJump, type CpuJumpOutcome } from "../game/competition-jump";
+import { cupLeaders } from "../game/cup";
 import {
   competitionOf,
   roundJustEnded,
@@ -90,6 +91,7 @@ export function useCompetition(show: Show, ownOutfit: Outfit) {
       contest: {
         hudName,
         outfit: competitorOutfit(competitor, ownOutfit),
+        leader: cupLeaders(current.cup).includes(index),
         cpu: outcome ? cpuSource(outcome, hudName) : null,
         onNext: () => afterJump(outcome ? outcome.score : playerScore.current),
         onAbandon: abandon,

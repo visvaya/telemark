@@ -4,7 +4,7 @@ import type { JumpSimState } from "../sim/jump-sim";
 import type { FrameBuffer } from "./frame-buffer";
 import { SLOPE_HALF_WIDTH_M, surfaceY } from "./jump-view-camera";
 import { BONES, DEPTH_TO_X, DEPTH_TO_Y, skeletonPoints, type BodyPart, type Point3 } from "./jumper-skeleton";
-import { band, swatchRampTable } from "./palette";
+import { band, color, swatchRampTable } from "./palette";
 
 /** The start platform reaches this far behind the start; the jumper stands on the inrun's track up to there. */
 const TOWER_BACK_M = 6;
@@ -66,9 +66,11 @@ export function brushLine(plot: Plot, xa: number, ya: number, xb: number, yb: nu
   }
 }
 
-/** Which outfit colour each body part wears; the suit is the "Spodnie" colour, as in the original. */
-const PART_COLOUR: Readonly<Record<BodyPart, OutfitPart>> = {
-  suit: "pants",
+/**
+ * Which outfit colour each body part wears. The torso ("suit") wears none of them: the original gives it a colour
+ * slot of its own (byte 0x13 of the jumper), light grey for everybody and yellow for the leader of a World Cup.
+ */
+const PART_COLOUR: Readonly<Record<Exclude<BodyPart, "suit">, OutfitPart>> = {
   pants: "pants",
   sleeves: "sleeves",
   gloves: "gloves",
@@ -137,16 +139,30 @@ export interface FigureAnchor {
   pxPerMY: number;
 }
 
-/** The jumper's figure (1cb6:20e1): every bone in its outfit colour, far side darker. */
-export function drawFigure(fb: FrameBuffer, h: HillProfile, s: JumpSimState, a: FigureAnchor, outfit: Outfit): void {
+/**
+ * The jumper's figure (1cb6:20e1): every bone in its outfit colour, far side darker; the torso in its own colour,
+ * yellow when `leader` (the leader of a World Cup).
+ */
+export function drawFigure(
+  fb: FrameBuffer,
+  h: HillProfile,
+  s: JumpSimState,
+  a: FigureAnchor,
+  outfit: Outfit,
+  leader: boolean,
+): void {
   const pts = figurePoints(h, s);
   const at = (i: number): Point3 => pts[i] ?? { z: 0, x: 0, y: 0 };
   const sx = (p: Point3) => a.x + (p.x - DEPTH_TO_X * p.z) * a.pxPerMX;
   const sy = (p: Point3) => a.y - (p.y - DEPTH_TO_Y * p.z) * a.pxPerMY;
+  const torso = color(leader ? "torsoLeader" : "torso");
   for (const b of BONES) {
     const from = at(b.from);
     const to = at(b.to);
-    const c = band(swatchRampTable(outfit[PART_COLOUR[b.part]], BONE_SHADES), b.shade / BONE_SHADES);
+    const c =
+      b.part === "suit"
+        ? torso
+        : band(swatchRampTable(outfit[PART_COLOUR[b.part]], BONE_SHADES), b.shade / BONE_SHADES);
     brushLine((x, y) => fb.put(x, y, c), sx(from), sy(from), sx(to), sy(to), b.thick);
   }
 }

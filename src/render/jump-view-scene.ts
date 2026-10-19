@@ -55,6 +55,8 @@ export interface HillSceneModel {
   look: HillLook;
   state: JumpSimState;
   outfit: Outfit;
+  /** The jumper leads a World Cup: the original's yellow torso. */
+  leader: boolean;
   recordM: number;
   /** In a competition, the distance that would lead, drawn as a line of its own; absent otherwise. */
   targetM?: number;
@@ -163,7 +165,7 @@ export function drawHillScene(fb: FrameBuffer, m: HillSceneModel, lastRow: numbe
   if (m.ghost !== undefined && m.drawGhost !== undefined) {
     m.drawGhost(fb, m.ghost, figureAnchor(view, m.ghost.jumper.xM, m.ghost.jumper.yM, j.xM, j.yM));
   }
-  drawFigure(fb, h, m.state, anchor, m.outfit);
+  drawFigure(fb, h, m.state, anchor, m.outfit, m.leader);
   drawGateNear(c, h, walls, view, near);
   drawInrunNearWall(c, h, walls, view, near);
   drawNearFence(c, h, view, marksOf(m), near);

@@ -53,6 +53,8 @@ export interface LiveProps {
   contestCpu: boolean;
   /** What the picture shows of the competition in a competition jump; null in training. */
   contestHud: ContestJumpHud | null;
+  /** The jumper leads the World Cup (the original's yellow torso); false in training. */
+  contestLeader: boolean;
 }
 
 /** What the runs need from the screen. */

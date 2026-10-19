@@ -60,6 +60,8 @@ export interface ContestJump {
   /** The name for the bar of the picture, with the round. */
   hudName: string;
   outfit: Outfit;
+  /** The jumper leads the World Cup: the original's yellow torso, from the second competition on. */
+  leader: boolean;
   /** A computer jumper's jump, played from its inputs; null for a player's jump. */
   cpu: ReplaySource | null;
   /** Goes on to the next jumper, once; false while the jump has no result to go on with. */
@@ -143,6 +145,7 @@ function useContestJump(props: Props) {
     jumperName: contest?.hudName ?? null,
     contestCpu: cpu !== null,
     contestHud: contest?.hud ?? null,
+    contestLeader: contest?.leader ?? false,
   };
   return { settings, contestNext, cpu, menuProps, live };
 }

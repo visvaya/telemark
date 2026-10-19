@@ -72,6 +72,7 @@ function drawFrame(picture: JumpPicture, hill: HillChoice, live: LiveProps, v: F
     newRecord: v.newRecord,
     scenery: v.scenery,
     outfit: live.settings.outfit,
+    ...(live.contestLeader ? { leader: true } : {}),
     windDriftM: v.jump.windDriftM,
     ...(best === undefined ? {} : { recordM: best.distanceM }),
     ...(v.ghost === null ? {} : { ghost: v.ghost }),

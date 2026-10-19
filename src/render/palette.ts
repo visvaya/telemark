@@ -27,6 +27,10 @@ const RGB = {
   sockWhite: vga(236, 236, 240),
   flake: vga(244, 246, 252),
   flakeFar: vga(204, 208, 224),
+  /** The torso has a colour of its own in the original, not one of the outfit's: light grey (palette 239). */
+  torso: vga(226, 226, 252),
+  /** The torso of the cup leader: the yellow the original writes computer jumpers' names in (palette 121). */
+  torsoLeader: vga(232, 228, 60),
 } as const;
 
 export type ColorName = keyof typeof RGB;

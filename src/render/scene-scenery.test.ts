@@ -442,6 +442,7 @@ describe("the floodlights' light on the hill at night", () => {
               look: choice.look,
               state,
               outfit: DEFAULT_OUTFIT,
+              leader: false,
               recordM: 0,
               pixelWidth: 1,
               ...(floodlights === undefined ? {} : { floodlights }),
