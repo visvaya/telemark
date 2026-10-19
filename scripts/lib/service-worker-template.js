@@ -110,6 +110,12 @@ function ownPathOf(request) {
   return url.origin === self.location.origin ? url.pathname : null;
 }
 
+// The network's answer, or a network error when the network fails (a reload stops the requests of the page it
+// leaves; a device loses its network): the worker answers as the network would, rather than failing itself.
+function fromNetwork(request) {
+  return fetch(request).catch(() => Response.error());
+}
+
 // The stored copy of a file of this release. The browser may drop a cache when the device runs out of room;
 // there is no copy then, and the game needs the network again.
 function fromThisRelease(keptUrl) {
@@ -145,7 +151,7 @@ self.addEventListener("fetch", (event) => {
   const page = request.mode === "navigate";
   if (page && START_PATHS.has(path)) {
     const start = fromThisRelease(START_URL);
-    event.respondWith(start.then((kept) => kept ?? fetch(request)));
+    event.respondWith(start.then((kept) => kept ?? fromNetwork(request)));
     // A page of this release starts: the launch that could still get the page of the release before is over.
     // A removal that fails is tried again with the next page; the answer does not wait for it.
     event.waitUntil(
@@ -154,12 +160,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (KEPT_URLS.has(path)) {
-    event.respondWith(fromThisRelease(path).then((kept) => kept ?? fetch(request)));
+    event.respondWith(fromThisRelease(path).then((kept) => kept ?? fromNetwork(request)));
     return;
   }
   // A page always comes from this release or from the network, never from another release.
   if (page || onlyThisReleaseIsStored) return;
-  event.respondWith(fromOtherRelease(path).then((kept) => kept ?? fetch(request)));
+  event.respondWith(fromOtherRelease(path).then((kept) => kept ?? fromNetwork(request)));
 });
 
 // A page asks which release this worker holds and whether all of it is stored, or asks a waiting worker to
