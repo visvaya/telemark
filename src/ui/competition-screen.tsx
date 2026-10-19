@@ -1,16 +1,18 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
 import { boardRows } from "../game/competition-board";
 import { roundJustEnded, type CompetitionRun } from "../game/competition-run";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { competitorCountry, competitorName, competitorShortName } from "./competition-names";
-import { AbandonQuestion } from "./abandon-question";
+import { AbandonChoice } from "./abandon-question";
 import { FlagIcon } from "./flag-icon";
 import { formatDecimal } from "./number-text";
 import { useEntryFocus } from "./use-entry-focus";
 
 const T = UI_TEXT.competition;
+/** The table's caption, which describes the board's way on. */
+const CAPTION_ID = "contest-caption";
 /** From this many competitors places take two digits, and their column is wider. */
 const MANY_COMPETITORS = 10;
 
@@ -131,7 +133,7 @@ function Board({ run }: { run: CompetitionRun }) {
   const rows = boardRows(state);
   return (
     <table className={state.competitors.length >= MANY_COMPETITORS ? "contest-table contest-many" : "contest-table"}>
-      <caption>{captionOf(run)}</caption>
+      <caption id={CAPTION_ID}>{captionOf(run)}</caption>
       <thead>
         <tr>
           <th scope="col" className="contest-place">
@@ -183,18 +185,19 @@ function nextLabel(run: CompetitionRun): string {
   return place === null ? T.next(name) : T.nextWithPlace(name, place);
 }
 
-/** The board between the jumps of a competition, the results after a round and the final classification. */
+/**
+ * The board between the jumps of a competition, the results after a round and the final classification. The focus
+ * goes to the way on (the next jump or round, or a new competition at the end), so the keyboard goes through a
+ * competition with Enter alone; the button is described by the table's caption, which a screen reader says with it.
+ */
 export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusOnEntry }: Props) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  useEntryFocus(headingRef, focusOnEntry);
-  const [asking, setAsking] = useState(false);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  useEntryFocus(primaryRef, focusOnEntry);
   const { state, hill } = run;
   return (
     <main className="screen">
       <header className="contest-header">
-        <h1 className="screen-title" tabIndex={-1} ref={headingRef}>
-          {T.boardTitle}
-        </h1>
+        <h1 className="screen-title">{T.boardTitle}</h1>
         <p className="note">{UI_TEXT.hillLabel(hill.name, hill.kPointM)}</p>
       </header>
       <hr className="rule" />
@@ -207,7 +210,13 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusO
       <div className="menu">
         {state.finished ? (
           <>
-            <button type="button" className="pixel-button" onClick={onAgain}>
+            <button
+              type="button"
+              className="pixel-button"
+              onClick={onAgain}
+              ref={primaryRef}
+              aria-describedby={CAPTION_ID}
+            >
               {T.again}
             </button>
             <button type="button" className="pixel-button" onClick={onMenu}>
@@ -216,16 +225,16 @@ export function CompetitionScreen({ run, record, onNext, onAgain, onMenu, focusO
           </>
         ) : (
           <>
-            <button type="button" className="pixel-button" onClick={onNext}>
+            <button
+              type="button"
+              className="pixel-button"
+              onClick={onNext}
+              ref={primaryRef}
+              aria-describedby={CAPTION_ID}
+            >
               {nextLabel(run)}
             </button>
-            {asking ? (
-              <AbandonQuestion onAnswer={(yes) => (yes ? onMenu() : setAsking(false))} />
-            ) : (
-              <button type="button" className="pixel-button" onClick={() => setAsking(true)}>
-                {T.abandon}
-              </button>
-            )}
+            <AbandonChoice label={T.abandon} onAbandon={onMenu} />
           </>
         )}
       </div>

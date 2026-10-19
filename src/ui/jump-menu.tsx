@@ -43,8 +43,8 @@ interface Props {
   onExit: () => void;
   /** A competition jump: no new jump and no other hill from the menu. */
   contest: boolean;
-  /** The question before a competition is left, in place of the exit button while it is asked. */
-  abandonQuestion: ReactNode;
+  /** In a competition, the way out with its question before leaving, in place of the exit button. */
+  abandon: ReactNode;
   /** How the replay is being watched; null while jumping. */
   replay: ReplayView | null;
   /** Whether a finished jump can be watched again. */
@@ -242,7 +242,7 @@ export function JumpMenu({ headingRef, resumeRef, ...p }: Props) {
       {p.replay === null && !p.contest && (
         <RecordGhostToggle recordGhost={p.settings.recordGhost} onSettings={p.onSettings} />
       )}
-      {p.abandonQuestion ?? (
+      {p.abandon ?? (
         <button type="button" className="pixel-button" onClick={p.onExit}>
           {JUMP_TEXT.exit}
         </button>
