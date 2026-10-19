@@ -93,6 +93,8 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await press(button(page, TEXT.contestStart), traits);
   await expectBoard(page, 5);
   const startWidths = await columnWidths(page);
+  // The focus waits on the way on, so the keyboard goes through a competition with Enter alone.
+  await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeFocused();
   // Everybody is listed from the start; the next jumper's row says so.
   await expect(rowOf(page, "Gracz 1")).toContainText("skacze teraz");
   for (let jumps = 0; jumps < 2; jumps++) {
@@ -119,6 +121,11 @@ test("a competition of one player and computer jumpers not watched runs to its r
   await expect(page.locator(".contest-row").first()).toContainText("1.");
   await press(button(page, "Jeszcze raz"), traits);
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();
+  // The question takes the focus on its safe answer; answered no, the focus returns to the way out.
+  await press(button(page, TEXT.contestAbandon), traits);
+  await expect(button(page, "Nie, wróć")).toBeFocused();
+  await press(button(page, "Nie, wróć"), traits);
+  await expect(button(page, TEXT.contestAbandon)).toBeFocused();
   await press(button(page, TEXT.contestAbandon), traits);
   await press(button(page, TEXT.contestAbandonYes), traits);
   await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();
@@ -168,7 +175,9 @@ test("leaving a competition jump asks first", async ({ page, traits }) => {
   await expect(button(page, TEXT.jumpAgain)).toHaveCount(0);
   await expect(button(page, TEXT.toHills)).toHaveCount(0);
   await press(button(page, TEXT.toMainMenu), traits);
+  await expect(button(page, "Nie, wróć")).toBeFocused();
   await press(button(page, "Nie, wróć"), traits);
+  await expect(button(page, TEXT.toMainMenu)).toBeFocused();
   await press(button(page, TEXT.toMainMenu), traits);
   await press(button(page, TEXT.contestAbandonYes), traits);
   await expect(page.getByRole("heading", { name: TEXT.menuHeading })).toBeVisible();

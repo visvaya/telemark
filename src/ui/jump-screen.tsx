@@ -8,7 +8,7 @@ import type { Outfit } from "../game/outfit";
 import type { HillRecord, Settings } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { typeset } from "./typeset";
-import { AbandonQuestion } from "./abandon-question";
+import { AbandonChoice } from "./abandon-question";
 import { JumpMenu } from "./jump-menu";
 import { ReplayBar } from "./replay-bar";
 import { nextReplaySpeed, type JumpRecording, type ReplaySource, type ReplayView } from "./jump-replay";
@@ -133,14 +133,10 @@ function useContestJump(props: Props) {
   const contestNext = useContestNext(contest);
   const cpu = contest?.cpu ?? null;
   useSkipKey(cpu ? contestNext : null);
-  const [abandonAsked, setAbandonAsked] = useState(false);
   const menuProps = {
-    onExit: contest ? () => setAbandonAsked(true) : props.onExit,
+    onExit: props.onExit,
     contest: contest !== undefined,
-    abandonQuestion:
-      abandonAsked && contest ? (
-        <AbandonQuestion onAnswer={(yes) => (yes ? contest.onAbandon() : setAbandonAsked(false))} />
-      ) : null,
+    abandon: contest ? <AbandonChoice label={JUMP_TEXT.exit} onAbandon={contest.onAbandon} /> : null,
   };
   const live = {
     contestNext,
