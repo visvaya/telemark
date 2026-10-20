@@ -24,10 +24,10 @@ export function contestFileText(contest: SavedContest, now: Date): string {
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
-/** The name the file is offered under: the local day and time, to the minute. */
+/** The name the file is offered under: the local day and time, to the second. */
 export function contestFileName(now: Date): string {
   const day = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-  return `telemark-zawody_${day}_${pad2(now.getHours())}-${pad2(now.getMinutes())}.json`;
+  return `telemark-zawody_${day}_${pad2(now.getHours())}-${pad2(now.getMinutes())}-${pad2(now.getSeconds())}.json`;
 }
 
 /** Why a file was not read: not a competition file, a file of a newer game, or a damaged one. */

@@ -91,12 +91,12 @@ export const UI_TEXT = {
     cupLastPoints: "Ostatni",
     cupGained: (points: number) => `+${points}`,
     leader: "lider",
-    newCompetitions: "Nowe zawody",
+    /** The same competitions again, with the same settings and a new draw. */
+    repeat: "Powtórz zawody",
     podium: "Podium",
     /** The podium read out: a place and the competitor on it. */
     podiumEntry: (place: number, name: string, points: number) => `${place}. miejsce: ${name}, ${points} pkt`,
     cupPointsText: (points: number) => `${points} pkt`,
-    playerPlace: (name: string, place: number) => `${name} · ${place}. miejsce`,
     players: "Gracze",
     playerName: (number: number) => `Gracz ${number}`,
     cpus: "Rywale komputerowi",
@@ -119,7 +119,6 @@ export const UI_TEXT = {
     finalTitle: "Klasyfikacja końcowa",
     next: (name: string) => `Dalej: skacze ${name}`,
     nextRound: (round: number) => `Rozpocznij ${round}. serię`,
-    again: "Jeszcze raz",
     menu: "Menu",
     abandon: "Przerwij zawody",
     abandonQuestion: "Wyjść z zawodów?",
@@ -162,7 +161,12 @@ export const UI_TEXT = {
       name: "Zawodnik",
       jump: (round: number) => `${round}. seria`,
       total: "Razem",
+      /** The cup tables' average place: shown short, read out in full. */
+      averagePlace: "Średnie miejsce",
+      averagePlaceShort: "Śr. miejsce",
     },
+    /** The average place of an entrant without any place yet. */
+    noAveragePlace: "-",
     distance: (distance: string) => `${distance} m`,
     /** The unit of points in the table: in full, and the letter it shrinks to where the table is narrow. */
     pointsUnit: "pkt",

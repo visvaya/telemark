@@ -286,6 +286,7 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
     return (
       <CompetitionSetupScreen
         hills={c.hills}
+        records={c.save.records}
         settings={c.save.settings.competition}
         onChange={(competition) => c.onSettings({ competition })}
         onStart={(hills) => c.contest.start(hills, c.save.settings.competition)}

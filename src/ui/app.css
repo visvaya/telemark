@@ -1853,6 +1853,13 @@ h2 {
   margin-top: 4px;
 }
 
+/* A hill's record after its name in the setup, in small type and the colour of values, as in the hill list. */
+.screen .contest-hill-record {
+  font-size: 0.7em;
+  color: var(--tone-violet);
+  font-palette: --tone-violet;
+}
+
 /* The hills of the setup: two buttons for the whole list, then a box per hill, own and original apart. */
 .contest-hill-actions {
   display: flex;
@@ -2046,18 +2053,6 @@ h2 {
   line-height: 1;
 }
 
-/* A player off the podium: the place and points in the player's colour, framed, as the game is the player's. */
-.cup-player-band {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 12px;
-  padding: 8px 12px;
-  border: 3px solid var(--tone-cyan);
-  background: var(--panel);
-  color: var(--tone-cyan);
-}
-
 /*
  * A phone held upright: room before each cell's text and after the last one's, none after the others (the next
  * cell's room keeps them apart), and the short forms.
@@ -2084,6 +2079,11 @@ h2 {
   }
 
   .contest-table .flag-icon {
+    display: none;
+  }
+
+  /* The cup tables' average place: no room for it; gone from the table, it is not read out either. */
+  .contest-table .cup-average {
     display: none;
   }
 

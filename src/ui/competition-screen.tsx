@@ -256,7 +256,7 @@ export function CompetitionScreen({
               ref={primaryRef}
               aria-describedby={CAPTION_ID}
             >
-              {T.again}
+              {T.repeat}
             </button>
             <button type="button" className="pixel-button" onClick={onMenu}>
               {T.menu}

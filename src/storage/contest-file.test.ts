@@ -39,8 +39,8 @@ describe("a competition file", () => {
     expect(contestFileText(contest, now).startsWith(head)).toBe(true);
   });
 
-  it("is named by the local day and time to the minute", () => {
-    expect(contestFileName(now)).toBe("telemark-zawody_2026-10-19_08-05.json");
+  it("is named by the local day and time to the second", () => {
+    expect(contestFileName(now)).toBe("telemark-zawody_2026-10-19_08-05-30.json");
   });
 
   it("stays far under its size limit at the most competitions and competitors", () => {
