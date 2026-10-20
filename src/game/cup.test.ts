@@ -14,6 +14,8 @@ import {
 import {
   CUP_POINTS,
   competitionCupPoints,
+  competitionPlaces,
+  cupAveragePlaces,
   cupLeaders,
   cupPhase,
   cupReducer,
@@ -236,5 +238,53 @@ describe("a cup", () => {
     cupReducer(s, { type: "nextCompetition", seed: 2 });
     expect(s).toEqual(copy);
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
+  });
+});
+
+/** A cup whose finished competitions gave these places. */
+const withPlaces = (places: CupState["places"]): CupState => ({ ...startCup(settings, ["a", "b", "c"], 7), places });
+
+describe("average places", () => {
+  it("are the mean of the places of the finished competitions", () => {
+    const s = withPlaces([
+      [1, 4, 2],
+      [2, 5, 2],
+    ]);
+    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 3) })).toEqual([1.5, 4.5, 2]);
+  });
+
+  it("are the one place after a single competition", () => {
+    const s = withPlaces([[3, 1]]);
+    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 2) })).toEqual([3, 1]);
+  });
+
+  it("leave out a competition without a place, and are null with none at all", () => {
+    const s = withPlaces([
+      [null, 2],
+      [4, null],
+    ]);
+    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 2) })).toEqual([4, 2]);
+    const none = withPlaces([[null, 1]]);
+    expect(cupAveragePlaces({ ...none, entrants: none.entrants.slice(0, 2) })).toEqual([null, 1]);
+  });
+
+  it("are null before the first competition ends", () => {
+    const s = startCup(settings, ["a", "b"], 7);
+    expect(cupAveragePlaces(s).every((p) => p === null)).toBe(true);
+  });
+
+  it("count a shared place for each tied entrant, as recorded by a finished competition", () => {
+    const s = runCompetition(startCup(settings, ["a", "b"], 7), () => 100);
+    expect(s.places).toEqual([competitionPlaces(s.competition)]);
+    expect(cupAveragePlaces(s).every((p) => p === 1)).toBe(true);
+  });
+
+  it("leave out a competition in which the entrant was out under the rule of real competitions", () => {
+    let s = startCup({ ...settings, disqualification: "fis" }, ["a", "b"], 5);
+    const [a] = s.competition.order;
+    s = scored(s, -120, 0);
+    s = runCompetition(s, () => 100);
+    expect(s.places[0]?.[a ?? -1]).toBeNull();
+    expect(cupAveragePlaces(s)[a ?? -1]).toBeNull();
   });
 });

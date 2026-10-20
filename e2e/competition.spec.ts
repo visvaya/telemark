@@ -1,7 +1,17 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { OWN_HILL_SPECS } from "../src/hills/own-hills";
-import { button, jumpCanvas, openCompetitionSetup, openMenu, press, storedSave, TEXT } from "./support/app";
+import {
+  BUILT_IN_HILL_ID,
+  button,
+  jumpCanvas,
+  openCompetitionSetup,
+  openMenu,
+  press,
+  SAVE_KEY,
+  storedSave,
+  TEXT,
+} from "./support/app";
 import { expect, test, type DeviceTraits } from "./support/fixtures";
 import { centerOf, playJump } from "./support/jump";
 
@@ -124,7 +134,7 @@ test("a competition of one player and computer jumpers not watched runs to its r
   // The columns keep their widths from the start list to the end: nothing moves as the results come in.
   expect(await columnWidths(page)).toEqual(startWidths);
   await expect(page.locator(".contest-row").first()).toContainText("1.");
-  await press(button(page, "Jeszcze raz"), traits);
+  await press(button(page, "Powtórz zawody"), traits);
   await expect(button(page, /^Dalej: skacze Gracz 1/)).toBeVisible();
   // The question takes the focus on its safe answer; answered no, the focus returns to the way out.
   await press(button(page, TEXT.contestAbandon), traits);
@@ -221,6 +231,32 @@ test("the hills of the setup and the double cup are remembered after the page is
   await expect(page.getByText("Puchar Świata: 4 konkursy")).toBeVisible();
 });
 
+test("the setup shows the record of a hill kept on this device after its name", async ({ page, traits }) => {
+  const hill = OWN_HILL_SPECS.find((h) => h.id === BUILT_IN_HILL_ID);
+  if (hill === undefined) throw new Error("built-in hill expected");
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  // A change writes the save; a record goes into it as a jump on the hill would put it.
+  await press(button(page, "Zaznacz wszystkie"), traits);
+  await expect.poll(() => storedSave(page)).not.toBeNull();
+  await page.evaluate(
+    ({ key, id }) => {
+      const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "{}");
+      const save = typeof parsed === "object" && parsed !== null ? parsed : {};
+      const kept: unknown = Reflect.get(save, "records");
+      const record = { distanceM: 123.5, points: 120, dateIso: "2026-10-20T08:00:00.000Z" };
+      const records = { ...(typeof kept === "object" && kept !== null ? kept : {}), [id]: record };
+      localStorage.setItem(key, JSON.stringify({ ...save, records }));
+    },
+    { key: SAVE_KEY, id: BUILT_IN_HILL_ID },
+  );
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  // The box keeps the hill's label as its name; the record describes it.
+  await expect(hillBox(page, hill.name)).toHaveAccessibleDescription("rekord 123,50 m");
+  await expect(page.getByText("rekord 123,50 m", { exact: true })).toBeVisible();
+});
+
 test("a world cup of two hills runs from the start list to its podium", async ({ page, traits }) => {
   const [first, second] = OWN_HILL_SPECS;
   if (!first || !second) throw new Error("two own hills expected");
@@ -249,6 +285,14 @@ test("a world cup of two hills runs from the start list to its podium", async ({
       await expect(page.getByRole("table", { name: "Klasyfikacja po 1 z 2 konkursach" })).toBeVisible();
       await expect(page.locator(".contest-row")).toHaveCount(4);
       await expect(page.locator(".contest-row").first()).toContainText("lider");
+      // The average place: a column where the screen is wide enough, gone (and not read out) where it is not.
+      const average = page.getByRole("columnheader", { name: "Średnie miejsce" });
+      if ((page.viewportSize()?.width ?? 0) >= 600) {
+        await expect(average).toBeVisible();
+        await expect(page.locator(".contest-row").first().locator(".cup-average")).toHaveText("1,0");
+      } else {
+        await expect(average).toHaveCount(0);
+      }
       const next = button(page, new RegExp(String.raw`^Dalej: ${second.name} K\d+ \(konkurs 2 z 2\)$`));
       await expect(next).toBeFocused();
       await press(next, traits);
@@ -260,10 +304,12 @@ test("a world cup of two hills runs from the start list to its podium", async ({
   const podium = page.getByRole("list", { name: "Podium" });
   await expect(podium).toBeVisible();
   await expect(podium.getByText(/^1\. miejsce: .+, \d+ pkt$/).first()).toBeAttached();
+  // A player's place is told by the table and the podium alone, with no band of its own.
+  await expect(page.locator(".cup-player-band")).toHaveCount(0);
   // No sideways scroll on the end screen.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await expect(button(page, "Nowe zawody")).toBeFocused();
-  await press(button(page, "Nowe zawody"), traits);
+  await expect(button(page, "Powtórz zawody")).toBeFocused();
+  await press(button(page, "Powtórz zawody"), traits);
   await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
 });
 
@@ -329,7 +375,7 @@ test("a cup saved to a file goes on from it on a page without it", async ({ page
     page.waitForEvent("download"),
     press(button(page, "Zapisz zawody do pliku"), traits),
   ]);
-  expect(download.suggestedFilename()).toMatch(/^telemark-zawody_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toMatch(/^telemark-zawody_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/);
   const text = await readFile(await download.path());
 
   await page.evaluate(() => localStorage.clear());

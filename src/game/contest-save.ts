@@ -9,7 +9,7 @@ import {
   type JumpScore,
 } from "./competition";
 import type { CompetitionRun } from "./competition-run";
-import { competitionCupPoints, cupPhase, type CupState } from "./cup";
+import { competitionCupPoints, competitionPlaces, cupPhase, type CupState } from "./cup";
 import type { HillChoice } from "./hill-choice";
 
 /**
@@ -193,6 +193,30 @@ function competitionOf(
   return sameList(order, secondRoundOrder(firstRound)) ? state : null;
 }
 
+/**
+ * The places of the finished competitions; a cup kept before places were kept has none, and then only the
+ * current competition's, when finished, are known again.
+ */
+function placesOf(
+  v: unknown,
+  finishedCount: number,
+  n: number,
+  competition: CompetitionState,
+): (number | null)[][] | null {
+  if (v === undefined) {
+    const unknown = Array.from({ length: finishedCount }, () => Array.from({ length: n }, () => null));
+    return competition.finished ? [...unknown.slice(0, -1), competitionPlaces(competition)] : unknown;
+  }
+  const places = listOf(v, finishedCount, finishedCount, (row) =>
+    listOf(row, n, n, (p) => (p === null || isWhole(p, 1, n) ? { p } : null)),
+  );
+  if (places === null) return null;
+  const rows = places.map((row) => row.map((cell) => cell.p));
+  const last = rows.at(-1);
+  if (competition.finished && (last === undefined || !sameList(last, competitionPlaces(competition)))) return null;
+  return rows;
+}
+
 function cupOf(v: unknown, settings: CompetitionSettings): CupState | null {
   const schedule = listOf(fieldOf(v, "schedule"), 1, L.MAX_COMPETITIONS, (id) => (isHillId(id) ? id : null));
   if (schedule === null) return null;
@@ -210,7 +234,9 @@ function cupOf(v: unknown, settings: CompetitionSettings): CupState | null {
   if (points === null) return null;
   const last = points.at(-1);
   if (competition.finished && (last === undefined || !sameList(last, competitionCupPoints(competition)))) return null;
-  return { schedule, index, entrants, competition, points };
+  const places = placesOf(fieldOf(v, "places"), finishedCount, n, competition);
+  if (places === null) return null;
+  return { schedule, index, entrants, competition, points, places };
 }
 
 /** A saved competition, or null for anything that is not a consistent one. Never throws; extra fields are ignored. */

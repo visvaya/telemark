@@ -2,7 +2,8 @@ import { useRef } from "react";
 import type { Competitor } from "../game/competition";
 import type { CompetitionRun } from "../game/competition-run";
 import { keptOf } from "../game/contest-save";
-import { cupStandings, type CupStandingRow } from "../game/cup";
+import { cupAveragePlaces, cupStandings, type CupStandingRow } from "../game/cup";
+import { formatDecimal } from "../text/decimal";
 import { cupPodium, cupRest } from "../game/cup-podium";
 import { UI_TEXT } from "../text/ui-text";
 import { AbandonChoice } from "./abandon-question";
@@ -32,6 +33,25 @@ function Who({ competitor }: { competitor: Competitor | undefined }) {
 const rowClass = (competitor: Competitor | undefined): string =>
   competitor?.kind === "player" ? "contest-row contest-player" : "contest-row";
 
+/** The column of average places, shown only where the screen is wide enough for it. */
+function AverageHeader() {
+  return (
+    <th scope="col" className="contest-total cup-average">
+      <span aria-hidden="true">{T.columns.averagePlaceShort}</span>
+      <span className="sr-only">{T.columns.averagePlace}</span>
+    </th>
+  );
+}
+
+/** An entrant's average place with one decimal; a dash without any place. */
+function AverageCell({ average }: { average: number | null | undefined }) {
+  return (
+    <td className="contest-total cup-average">
+      {average === null || average === undefined ? T.noAveragePlace : formatDecimal(average, 1)}
+    </td>
+  );
+}
+
 /** The place on the first row of a tie only, as the original shows shared places. */
 function shownPlace(rows: readonly CupStandingRow[], at: number): string {
   const row = rows[at];
@@ -49,14 +69,15 @@ interface StandingsProps {
 }
 
 /**
- * The cup standings between two competitions: place, competitor, the cup points so far and those of the last
- * competition. The way on starts the next competition; the focus waits on it, so Enter goes through a cup.
+ * The cup standings between two competitions: place, competitor, the cup points so far, those of the last
+ * competition and the average place. The way on starts the next competition; the focus waits on it, so Enter goes through a cup.
  */
 export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntry }: StandingsProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   useEntryFocus(primaryRef, focusOnEntry);
   const { cup } = run;
   const rows = cupStandings(cup);
+  const averages = cupAveragePlaces(cup);
   const total = cup.schedule.length;
   // The standings show only between competitions, so a next hill is always there.
   const nextHill = run.hills[cup.index + 1] ?? run.hill;
@@ -80,6 +101,7 @@ export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntr
               <th scope="col" className="contest-total">
                 {T.cupLastPoints}
               </th>
+              <AverageHeader />
             </tr>
           </thead>
           <tbody>
@@ -94,6 +116,7 @@ export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntr
                   </th>
                   <td className="contest-total">{row.totalPoints}</td>
                   <td className="contest-total cup-gained">{T.cupGained(row.lastPoints)}</td>
+                  <AverageCell average={averages[row.entrant]} />
                 </tr>
               );
             })}
@@ -142,8 +165,8 @@ interface EndProps {
 }
 
 /**
- * The end of a cup: the trophy, the podium (laid out 2-1-3, read 1, 2, 3), a band for each player off the podium,
- * the rest of the standings, and a new cup with the same settings or the menu.
+ * The end of a cup: the trophy, the podium (laid out 2-1-3, read 1, 2, 3), the rest of the standings with each
+ * entrant's average place, and the same cup again with the same settings and a new draw, or the menu.
  */
 export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
@@ -151,7 +174,7 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
   const { cup } = run;
   const rows = cupStandings(cup);
   const rest = cupRest(rows);
-  const players = rest.filter((r) => cup.entrants[r.entrant]?.kind === "player");
+  const averages = cupAveragePlaces(cup);
   return (
     <main className="screen">
       <header className="contest-header">
@@ -185,12 +208,6 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
           </li>
         ))}
       </ol>
-      {players.map((r) => (
-        <p key={r.entrant} className="cup-player-band">
-          <span>{T.playerPlace(competitorName(cup.entrants[r.entrant]), r.place)}</span>
-          <span>{T.cupPointsText(r.totalPoints)}</span>
-        </p>
-      ))}
       {rest.length > 0 && (
         <table className={tableClass(rows.length)}>
           {/* Visible headers, as on the standings: a phone's fixed table takes its column widths from them. */}
@@ -204,6 +221,7 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
               <th scope="col" className="contest-total">
                 {T.cupPoints}
               </th>
+              <AverageHeader />
             </tr>
           </thead>
           <tbody>
@@ -216,6 +234,7 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
                     <Who competitor={c} />
                   </th>
                   <td className="contest-total">{T.cupPointsText(r.totalPoints)}</td>
+                  <AverageCell average={averages[r.entrant]} />
                 </tr>
               );
             })}
@@ -224,7 +243,7 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
       )}
       <div className="menu">
         <button type="button" className="pixel-button" onClick={onAgain} ref={primaryRef}>
-          {T.newCompetitions}
+          {T.repeat}
         </button>
         <button type="button" className="pixel-button" onClick={onMenu}>
           {T.menu}

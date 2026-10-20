@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   CPU_LEVEL_SETTINGS,
   DISQUALIFICATION_RULES,
@@ -10,6 +10,8 @@ import {
 import { RIVALS } from "../game/competition-rivals";
 import { cupSchedule } from "../game/cup";
 import type { HillChoice } from "../game/hill-choice";
+import type { HillRecord } from "../storage/save-data";
+import { formatDecimal } from "../text/decimal";
 import { UI_TEXT } from "../text/ui-text";
 import { FlagIcon } from "./flag-icon";
 import { useEntryFocus } from "./use-entry-focus";
@@ -18,6 +20,8 @@ const T = UI_TEXT.competition;
 
 interface Props {
   hills: readonly HillChoice[];
+  /** The hill records kept on this device, by hill id. */
+  records: Readonly<Record<string, HillRecord>>;
   settings: CompetitionSettings;
   onChange: (settings: CompetitionSettings) => void;
   /** Starts a competition on each of the hills, in this order. */
@@ -65,12 +69,32 @@ const tickedIds = (hills: readonly HillChoice[], hillIds: readonly string[] | nu
 
 const replaced = <T,>(list: readonly T[], at: number, value: T): T[] => list.map((v, i) => (i === at ? value : v));
 
-/** A box with its text, framed like the boxes of the settings. */
-function Check({ label, checked, onChange }: { label: ReactNode; checked: boolean; onChange: (on: boolean) => void }) {
+/**
+ * A box with its text, framed like the boxes of the settings; a note after the text (a hill's record) describes the
+ * box without becoming part of its name.
+ */
+function Check({
+  label,
+  note,
+  checked,
+  onChange,
+}: {
+  label: ReactNode;
+  note?: string | undefined;
+  checked: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  const id = useId();
+  const named = note === undefined ? {} : { "aria-labelledby": `${id}-label`, "aria-describedby": `${id}-note` };
   return (
     <label className="settings-check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} />
-      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} {...named} />
+      <span id={`${id}-label`}>{label}</span>
+      {note !== undefined && (
+        <span id={`${id}-note`} className="contest-hill-record">
+          {note}
+        </span>
+      )}
     </label>
   );
 }
@@ -111,11 +135,13 @@ function DisqualificationChoice({
 function HillGroup({
   title,
   hills,
+  records,
   ticked,
   onTick,
 }: {
   title: string | null;
   hills: readonly HillChoice[];
+  records: Readonly<Record<string, HillRecord>>;
   ticked: readonly string[];
   onTick: (id: string, on: boolean) => void;
 }) {
@@ -123,14 +149,18 @@ function HillGroup({
   return (
     <div className="contest-hill-group">
       {title !== null && <h3 className="contest-hill-group-title">{title}</h3>}
-      {hills.map((h) => (
-        <Check
-          key={h.id}
-          label={UI_TEXT.hillLabel(h.name, h.kPointM)}
-          checked={ticked.includes(h.id)}
-          onChange={(on) => onTick(h.id, on)}
-        />
-      ))}
+      {hills.map((h) => {
+        const record = records[h.id];
+        return (
+          <Check
+            key={h.id}
+            label={UI_TEXT.hillLabel(h.name, h.kPointM)}
+            note={record === undefined ? undefined : UI_TEXT.hills.record(formatDecimal(record.distanceM, 2))}
+            checked={ticked.includes(h.id)}
+            onChange={(on) => onTick(h.id, on)}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -138,11 +168,13 @@ function HillGroup({
 /** The hills of the competitions, own and original apart, with the buttons for the whole list and the double cup. */
 function HillsChoice({
   hills,
+  records,
   settings,
   ticked,
   onChange,
 }: {
   hills: readonly HillChoice[];
+  records: Readonly<Record<string, HillRecord>>;
   settings: CompetitionSettings;
   ticked: readonly string[];
   onChange: (settings: CompetitionSettings) => void;
@@ -171,8 +203,14 @@ function HillsChoice({
           {T.clearHills}
         </button>
       </div>
-      <HillGroup title={grouped ? T.ownHills : null} hills={own} ticked={ticked} onTick={tick} />
-      <HillGroup title={grouped ? T.originalHills : null} hills={original} ticked={ticked} onTick={tick} />
+      <HillGroup title={grouped ? T.ownHills : null} hills={own} records={records} ticked={ticked} onTick={tick} />
+      <HillGroup
+        title={grouped ? T.originalHills : null}
+        hills={original}
+        records={records}
+        ticked={ticked}
+        onTick={tick}
+      />
       <Check
         label={T.doubleCup}
         checked={settings.doubleCup}
@@ -266,6 +304,7 @@ function useReplacing(kept: string | null, onReadFile: (file: File) => Promise<C
 /** The setup of a competition: the hill, who takes part, and whether the computer jumpers are watched. */
 export function CompetitionSetupScreen({
   hills,
+  records,
   settings,
   onChange,
   onStart,
@@ -295,7 +334,7 @@ export function CompetitionSetupScreen({
         {T.setupTitle}
       </h1>
       <hr className="rule" />
-      <HillsChoice hills={hills} settings={settings} ticked={ticked} onChange={onChange} />
+      <HillsChoice hills={hills} records={records} settings={settings} ticked={ticked} onChange={onChange} />
       <section className="settings-group" aria-labelledby="contest-players">
         <h2 className="hill-section-title" id="contest-players">
           {T.players}
