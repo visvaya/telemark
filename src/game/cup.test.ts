@@ -14,7 +14,6 @@ import {
 import {
   CUP_POINTS,
   competitionCupPoints,
-  competitionPlaces,
   cupAveragePlaces,
   cupLeaders,
   cupPhase,
@@ -241,8 +240,11 @@ describe("a cup", () => {
   });
 });
 
-/** A cup whose finished competitions gave these places. */
-const withPlaces = (places: CupState["places"]): CupState => ({ ...startCup(settings, ["a", "b", "c"], 7), places });
+/** A cup whose finished competitions gave these places (null: no place), kept as the cup points they scored. */
+const withPlaces = (places: readonly (readonly (number | null)[])[]): CupState => ({
+  ...startCup(settings, ["a", "b", "c"], 7),
+  points: places.map((row) => row.map((p) => (p === null ? 0 : (CUP_POINTS[p - 1] ?? 0)))),
+});
 
 describe("average places", () => {
   it("are the mean of the places of the finished competitions", () => {
@@ -273,10 +275,18 @@ describe("average places", () => {
     expect(cupAveragePlaces(s).every((p) => p === null)).toBe(true);
   });
 
-  it("count a shared place for each tied entrant, as recorded by a finished competition", () => {
+  it("count a shared place for each tied entrant", () => {
     const s = runCompetition(startCup(settings, ["a", "b"], 7), () => 100);
-    expect(s.places).toEqual([competitionPlaces(s.competition)]);
     expect(cupAveragePlaces(s).every((p) => p === 1)).toBe(true);
+  });
+
+  it("tell every place of a full field of 16 from its cup points", () => {
+    const places = Array.from({ length: CUP_POINTS.length }, (_v, i) => i + 1);
+    const s = {
+      ...withPlaces([places]),
+      entrants: Array.from({ length: CUP_POINTS.length }, () => ({ kind: "player" as const, slot: 0 })),
+    };
+    expect(cupAveragePlaces(s)).toEqual(places);
   });
 
   it("leave out a competition in which the entrant was out under the rule of real competitions", () => {
@@ -284,7 +294,7 @@ describe("average places", () => {
     const [a] = s.competition.order;
     s = scored(s, -120, 0);
     s = runCompetition(s, () => 100);
-    expect(s.places[0]?.[a ?? -1]).toBeNull();
+    expect(s.points[0]?.[a ?? -1]).toBe(0);
     expect(cupAveragePlaces(s)[a ?? -1]).toBeNull();
   });
 });

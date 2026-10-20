@@ -33,11 +33,6 @@ export interface CupState {
   competition: CompetitionState;
   /** Cup points of every finished competition, per entrant. */
   points: readonly (readonly number[])[];
-  /**
-   * The place of every entrant in every finished competition, null without one (out under the "fis" rule, or
-   * not known: a cup kept before places were kept).
-   */
-  places: readonly (readonly (number | null)[])[];
 }
 
 export type CupPhase = "competition" | "standings" | "over";
@@ -79,12 +74,11 @@ export function startCup(settings: CompetitionSettings, schedule: readonly strin
     entrants,
     competition: openDrawnCompetition(entrants, settings.disqualification, rng),
     points: [],
-    places: [],
   };
 }
 
 /** The place of each competitor in a competition; null without one. */
-export function competitionPlaces(competition: CompetitionState): (number | null)[] {
+function competitionPlaces(competition: CompetitionState): (number | null)[] {
   const place = new Map(standings(competition).map((r) => [r.competitor, r.place]));
   return competition.competitors.map((_c, i) => place.get(i) ?? null);
 }
@@ -95,13 +89,22 @@ export function competitionCupPoints(competition: CompetitionState): number[] {
 }
 
 /**
+ * The place that scored these cup points; null for none. A cup has at most as many entrants as the table has
+ * places, and the table falls with every place, so the points tell the place (shared places share their points).
+ */
+function placeOfCupPoints(points: number): number | null {
+  const at = CUP_POINTS.indexOf(points);
+  return points === 0 || at < 0 ? null : at + 1;
+}
+
+/**
  * Each entrant's average place over the finished competitions in which the entrant had a place; null with none.
  */
 export function cupAveragePlaces(state: CupState): (number | null)[] {
   return state.entrants.map((_e, entrant) => {
-    const own = state.places.flatMap((row) => {
-      const p = row[entrant];
-      return p === null || p === undefined ? [] : [p];
+    const own = state.points.flatMap((row) => {
+      const p = placeOfCupPoints(row[entrant] ?? 0);
+      return p === null ? [] : [p];
     });
     return own.length === 0 ? null : own.reduce((sum, p) => sum + p, 0) / own.length;
   });
@@ -149,12 +152,7 @@ export function cupReducer(state: CupState, action: CupAction): CupState {
     if (state.competition.finished) return state;
     const competition = competitionReducer(state.competition, action);
     if (!competition.finished) return { ...state, competition };
-    return {
-      ...state,
-      competition,
-      points: [...state.points, competitionCupPoints(competition)],
-      places: [...state.places, competitionPlaces(competition)],
-    };
+    return { ...state, competition, points: [...state.points, competitionCupPoints(competition)] };
   }
   if (cupPhase(state) !== "standings") return state;
   const entrants = withNewForms(state.entrants, new BorlandRandom(action.seed));

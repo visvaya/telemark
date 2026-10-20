@@ -190,25 +190,6 @@ describe.runIf(first && second)("a kept competition", () => {
     expect(parseSavedContest({ ...standings, cup: { ...standings.cup, points } })).toBeNull();
   });
 
-  it("refuses places that do not follow from the finished competition", () => {
-    const standings = cup.find((c) => c.place === "standings");
-    if (standings === undefined) throw new Error("no standings");
-    const places = standings.cup.places.map((row) => row.map((p) => (p === 1 ? 2 : p)));
-    expect(parseSavedContest({ ...standings, cup: { ...standings.cup, places } })).toBeNull();
-  });
-
-  it("reads a cup kept without places, knowing only those of a finished current competition", () => {
-    const standings = cup.find((c) => c.place === "standings");
-    if (standings === undefined) throw new Error("no standings");
-    const { places, ...rest } = json(standings.cup);
-    const read = parseSavedContest({ ...standings, cup: rest });
-    expect(read?.cup.places).toEqual(places);
-    const running = cup.find((c) => c.place === "board" && c.cup.index === 1 && !c.cup.competition.finished);
-    if (running === undefined) throw new Error("no second competition");
-    const { places: _p, ...older } = json(running.cup);
-    expect(parseSavedContest({ ...running, cup: older })?.cup.places).toEqual([older.entrants.map(() => null)]);
-  });
-
   it("never throws, whatever it is given", () => {
     const hostile: unknown[] = [
       undefined,
