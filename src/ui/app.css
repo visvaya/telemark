@@ -1741,8 +1741,9 @@ h2 {
 }
 
 /*
- * Column headers standing on the rule under them, on one line: the columns are wide enough for them, and only a
- * reader's wider text spacing may break one where the screen is narrow.
+ * Column headers standing on the rule under them, on one line: the columns are wide enough for them. The widths
+ * are fixed at every width of the screen, so a reader's wider text spacing breaks a header rather than pushing it
+ * out of its column.
  */
 .contest-table thead th {
   padding-block: 2px 6px;
@@ -1770,12 +1771,6 @@ h2 {
 @media (min-width: 760px) {
   .contest-early-number {
     display: none;
-  }
-}
-
-@media (min-width: 600px) {
-  .contest-table thead th {
-    white-space: nowrap;
   }
 }
 
