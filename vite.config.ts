@@ -25,7 +25,7 @@ export default defineConfig({
     // `pnpm test:hills-stability`, which sets this variable; every other run leaves it out.
     exclude: [
       ...configDefaults.exclude,
-      ...(process.env["HILL_STABILITY"] === "1" ? [] : ["src/hills/hill-play.stability.test.ts"]),
+      ...(process.env["HILL_STABILITY"] === "1" ? [] : ["src/hills/hill-play.stability-*.test.ts"]),
     ],
     globals: false,
     // Coverage is measured where a wrong value does not crash anything but silently gives wrong results: the
