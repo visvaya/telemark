@@ -163,7 +163,7 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
   // The start number: a column of its own where the table is wide enough, else in the place's cell before the jump.
   const numberHeader = page.getByRole("columnheader", { name: "Numer startowy" });
   const early = page.locator(".contest-row .contest-early-number");
-  if ((page.viewportSize()?.width ?? 0) >= 600) {
+  if ((page.viewportSize()?.width ?? 0) >= 760) {
     await expect(numberHeader).toBeVisible();
     await expect(page.locator(".contest-row .contest-number")).toHaveText("1");
     await expect(early).toBeHidden();
@@ -400,4 +400,32 @@ test("a cup saved to a file goes on from it on a page without it", async ({ page
   await input.setInputFiles({ name: download.suggestedFilename(), mimeType: "application/json", buffer: text });
   await expect(page.getByText("Konkurs 1 z 2")).toBeVisible();
   expect(await page.locator(".contest-table").innerText()).toBe(board);
+});
+
+test("every name of a full field keeps one line, whole, at every width from 375 px", async ({ page, traits }) => {
+  // Widths are set here, so one device is enough; the edges of the compact table's band are among them. At 360 px
+  // a field of sixteen leaves the longest short names an ellipsis, which the table allows there.
+  test.skip(!traits.desktop, "the widths are set by the test");
+  await openMenu(page);
+  await openCompetitionSetup(page, traits);
+  const players = Array.from({ length: 7 }, (_v, i) => `Gracz ${i + 2}`);
+  const rivals = ["Florian Hasenauer", "Tomasz Wierzbicki", "Jonas Kellerhals", "Mikael Sundqvist"];
+  await setUp(page, traits, Object.fromEntries([...players, ...rivals].map((name) => [name, true])));
+  await press(button(page, TEXT.contestStart), traits);
+  await expect(page.locator(".contest-row")).toHaveCount(16);
+  const cut: string[] = [];
+  for (const width of [375, 412, 599, 600, 700, 759, 760, 844, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const names = await page
+      .locator(".contest-row .contest-who")
+      .evaluateAll((all) =>
+        all
+          .filter(
+            (n) => n.scrollWidth > n.clientWidth || n.clientHeight > 1.5 * parseFloat(getComputedStyle(n).lineHeight),
+          )
+          .map((n) => n.textContent),
+      );
+    if (names.length > 0) cut.push(`${width} px: ${names.join(", ")}`);
+  }
+  expect(cut, "names cut or broken").toEqual([]);
 });
