@@ -151,11 +151,11 @@ function TrainingButtons(
         {p.touch ? "" : JUMP_TEXT.keepKey}
       </button>
       {!p.replayAvailable && <p className="note">{REPLAY_TEXT.notYet}</p>}
-      <button type="button" className="pixel-button" onClick={() => p.onPanel("help")}>
+      <button type="button" className="pixel-button" onClick={() => p.onPanel("help")} data-opens-panel="help">
         {UI_TEXT.menu.howTo}
       </button>
       {!p.contest && (
-        <button type="button" className="pixel-button" onClick={() => p.onPanel("hills")}>
+        <button type="button" className="pixel-button" onClick={() => p.onPanel("hills")} data-opens-panel="hills">
           {JUMP_TEXT.changeHill}
         </button>
       )}

@@ -134,6 +134,8 @@ test("the jump screen is operated with the keyboard alone: Escape opens its menu
   await button(page, TEXT.back).focus();
   await page.keyboard.press("Enter");
   await expect(resume).toBeVisible();
+  // The way back leaves the focus on the button that opened the instructions, not on the page.
+  await expect(button(page, "Jak skakać")).toBeFocused();
 
   // Escape closes the menu; the focus returns to the button of the menu, and Escape opens the menu again.
   await page.keyboard.press("Escape");
@@ -149,6 +151,7 @@ test("the jump screen is operated with the keyboard alone: Escape opens its menu
   expect(await expectVisibleFocus(page)).toBe(TEXT.hillListTitle);
   await button(page, TEXT.back).focus();
   await page.keyboard.press("Enter");
+  await expect(button(page, TEXT.toHills)).toBeFocused();
   await button(page, TEXT.toMainMenu).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Telemark" })).toBeFocused();
