@@ -7,6 +7,8 @@ export const PWA_CONFIG = {
   MARKER_META_NAME: "telemark-offline",
   /** A check for a new release on returning to the game happens at most this often. */
   UPDATE_CHECK_MIN_INTERVAL_S: 900,
+  /** While the game cannot start offline, a check again on returning to the game happens at most this often. */
+  READINESS_RETRY_MIN_INTERVAL_S: 30,
   /** How long the page waits for the worker to say what it holds. */
   RELEASE_ANSWER_TIMEOUT_S: 5,
   /** Type of the message that asks the worker which release it holds, and of its answer. */

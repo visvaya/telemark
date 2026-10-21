@@ -452,6 +452,7 @@ export function App({ diagnostics }: AppProps) {
       persistent={persistent}
       replaysNotStored={replays.notStored}
       offline={offline}
+      diagnostics={diagnostics}
       onOpen={(kind) => show({ kind })}
       kept={keptContest.kept}
       onResume={keptContest.resumeKept}

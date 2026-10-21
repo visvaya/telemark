@@ -1,15 +1,50 @@
 import { useEffect, useReducer, useState, type ReactNode } from "react";
-import { reduceUpdateCheck, type OfflineState } from "../pwa/offline-state";
+import {
+  reduceReadinessRetry,
+  reduceUpdateCheck,
+  type OfflineState,
+  type ReadinessOutcome,
+} from "../pwa/offline-state";
 import { UI_TEXT } from "../text/ui-text";
 import { typeset } from "./typeset";
 import type { UpdateControls } from "./use-offline-state";
 
-/** Whether the game can be played without a network. */
-export function OfflineNotice({ state }: { state: OfflineState | null }) {
+/**
+ * Whether the game can be played without a network; when it cannot, why (as far as the page can tell) and a
+ * button that checks again. Presses while a check runs make no second check; its answer is said in a live region
+ * that stays after the game has become ready. The error behind it shows only with the diagnostics on.
+ */
+export function OfflineNotice({
+  state,
+  onRetry,
+  diagnostics = false,
+}: {
+  state: OfflineState | null;
+  onRetry?: (() => Promise<ReadinessOutcome>) | undefined;
+  diagnostics?: boolean;
+}) {
+  const [retry, dispatch] = useReducer(reduceReadinessRetry, "idle");
   if (state === null) return null;
+  const checking = retry === "checking";
+  const onPress = () => {
+    if (checking || !onRetry) return;
+    dispatch("start");
+    void onRetry().then(dispatch);
+  };
+  const cause = state.readiness === "unavailable" ? state.unavailable : null;
   return (
     <div className="offline-notice">
       <p className="note">{UI_TEXT.offline.readiness[state.readiness]}</p>
+      {cause && <p className="note">{UI_TEXT.offline.cause[cause.cause]}</p>}
+      {cause && diagnostics && cause.detail !== null && <p className="note">{UI_TEXT.offline.detail(cause.detail)}</p>}
+      {onRetry && state.readiness === "unavailable" && (
+        <button type="button" className="pixel-button small-button" aria-disabled={checking} onClick={onPress}>
+          {UI_TEXT.offline.retry.button}
+        </button>
+      )}
+      {onRetry && (
+        <div aria-live="polite">{retry !== "idle" && <p className="note">{UI_TEXT.offline.retry[retry]}</p>}</div>
+      )}
     </div>
   );
 }
