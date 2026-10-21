@@ -285,13 +285,13 @@ test("a world cup of two hills runs from the start list to its podium", async ({
       await expect(page.getByRole("table", { name: "Klasyfikacja po 1 z 2 konkursach" })).toBeVisible();
       await expect(page.locator(".contest-row")).toHaveCount(4);
       await expect(page.locator(".contest-row").first()).toContainText("lider");
-      // The average place: a column where the screen is wide enough, gone (and not read out) where it is not.
-      const average = page.getByRole("columnheader", { name: "Średnie miejsce" });
+      // The wins: a column where the screen is wide enough, gone (and not read out) where it is not.
+      const wins = page.getByRole("columnheader", { name: "Zwycięstwa" });
       if ((page.viewportSize()?.width ?? 0) >= 600) {
-        await expect(average).toBeVisible();
-        await expect(page.locator(".contest-row").first().locator(".cup-average")).toHaveText("1,0");
+        await expect(wins).toBeVisible();
+        await expect(page.locator(".contest-row").first().locator(".cup-wins")).toHaveText("1");
       } else {
-        await expect(average).toHaveCount(0);
+        await expect(wins).toHaveCount(0);
       }
       const next = button(page, new RegExp(String.raw`^Dalej: ${second.name} K\d+ \(konkurs 2 z 2\)$`));
       await expect(next).toBeFocused();

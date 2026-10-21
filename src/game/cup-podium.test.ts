@@ -7,6 +7,7 @@ const row = (entrant: number, place: number, totalPoints: number): CupStandingRo
   place,
   totalPoints,
   lastPoints: 0,
+  wins: 0,
 });
 
 describe("the podium of a cup", () => {

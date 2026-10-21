@@ -5,6 +5,7 @@ import {
   drawEntrants,
   openCompetition,
   openDrawnCompetition,
+  shuffled,
   standings,
   type CompetitionSettings,
   type CompetitionState,
@@ -33,6 +34,11 @@ export interface CupState {
   competition: CompetitionState;
   /** Cup points of every finished competition, per entrant. */
   points: readonly (readonly number[])[];
+  /**
+   * The lots drawn with the cup: every entrant index once, the first ranked highest. They order entrants equal on
+   * cup points and on every place (FIS World Cup rules, art. 3.1.3: in the end the lot decides).
+   */
+  lots: readonly number[];
 }
 
 export type CupPhase = "competition" | "standings" | "over";
@@ -41,11 +47,13 @@ export type CupAction = { type: "scored"; score: JumpScore } | { type: "nextComp
 
 export interface CupStandingRow {
   entrant: number;
-  /** 1 for the leader; tied entrants share a place. */
+  /** 1 for the leader; entrants tied on points share a place until the final standings. */
   place: number;
   totalPoints: number;
   /** The points of the last finished competition; 0 before the first one ends. */
   lastPoints: number;
+  /** Competitions won, a shared first place included. */
+  wins: number;
 }
 
 /**
@@ -64,17 +72,15 @@ export function cupSchedule(
   return doubleCup ? [...series, ...series] : series;
 }
 
-/** A new cup drawn from `seed`: the computer jumpers' talents once, then the first competition as a single one. */
+/**
+ * A new cup drawn from `seed`: the computer jumpers' talents once, then the first competition as a single one, then
+ * the lots.
+ */
 export function startCup(settings: CompetitionSettings, schedule: readonly string[], seed: number): CupState {
   const rng = new BorlandRandom(seed);
   const entrants = drawEntrants(settings, rng);
-  return {
-    schedule,
-    index: 0,
-    entrants,
-    competition: openDrawnCompetition(entrants, settings.disqualification, rng),
-    points: [],
-  };
+  const competition = openDrawnCompetition(entrants, settings.disqualification, rng);
+  return { schedule, index: 0, entrants, competition, points: [], lots: shuffled(entrants.length, rng) };
 }
 
 /** The place of each competitor in a competition; null without one. */
@@ -97,17 +103,20 @@ function placeOfCupPoints(points: number): number | null {
   return points === 0 || at < 0 ? null : at + 1;
 }
 
-/**
- * Each entrant's average place over the finished competitions in which the entrant had a place; null with none.
- */
-export function cupAveragePlaces(state: CupState): (number | null)[] {
-  return state.entrants.map((_e, entrant) => {
-    const own = state.points.flatMap((row) => {
-      const p = placeOfCupPoints(row[entrant] ?? 0);
-      return p === null ? [] : [p];
-    });
-    return own.length === 0 ? null : own.reduce((sum, p) => sum + p, 0) / own.length;
-  });
+/** How many times an entrant took each place in the finished competitions: place 1 first, up to the last scoring. */
+function placeCounts(state: CupState, entrant: number): number[] {
+  const counts = CUP_POINTS.map(() => 0);
+  for (const row of state.points) {
+    const place = placeOfCupPoints(row[entrant] ?? 0);
+    if (place !== null) counts[place - 1] = (counts[place - 1] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** More wins first, then more second places, and so on; 0 when every count is the same. */
+function byPlaces(a: readonly number[], b: readonly number[]): number {
+  const at = a.findIndex((count, i) => count !== b[i]);
+  return at < 0 ? 0 : (b[at] ?? 0) - (a[at] ?? 0);
 }
 
 /** A competition running, the cup standings due before the next one, or the cup over (one hill: after it). */
@@ -116,18 +125,41 @@ export function cupPhase(state: CupState): CupPhase {
   return state.index + 1 < state.schedule.length ? "standings" : "over";
 }
 
-/** Cup standings: by total points, the higher first; ties keep entrant order and share a place. */
+/**
+ * Cup standings: by total points, the higher first. Entrants on the same points are ordered as in the FIS World
+ * Cup rules (art. 3.1.3): more wins, then more second places and so on, and in the end the lots. During the cup
+ * they share a place, as FIS standings do during a season; the final standings give each a place of their own.
+ */
 export function cupStandings(state: CupState): CupStandingRow[] {
   const last = state.points.at(-1);
+  const lot = new Map(state.lots.map((entrant, rank) => [entrant, rank]));
   const rows = state.entrants
-    .map((_e, entrant) => ({
-      entrant,
-      totalPoints: state.points.reduce((sum, competition) => sum + (competition[entrant] ?? 0), 0),
-      lastPoints: last?.[entrant] ?? 0,
-    }))
-    .toSorted((a, b) => b.totalPoints - a.totalPoints || a.entrant - b.entrant);
-  return rows.map((r) => ({ ...r, place: rows.findIndex((o) => o.totalPoints === r.totalPoints) + 1 }));
+    .map((_e, entrant) => {
+      const places = placeCounts(state, entrant);
+      return {
+        entrant,
+        totalPoints: state.points.reduce((sum, competition) => sum + (competition[entrant] ?? 0), 0),
+        lastPoints: last?.[entrant] ?? 0,
+        wins: places[0] ?? 0,
+        places,
+      };
+    })
+    .toSorted(
+      (a, b) =>
+        b.totalPoints - a.totalPoints ||
+        byPlaces(a.places, b.places) ||
+        (lot.get(a.entrant) ?? a.entrant) - (lot.get(b.entrant) ?? b.entrant),
+    );
+  const final = cupPhase(state) === "over";
+  return rows.map(({ places: _places, ...r }, at) => ({
+    ...r,
+    place: final ? at + 1 : rows.findIndex((o) => o.totalPoints === r.totalPoints) + 1,
+  }));
 }
+
+/** Whether any entrants of the standings are on the same points, so the rules for ties ordered them. */
+export const tiedOnPoints = (rows: readonly CupStandingRow[]): boolean =>
+  rows.some((r, at) => rows[at - 1]?.totalPoints === r.totalPoints);
 
 /** The entrants on place 1 of the cup standings, once a competition has finished; every tied leader. */
 export function cupLeaders(state: CupState): number[] {
@@ -156,7 +188,7 @@ export function cupReducer(state: CupState, action: CupAction): CupState {
   }
   if (cupPhase(state) !== "standings") return state;
   const entrants = withNewForms(state.entrants, new BorlandRandom(action.seed));
-  // The cup leader jumps last; the original's sort keeps entrant order among ties and reverses the ranking.
+  // The cup leader jumps last, and of tied entrants the one ranked higher, as in FIS start lists.
   const order = cupStandings(state)
     .map((r) => r.entrant)
     .toReversed();

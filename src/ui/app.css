@@ -2082,8 +2082,8 @@ h2 {
     display: none;
   }
 
-  /* The cup tables' average place: no room for it; gone from the table, it is not read out either. */
-  .contest-table .cup-average {
+  /* The cup tables' wins: no room for them; gone from the table, they are not read out either. */
+  .contest-table .cup-wins {
     display: none;
   }
 
