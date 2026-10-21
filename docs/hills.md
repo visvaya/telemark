@@ -386,9 +386,12 @@ Rules:
 ### Verdict stability
 
 A rule computed from a sample must give the same verdict on another sample, otherwise it measures the sample, not
-the hill. The test in `src/hills/hill-play.stability.test.ts` evaluates each own hill on three disjoint sets of
-seeds (wind sweep 1-256, 257-512, 513-768; random jumps 1-16, 17-32, 33-48) and requires the same list of failed
-rules on each of them.
+the hill. The stability tests (`src/hills/hill-play.stability-*.test.ts`, the checks themselves in
+`src/hills/test-support/hill-stability.cases.ts`) evaluate each own hill on three disjoint sets of seeds (wind sweep
+1-256, 257-512, 513-768; random jumps 1-16, 17-32, 33-48) and require the same list of failed rules on each of
+them. The own hills and the generated set are split among several files so that the files run in parallel; hills
+whose K points are less than `NEVER_ALIKE_K_GAP_M` (9.8 m) apart, the only ones that can be too alike, stay in one
+part of the set.
 
 The checks have two levels. The ordinary test run (and the gate before a PR) evaluates in detail the training hill
 (the first own hill), on the sample described above; `corepack pnpm test src/hills` takes a dozen or so seconds.
@@ -428,10 +431,10 @@ changes to the tests.
 - scenery away from the track: no tree stands on the jumper's plane or in front of it (trees are only on the
   layers behind the far edge of the landing hill, by construction), and the inrun supports end at the takeoff at
   the latest, because behind it they would stand in the landing hill;
-- jumper figure (`jump-view.test.ts`): every phase of the jump drawn without empty pixels, the figure on the snow
+- jumper figure (`jump-view.hills-*.test.ts`, the checks in `src/render/test-support/jump-view-hills.cases.ts`): every phase of the jump drawn without empty pixels, the figure on the snow
   and in the inrun track with a takeoff much too early, early, just before the takeoff and without a takeoff,
   because these cases depend on the length of the inrun;
-- title (`jump-view.test.ts`): in the narrowest picture (256 px) and with the pause button moving the title
+- title (the same files): in the narrowest picture (256 px) and with the pause button moving the title
   farthest to the right, the whole text is in the picture and none of its pixels lies in the columns of the wind
   box and the start light; this is checked by the drawing, not only by the width computed in the format check;
 - frame time budget (`frame-time.budget.test.ts`): drawing this hill's widest picture fits in the budget, because

@@ -186,7 +186,14 @@
       }
     },
     {
-      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", "e2e/**/*.spec.ts", "e2e/**/*.perf.ts"],
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.mjs",
+        "src/**/test-support/*.cases.ts",
+        "e2e/**/*.spec.ts",
+        "e2e/**/*.perf.ts"
+      ],
       "rules": {
         "max-lines-per-function": "off"
       }
