@@ -3,6 +3,8 @@ import { isOut, standings, tenths, type CompetitionState, type JumpScore } from 
 /** One row of the board: a place once the competitor has jumped, null before and once out of the competition. */
 export interface BoardRow {
   competitor: number;
+  /** The place in the first round's start list, from 1; the same for the whole competition, as in FIS lists. */
+  startNumber: number;
   place: number | null;
   totalPoints: number | null;
   scores: readonly (JumpScore | null)[];
@@ -16,13 +18,19 @@ export interface BoardRow {
  * the competition last, in the same order.
  */
 export function boardRows(state: CompetitionState): BoardRow[] {
-  const ranked: BoardRow[] = standings(state).map((r) => ({ ...r, out: false }));
+  const startNumber = (competitor: number) => state.startOrder.indexOf(competitor) + 1;
+  const ranked: BoardRow[] = standings(state).map((r) => ({
+    ...r,
+    startNumber: startNumber(r.competitor),
+    out: false,
+  }));
   const shown = new Set(ranked.map((r) => r.competitor));
   const unranked = (out: boolean): BoardRow[] =>
     state.startOrder
       .filter((c) => !shown.has(c) && isOut(state, c) === out)
       .map((competitor) => ({
         competitor,
+        startNumber: startNumber(competitor),
         place: null,
         totalPoints: null,
         scores: state.scores.map((round) => round[competitor] ?? null),

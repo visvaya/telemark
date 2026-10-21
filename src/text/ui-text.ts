@@ -158,6 +158,9 @@ export const UI_TEXT = {
     columns: {
       place: "Miejsce",
       placeShort: "M.",
+      /** The start number, as FIS lists name it: shown short, read out in full. */
+      startNumber: "Numer startowy",
+      startNumberShort: "Nr",
       name: "Zawodnik",
       jump: (round: number) => `${round}. seria`,
       total: "Razem",
@@ -177,6 +180,8 @@ export const UI_TEXT = {
     disqualifiedShort: "dyskw.",
     disqualified: "dyskwalifikacja",
     place: (place: number) => `${place}.`,
+    /** A start number where the place stands before the first jump, on a narrow table, as it is read out. */
+    startNumberSpoken: (n: number) => `numer startowy ${n}`,
     noJump: "-",
     /** The mark of the competitor who jumps next, and its shorter word where the table has least room (below 350 px). */
     nextJumper: "skacze teraz",

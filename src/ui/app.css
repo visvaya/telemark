@@ -1706,6 +1706,8 @@ h2 {
   --jump-w: 5.3em;
   /* "263,5 pkt" */
   --total-w: 6.25em;
+  /* "Nr" and "8" */
+  --number-w: 1.5em;
   width: 100%;
   border-collapse: collapse;
   font-size: clamp(11px, 3vw, 16px);
@@ -1715,6 +1717,7 @@ h2 {
 /* Ten competitors or more: places of two digits ("16." takes 2 em). */
 .contest-table.contest-many {
   --place-w: 2.4em;
+  --number-w: 2em;
 }
 
 /* What the table is, as the screens' section labels look, so it does not run into the column headers under it. */
@@ -1758,6 +1761,18 @@ h2 {
   white-space: nowrap;
 }
 
+/* The start number, right after the place as in FIS lists, from 600 px; narrower, it stands in the place's cell. */
+.contest-table .contest-number {
+  width: calc(var(--number-w) + var(--cell-pad-start) + var(--cell-pad-end));
+  white-space: nowrap;
+}
+
+@media (min-width: 600px) {
+  .contest-early-number {
+    display: none;
+  }
+}
+
 @media (min-width: 600px) {
   .contest-table thead th {
     white-space: nowrap;
@@ -1785,7 +1800,8 @@ h2 {
   color: var(--tone-white);
 }
 
-.contest-row .contest-place {
+.contest-row .contest-place,
+.contest-row .contest-number {
   color: var(--muted);
 }
 
@@ -1855,6 +1871,8 @@ h2 {
 
 /* A hill's record after its name in the setup, in small type and the colour of values, as in the hill list. */
 .screen .contest-hill-record {
+  display: inline-block;
+  white-space: nowrap;
   font-size: 0.7em;
   color: var(--tone-violet);
   font-palette: --tone-violet;
@@ -2079,6 +2097,11 @@ h2 {
   }
 
   .contest-table .flag-icon {
+    display: none;
+  }
+
+  /* The start number has no column of its own here; it stands in the place's cell until the first jump. */
+  .contest-table .contest-number {
     display: none;
   }
 
