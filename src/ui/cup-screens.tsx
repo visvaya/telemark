@@ -2,8 +2,7 @@ import { useRef } from "react";
 import type { Competitor } from "../game/competition";
 import type { CompetitionRun } from "../game/competition-run";
 import { keptOf } from "../game/contest-save";
-import { cupAveragePlaces, cupStandings, type CupStandingRow } from "../game/cup";
-import { formatDecimal } from "../text/decimal";
+import { cupStandings, tiedOnPoints, type CupStandingRow } from "../game/cup";
 import { cupPodium, cupRest } from "../game/cup-podium";
 import { UI_TEXT } from "../text/ui-text";
 import { AbandonChoice } from "./abandon-question";
@@ -33,23 +32,18 @@ function Who({ competitor }: { competitor: Competitor | undefined }) {
 const rowClass = (competitor: Competitor | undefined): string =>
   competitor?.kind === "player" ? "contest-row contest-player" : "contest-row";
 
-/** The column of average places, shown only where the screen is wide enough for it. */
-function AverageHeader() {
+/** The column of competitions won, shown only where the screen is wide enough for it. */
+function WinsHeader() {
   return (
-    <th scope="col" className="contest-total cup-average">
-      <span aria-hidden="true">{T.columns.averagePlaceShort}</span>
-      <span className="sr-only">{T.columns.averagePlace}</span>
+    <th scope="col" className="contest-total cup-wins">
+      {T.columns.wins}
     </th>
   );
 }
 
-/** An entrant's average place with one decimal; a dash without any place. */
-function AverageCell({ average }: { average: number | null | undefined }) {
-  return (
-    <td className="contest-total cup-average">
-      {average === null || average === undefined ? T.noAveragePlace : formatDecimal(average, 1)}
-    </td>
-  );
+/** How entrants on the same points were ordered, under standings that have any. */
+function TieRule({ rows }: { rows: readonly CupStandingRow[] }) {
+  return tiedOnPoints(rows) ? <p className="note cup-tie-rule">{T.cupTieRule}</p> : null;
 }
 
 /** The place on the first row of a tie only, as the original shows shared places. */
@@ -70,14 +64,13 @@ interface StandingsProps {
 
 /**
  * The cup standings between two competitions: place, competitor, the cup points so far, those of the last
- * competition and the average place. The way on starts the next competition; the focus waits on it, so Enter goes through a cup.
+ * competition and the competitions won. The way on starts the next competition; the focus waits on it, so Enter goes through a cup.
  */
 export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntry }: StandingsProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   useEntryFocus(primaryRef, focusOnEntry);
   const { cup } = run;
   const rows = cupStandings(cup);
-  const averages = cupAveragePlaces(cup);
   const total = cup.schedule.length;
   // The standings show only between competitions, so a next hill is always there.
   const nextHill = run.hills[cup.index + 1] ?? run.hill;
@@ -101,7 +94,7 @@ export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntr
               <th scope="col" className="contest-total">
                 {T.cupLastPoints}
               </th>
-              <AverageHeader />
+              <WinsHeader />
             </tr>
           </thead>
           <tbody>
@@ -116,12 +109,13 @@ export function CupStandingsScreen({ run, onNext, onLeave, onFinish, focusOnEntr
                   </th>
                   <td className="contest-total">{row.totalPoints}</td>
                   <td className="contest-total cup-gained">{T.cupGained(row.lastPoints)}</td>
-                  <AverageCell average={averages[row.entrant]} />
+                  <td className="contest-total cup-wins">{row.wins}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+        <TieRule rows={rows} />
       </section>
       <div className="menu">
         <button
@@ -166,7 +160,7 @@ interface EndProps {
 
 /**
  * The end of a cup: the trophy, the podium (laid out 2-1-3, read 1, 2, 3), the rest of the standings with each
- * entrant's average place, and the same cup again with the same settings and a new draw, or the menu.
+ * entrant's wins, and the same cup again with the same settings and a new draw, or the menu.
  */
 export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
@@ -174,7 +168,6 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
   const { cup } = run;
   const rows = cupStandings(cup);
   const rest = cupRest(rows);
-  const averages = cupAveragePlaces(cup);
   return (
     <main className="screen">
       <header className="contest-header">
@@ -221,7 +214,7 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
               <th scope="col" className="contest-total">
                 {T.cupPoints}
               </th>
-              <AverageHeader />
+              <WinsHeader />
             </tr>
           </thead>
           <tbody>
@@ -234,13 +227,14 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
                     <Who competitor={c} />
                   </th>
                   <td className="contest-total">{T.cupPointsText(r.totalPoints)}</td>
-                  <AverageCell average={averages[r.entrant]} />
+                  <td className="contest-total cup-wins">{r.wins}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       )}
+      <TieRule rows={rows} />
       <div className="menu">
         <button type="button" className="pixel-button" onClick={onAgain} ref={primaryRef}>
           {T.repeat}
