@@ -132,3 +132,25 @@ export function reduceUpdateCheck(state: UpdateCheckState, event: "start" | Upda
   if (event === "start") return "checking";
   return state === "checking" ? event : state;
 }
+
+/** The caches that hold releases of the game; anything else in the origin (another owner's) is never touched. */
+export function releaseCaches(names: readonly string[]): string[] {
+  return names.filter((name) => name.startsWith(PWA_CONFIG.RELEASE_CACHE_PREFIX));
+}
+
+/**
+ * Whether the note offers to install the game again: when part of the stored release is missing (only a new
+ * install refills it), or when the worker still does not answer after the player checked again.
+ */
+export function reinstallOffered(cause: UnavailableCause, retry: ReadinessRetryState): boolean {
+  return cause === "incomplete" || (cause === "no-answer" && retry === "unavailable");
+}
+
+/** The reinstall the player asked for: not asked, running (the page reloads at its end), or failed. */
+export type ReinstallState = "idle" | "reinstalling" | "failed";
+
+/** A press while it runs changes nothing; a failure lets the player press again. */
+export function reduceReinstall(state: ReinstallState, event: "start" | "failed"): ReinstallState {
+  if (event === "start") return "reinstalling";
+  return state === "reinstalling" ? "failed" : state;
+}
