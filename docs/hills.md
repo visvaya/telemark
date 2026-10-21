@@ -396,9 +396,9 @@ part of the set.
 The checks have two levels. The ordinary test run (and the gate before a PR) evaluates in detail the training hill
 (the first own hill), on the sample described above; `corepack pnpm test src/hills` takes a dozen or so seconds.
 The stability test evaluates each own hill (up to the limit of the bots' reliability it must pass all the rules)
-and the whole generated set, about 5 minutes in all on this machine, so it has a separate command,
-`corepack pnpm test:hills-stability` (the variable `HILL_STABILITY=1` includes the file, which `vite.config.ts`
-otherwise skips). The gate before a PR of a change in these paths also runs them locally. CI runs them in the
+and the whole generated set, about 3.5 minutes on a 4-core laptop with the files in parallel (6.5 minutes in one
+file), so it has a separate command, `corepack pnpm test:hills-stability` (the variable `HILL_STABILITY=1`
+includes the files, which `vite.config.ts` otherwise skips). The gate before a PR of a change in these paths also runs them locally. CI runs them in the
 `checks` job when a change touches `src/hills/`, `src/sim/`, `src/game/`, the workflow, `package.json` or
 `vite.config.ts`, and also when it cannot be established what changed (a manual run, no previous commit).
 
