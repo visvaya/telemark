@@ -28,6 +28,8 @@ interface Props {
   replaysNotStored: boolean;
   /** Whether the game can start without a network, and the means to check for and install a new release. */
   offline: OfflineSupportView;
+  /** Whether the address of the page asked for the diagnostics: the note about offline play then names errors. */
+  diagnostics: boolean;
   /** Opens another screen of the game. */
   onOpen: (
     screen: "hills" | "contest-setup" | "replays" | "outfit" | "settings" | "howto" | "install" | "about",
@@ -125,6 +127,7 @@ export function MenuScreen({
   persistent,
   replaysNotStored,
   offline,
+  diagnostics,
   onOpen,
   onOriginalHills,
   kept,
@@ -234,7 +237,7 @@ export function MenuScreen({
           {message.text}
         </p>
       )}
-      <OfflineNotice state={offline.state} />
+      <OfflineNotice state={offline.state} onRetry={offline.updates?.retryReadiness} diagnostics={diagnostics} />
     </main>
   );
 }

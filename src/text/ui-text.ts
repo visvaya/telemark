@@ -498,6 +498,25 @@ export const UI_TEXT = {
       ready: "Gotowe do gry bez internetu.",
       unavailable: "Gra bez internetu nie jest jeszcze gotowa.",
     },
+    /** Why it is not ready, as far as the page can tell. */
+    cause: {
+      "registration-refused":
+        "Przeglądarka nie pozwoliła zapisać gry (może to okno prywatne albo takie ustawienie przeglądarki).",
+      "install-failed":
+        "Nie udało się zapisać plików gry. Przyczyny nie da się ustalić: brak połączenia albo brak miejsca na dysku.",
+      "no-answer": "Przeglądarka nie odpowiedziała na czas, czy gra jest zapisana.",
+      incomplete:
+        "Części plików gry brakuje w pamięci przeglądarki (może brakuje miejsca na dysku albo dane strony wyczyszczono).",
+    },
+    /** The check again the player asks for, and what it found. */
+    retry: {
+      button: "Spróbuj ponownie",
+      checking: "Sprawdzam...",
+      ready: "Gotowe do gry bez internetu.",
+      unavailable: "Nadal nie jest gotowa.",
+    },
+    /** The error behind it, shown only with the diagnostics on. */
+    detail: (detail: string) => `Szczegóły: ${detail}`,
     /** A newer release is stored: what the player does to get it, with its version when the worker told it. */
     updateWaiting: (version: string | null) =>
       `${version === null ? "Jest nowa wersja gry." : `Jest nowa wersja gry: ${version}.`} Za|mknij grę cał|ko|wi|cie (wszyst|kie okna, a~na te|le|fo|nie tak|że apli|ka|cję w~prze|łącz|ni|ku apli|ka|cji) i~uru|chom ją po|now|nie, żeby się za|in|sta|lo|wa|ła.`,

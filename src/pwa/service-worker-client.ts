@@ -1,4 +1,12 @@
-import { updateCheckDue, type OfflineEvent, type UpdateCheckOutcome } from "./offline-state";
+import {
+  errorDetail,
+  readinessRetryDue,
+  updateCheckDue,
+  type OfflineEvent,
+  type ReadinessOutcome,
+  type UnavailableCause,
+  type UpdateCheckOutcome,
+} from "./offline-state";
 import { PWA_CONFIG } from "./pwa-config";
 
 /** The parts of a service worker, its registration and the browser that the page uses. */
@@ -18,8 +26,8 @@ export interface RegistrationLike<W extends WorkerLike> {
 
 export interface OfflineEnvironment<W extends WorkerLike> {
   register(): Promise<RegistrationLike<W>>;
-  /** Asks a worker whether it holds every file of its release. */
-  holdsWholeRelease(worker: W): Promise<boolean>;
+  /** Asks a worker whether it holds every file of its release; null when it does not answer in time. */
+  holdsWholeRelease(worker: W): Promise<boolean | null>;
   /** Asks a worker which version of the game its release is; null when it does not say. */
   versionOf(worker: W): Promise<string | null>;
   /** Calls the listener when the player comes back: the network returns or the page is shown again. */
@@ -39,6 +47,11 @@ export interface OfflineSupport {
   stop: () => void;
   /** Looks for a new release now and says what was found. */
   checkNow: () => Promise<UpdateCheckOutcome>;
+  /**
+   * Checks again whether the game can start without a network: registers the worker again when that was
+   * refused, asks the active worker again, or tries the first install again. A call while a check runs joins it.
+   */
+  retryReadiness: () => Promise<ReadinessOutcome>;
   /**
    * Asks the waiting release to take over and reloads this page once it has; false when no release waits.
    * `onFailed` is called when that release is dropped instead of taking over.
@@ -63,24 +76,23 @@ export function startOfflineSupport<W extends WorkerLike>(
 ): OfflineSupport {
   let stopped = false;
   let lastCheckMs = env.nowMs();
+  let lastRetryMs = lastCheckMs;
+  const readiness = readinessSignal();
   const emit = (event: OfflineEvent) => {
-    if (!stopped) report(event);
+    if (stopped) return;
+    readiness.note(event);
+    report(event);
   };
-  /** Asks a waiting worker which version of the game it holds; an older one does not say. */
-  const tellVersion = (worker: W | null) => {
-    if (worker === null) return;
-    void env.versionOf(worker).then(
-      (version) => {
-        if (version !== null) emit({ type: "update-version", version });
-      },
-      () => undefined,
-    );
-  };
-  const confirm = (worker: W) => {
+  const unavailable = (cause: UnavailableCause, error?: unknown) =>
+    emit({ type: "unavailable", cause, detail: errorDetail(error) });
+  const tellVersion = (worker: W | null) => announceVersion(env, worker, emit);
+  const confirm = (worker: W): Promise<ReadinessOutcome> => {
+    const answered = readiness.next();
     void env.holdsWholeRelease(worker).then(
-      (whole) => emit(whole ? "ready" : "unavailable"),
-      () => emit("unavailable"),
+      (whole) => (whole === true ? emit("ready") : unavailable(whole === null ? "no-answer" : "incomplete")),
+      (error: unknown) => unavailable("no-answer", error),
     );
+    return answered;
   };
 
   // Workers that waited while an older one answered for this page, and the one this page asked to take over.
@@ -107,10 +119,10 @@ export function startOfflineSupport<W extends WorkerLike>(
         emit("update-active");
         // A page an older worker answered for runs that release's code until it is loaded again.
         if (waitedWhileControlled.has(worker) && askedWorker !== worker) emit("update-elsewhere");
-        confirm(worker);
+        void confirm(worker);
       }
       // A first install that failed; a failed update leaves the active worker and its release as they were.
-      if (worker.state === "redundant" && active === null) emit("unavailable");
+      if (worker.state === "redundant" && active === null) unavailable("install-failed");
       // A newer release that could not be stored. A waiting one that a still newer release replaces is not.
       if (worker.state === "redundant" && active !== null && !stored) emit("update-failed");
     });
@@ -118,7 +130,6 @@ export function startOfflineSupport<W extends WorkerLike>(
 
   const watch = (registration: RegistrationLike<W>) => {
     if (registration.active !== null) {
-      confirm(registration.active);
       if (registration.waiting !== null) {
         noteWait(registration.waiting);
         emit("update-waiting");
@@ -133,38 +144,50 @@ export function startOfflineSupport<W extends WorkerLike>(
     });
   };
 
-  let stopListening: (() => void) | null = null;
   let current: RegistrationLike<W> | null = null;
-  const registered = env.register();
-  void registered.then(
-    (registration) => {
-      if (stopped) return;
-      current = registration;
-      watch(registration);
-      stopListening = env.onReturn(() => {
-        const nowMs = env.nowMs();
-        if (!updateCheckDue(nowMs, lastCheckMs)) return;
-        lastCheckMs = nowMs;
-        // No network is an expected answer here, not an error.
-        registration.update().catch(() => undefined);
-      });
-    },
-    () => emit("unavailable"),
-  );
+  /** Registers the worker and follows it; the promise is null when the browser refused. */
+  const register = (): Promise<RegistrationLike<W> | null> =>
+    env.register().then(
+      (registration) => {
+        if (stopped) return null;
+        current = registration;
+        watch(registration);
+        return registration;
+      },
+      (error: unknown) => {
+        unavailable("registration-refused", error);
+        return null;
+      },
+    );
+  let registered = register();
+  void registered.then((registration) => {
+    if (registration?.active) void confirm(registration.active);
+  });
+
+  const checks = { confirm, next: readiness.next, unavailable };
+  const retryReadiness = singleFlight(async (): Promise<ReadinessOutcome> => {
+    lastRetryMs = env.nowMs();
+    // A refused registration is asked for again.
+    const known = (await registered) ?? (await (registered = register()));
+    return known === null ? "unavailable" : recheck(known, checks);
+  });
+
+  const stopListening = env.onReturn(() => {
+    const nowMs = env.nowMs();
+    if (readiness.last() === "unavailable") {
+      if (readinessRetryDue(nowMs, lastRetryMs)) void retryReadiness();
+    } else if (current !== null && updateCheckDue(nowMs, lastCheckMs)) {
+      lastCheckMs = nowMs;
+      // No network is an expected answer here, not an error.
+      current.update().catch(() => undefined);
+    }
+  });
 
   const checkNow = async (): Promise<UpdateCheckOutcome> => {
-    const registration = await registered.catch(() => null);
+    const registration = await registered;
     if (registration === null) return "unavailable";
     lastCheckMs = env.nowMs();
-    try {
-      await registration.update();
-    } catch {
-      // The browser does not tell a missing network from a server that did not answer.
-      return "unreachable";
-    }
-    const newer = registration.installing ?? registration.waiting;
-    if (registration.active === null) return newer === null ? "latest" : "saving";
-    return newer === null ? "latest" : "found";
+    return lookForRelease(registration);
   };
 
   const installer = startInstaller(env, {
@@ -177,13 +200,101 @@ export function startOfflineSupport<W extends WorkerLike>(
   return {
     stop: () => {
       stopped = true;
-      stopListening?.();
+      stopListening();
       installer.stop();
     },
     checkNow,
+    retryReadiness,
     installNow: installer.installNow,
     reloadNow: () => env.reload(),
   };
+}
+
+/** Asks a waiting worker which version of the game it holds; an older one does not say. */
+function announceVersion<W extends WorkerLike>(
+  env: Pick<OfflineEnvironment<W>, "versionOf">,
+  worker: W | null,
+  emit: (event: OfflineEvent) => void,
+): void {
+  if (worker === null) return;
+  void env.versionOf(worker).then(
+    (version) => {
+      if (version !== null) emit({ type: "update-version", version });
+    },
+    () => undefined,
+  );
+}
+
+/** Looks for a new release now and says what was found. */
+async function lookForRelease<W extends WorkerLike>(registration: RegistrationLike<W>): Promise<UpdateCheckOutcome> {
+  try {
+    await registration.update();
+  } catch {
+    // The browser does not tell a missing network from a server that did not answer.
+    return "unreachable";
+  }
+  const newer = registration.installing ?? registration.waiting;
+  if (registration.active === null) return newer === null ? "latest" : "saving";
+  return newer === null ? "latest" : "found";
+}
+
+/** The last answer about readiness, and the checks that wait for the next one. */
+function readinessSignal() {
+  let last: ReadinessOutcome | null = null;
+  let waiters: readonly ((outcome: ReadinessOutcome) => void)[] = [];
+  return {
+    note(event: OfflineEvent) {
+      const outcome =
+        event === "ready" ? "ready" : typeof event === "object" && event.type === "unavailable" ? "unavailable" : null;
+      if (outcome === null) return;
+      last = outcome;
+      const waiting = waiters;
+      waiters = [];
+      for (const resolve of waiting) resolve(outcome);
+    },
+    next: () =>
+      new Promise<ReadinessOutcome>((resolve) => {
+        waiters = [...waiters, resolve];
+      }),
+    last: () => last,
+  };
+}
+
+/** A task that runs once at a time: a call while it runs gets the run under way. */
+function singleFlight<T>(run: () => Promise<T>): () => Promise<T> {
+  const flight: { current: Promise<T> | null } = { current: null };
+  return () => {
+    if (flight.current !== null) return flight.current;
+    const started = run().finally(() => {
+      flight.current = null;
+    });
+    flight.current = started;
+    return started;
+  };
+}
+
+/** Asks again what a registration holds, and waits for the answer. */
+async function recheck<W extends WorkerLike>(
+  registration: RegistrationLike<W>,
+  checks: {
+    confirm: (worker: W) => Promise<ReadinessOutcome>;
+    next: () => Promise<ReadinessOutcome>;
+    unavailable: (cause: UnavailableCause, error?: unknown) => void;
+  },
+): Promise<ReadinessOutcome> {
+  if (registration.active !== null) return checks.confirm(registration.active);
+  const pending = () => registration.installing ?? registration.waiting;
+  if (pending() !== null) return checks.next();
+  // No worker at all after a failed first install: the browser installs the release again.
+  try {
+    await registration.update();
+  } catch (error) {
+    checks.unavailable("install-failed", error);
+    return "unavailable";
+  }
+  if (pending() !== null) return checks.next();
+  checks.unavailable("install-failed");
+  return "unavailable";
 }
 
 /**
@@ -258,7 +369,7 @@ export function browserOfflineEnvironment(container: ServiceWorkerContainer): Of
         // The browser's own cache never answers for the worker's script.
         updateViaCache: "none",
       }),
-    holdsWholeRelease: (worker) => askWorker(worker).then(saysComplete),
+    holdsWholeRelease: (worker) => askWorker(worker).then((data) => (data === null ? null : saysComplete(data))),
     versionOf: (worker) => askWorker(worker).then(versionIn),
     onReturn(listener) {
       const onVisibility = () => {

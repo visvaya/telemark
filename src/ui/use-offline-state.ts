@@ -4,6 +4,7 @@ import {
   offlineSupportWanted,
   reduceOffline,
   type OfflineState,
+  type ReadinessOutcome,
   type UpdateCheckOutcome,
 } from "../pwa/offline-state";
 import { PWA_CONFIG } from "../pwa/pwa-config";
@@ -12,6 +13,8 @@ import { browserOfflineEnvironment, startOfflineSupport, type OfflineSupport } f
 /** What the menus can ask of the service worker. */
 export interface UpdateControls {
   checkNow: () => Promise<UpdateCheckOutcome>;
+  /** Checks again whether the game can start without a network. */
+  retryReadiness: () => Promise<ReadinessOutcome>;
   installNow: (onFailed: () => void) => boolean;
   reloadNow: () => void;
 }
@@ -60,6 +63,7 @@ export function useOfflineState(): OfflineSupportView {
         ? null
         : {
             checkNow: () => support.current?.checkNow() ?? Promise.resolve("unavailable"),
+            retryReadiness: () => support.current?.retryReadiness() ?? Promise.resolve("unavailable"),
             installNow: (onFailed) => support.current?.installNow(onFailed) ?? false,
             reloadNow: () => support.current?.reloadNow(),
           },

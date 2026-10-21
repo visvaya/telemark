@@ -6,8 +6,23 @@ import { PWA_CONFIG } from "./pwa-config";
  */
 type OfflineReadiness = "preparing" | "ready" | "unavailable";
 
+/**
+ * Why the game cannot start without a network, as far as the page can tell: the browser refused to register the
+ * worker, the first install of the release failed (the worker does not say why: no network or no room), the
+ * active worker did not answer in time, or it answered that a file of its release is missing from its cache.
+ */
+export type UnavailableCause = "registration-refused" | "install-failed" | "no-answer" | "incomplete";
+
+interface Unavailable {
+  cause: UnavailableCause;
+  /** The name and message of the error behind it, for the diagnostics only; null when there was none. */
+  detail: string | null;
+}
+
 export interface OfflineState {
   readiness: OfflineReadiness;
+  /** Why the readiness is "unavailable"; null otherwise. */
+  unavailable: Unavailable | null;
   /** A newer release is stored and takes over once every window of the game has been closed. */
   updateWaiting: boolean;
   /** The version of the game in that release, once its worker has told it; null before, or from an older worker. */
@@ -26,7 +41,7 @@ export interface OfflineState {
  */
 export type OfflineEvent =
   | "ready"
-  | "unavailable"
+  | ({ type: "unavailable" } & Unavailable)
   | "update-waiting"
   | "update-active"
   | "update-elsewhere"
@@ -35,6 +50,7 @@ export type OfflineEvent =
 
 export const INITIAL_OFFLINE_STATE: OfflineState = {
   readiness: "preparing",
+  unavailable: null,
   updateWaiting: false,
   updateVersion: null,
   updatedElsewhere: false,
@@ -42,12 +58,43 @@ export const INITIAL_OFFLINE_STATE: OfflineState = {
 };
 
 export function reduceOffline(state: OfflineState, event: OfflineEvent): OfflineState {
+  if (typeof event === "object" && event.type === "unavailable") {
+    return { ...state, readiness: "unavailable", unavailable: { cause: event.cause, detail: event.detail } };
+  }
   if (typeof event === "object") return { ...state, updateVersion: event.version };
   if (event === "update-waiting") return { ...state, updateWaiting: true };
   if (event === "update-failed") return { ...state, updateFailures: state.updateFailures + 1 };
   if (event === "update-elsewhere") return { ...state, updatedElsewhere: true };
   if (event === "update-active") return { ...state, updateWaiting: false, updateVersion: null };
-  return { ...state, readiness: event };
+  return { ...state, readiness: "ready", unavailable: null };
+}
+
+/** The name and message of an error, for the diagnostics; null for anything that is not an error. */
+export function errorDetail(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) return null;
+  const name: unknown = Reflect.get(error, "name");
+  const message: unknown = Reflect.get(error, "message");
+  if (typeof name !== "string" || typeof message !== "string") return null;
+  return message === "" ? name : `${name}: ${message}`;
+}
+
+/** Whether enough time has passed since the last readiness check to check again on the player's return. */
+export function readinessRetryDue(nowMs: number, lastRetryMs: number): boolean {
+  return nowMs - lastRetryMs >= PWA_CONFIG.READINESS_RETRY_MIN_INTERVAL_S * 1000;
+}
+
+/** What a readiness check the player asked for ended with. */
+export type ReadinessOutcome = "ready" | "unavailable";
+
+/** The check the player asked for: not asked yet, running, or what it found. Presses while it runs change nothing. */
+export type ReadinessRetryState = "idle" | "checking" | ReadinessOutcome;
+
+export function reduceReadinessRetry(
+  state: ReadinessRetryState,
+  event: "start" | ReadinessOutcome,
+): ReadinessRetryState {
+  if (event === "start") return "checking";
+  return state === "checking" ? event : state;
 }
 
 /** What has to hold for the page to register a service worker at all. */

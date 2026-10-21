@@ -11,8 +11,8 @@ import {
 
 interface FakeWorker {
   state: ServiceWorkerState;
-  /** What the worker answers when asked whether it holds its whole release. */
-  whole: boolean;
+  /** What the worker answers when asked whether it holds its whole release; null: no answer in time. */
+  whole: boolean | null;
   /** The version of the game it names, when it is of a release that names one. */
   version: string | null;
   addEventListener(type: "statechange", listener: () => void): void;
@@ -22,7 +22,11 @@ interface FakeWorker {
   followers(): number;
 }
 
-function fakeWorker(state: ServiceWorkerState, whole = true, version: string | null = null): FakeWorker {
+function fakeWorker(
+  state: ServiceWorkerState,
+  whole: boolean | null = true,
+  version: string | null = null,
+): FakeWorker {
   const listeners: (() => void)[] = [];
   const worker: FakeWorker = {
     state,
@@ -191,13 +195,20 @@ describe("startOfflineSupport", () => {
     registration.installing = null;
     worker.become("redundant");
     await settle();
-    expect(events).toEqual(["unavailable"]);
+    expect(events).toEqual([{ type: "unavailable", cause: "install-failed", detail: null }]);
   });
 
-  it("is unavailable when registering is refused", async () => {
-    const { events } = start(() => Promise.reject(new Error("blocked")));
+  it("is unavailable when registering is refused, and keeps the error for the diagnostics", async () => {
+    const { events } = start(() => Promise.reject(new DOMException("denied", "SecurityError")));
     await settle();
-    expect(events).toEqual(["unavailable"]);
+    expect(events).toEqual([{ type: "unavailable", cause: "registration-refused", detail: "SecurityError: denied" }]);
+  });
+
+  it("is unavailable when the active worker does not answer in time", async () => {
+    const registration = fakeRegistration({ active: fakeWorker("activated", null) });
+    const { events } = start(() => Promise.resolve(registration));
+    await settle();
+    expect(events).toEqual([{ type: "unavailable", cause: "no-answer", detail: null }]);
   });
 
   it("is ready at once on a later visit", async () => {
@@ -211,7 +222,7 @@ describe("startOfflineSupport", () => {
     const registration = fakeRegistration({ active: fakeWorker("activated", false) });
     const { events } = start(() => Promise.resolve(registration));
     await settle();
-    expect(events).toEqual(["unavailable"]);
+    expect(events).toEqual([{ type: "unavailable", cause: "incomplete", detail: null }]);
   });
 
   it("reports an update that was already waiting when the page opened", async () => {
@@ -511,5 +522,86 @@ describe("versionIn", () => {
     expect(versionIn({ version: "<b>0.1.0</b>" })).toBeNull();
     expect(versionIn({})).toBeNull();
     expect(versionIn(null)).toBeNull();
+  });
+});
+
+describe("retryReadiness", () => {
+  it("asks the active worker again and reports what it says now", async () => {
+    const active = fakeWorker("activated", null);
+    const registration = fakeRegistration({ active });
+    const { events, support } = start(() => Promise.resolve(registration));
+    await settle();
+    active.whole = true;
+    expect(await support.retryReadiness()).toBe("ready");
+    expect(events.at(-1)).toBe("ready");
+  });
+
+  it("makes one check of presses that come while it runs", async () => {
+    const registration = fakeRegistration({ active: fakeWorker("activated", false) });
+    const { events, support } = start(() => Promise.resolve(registration));
+    await settle();
+    const first = support.retryReadiness();
+    expect(support.retryReadiness()).toBe(first);
+    expect(await first).toBe("unavailable");
+    expect(events).toHaveLength(2);
+  });
+
+  it("registers again when registering was refused", async () => {
+    let attempts = 0;
+    const registration = fakeRegistration({ active: fakeWorker("activated") });
+    const { events, support } = start(() => {
+      attempts += 1;
+      return attempts === 1 ? Promise.reject(new Error("blocked")) : Promise.resolve(registration);
+    });
+    await settle();
+    expect(await support.retryReadiness()).toBe("ready");
+    expect(attempts).toBe(2);
+    expect(events.at(-1)).toBe("ready");
+  });
+
+  it("installs again after a failed first install, and waits for the result", async () => {
+    const failed = fakeWorker("installing");
+    const registration = fakeRegistration({ installing: failed });
+    const { support } = start(() => Promise.resolve(registration));
+    await settle();
+    registration.installing = null;
+    failed.become("redundant");
+    const next = fakeWorker("installing");
+    registration.onUpdate = () => {
+      registration.find(next);
+      return Promise.resolve(undefined);
+    };
+    const outcome = support.retryReadiness();
+    await settle();
+    registration.installTo(next, "activated");
+    expect(await outcome).toBe("ready");
+  });
+
+  it("says the install failed when the browser cannot fetch the release again", async () => {
+    const failed = fakeWorker("installing");
+    const registration = fakeRegistration({ installing: failed });
+    const { events, support } = start(() => Promise.resolve(registration));
+    await settle();
+    registration.installing = null;
+    failed.become("redundant");
+    expect(await support.retryReadiness()).toBe("unavailable");
+    expect(events.at(-1)).toEqual({ type: "unavailable", cause: "install-failed", detail: "TypeError: no network" });
+  });
+
+  it("checks again on its own when the player comes back while not ready, but not more often than the interval", async () => {
+    const active = fakeWorker("activated", null);
+    const registration = fakeRegistration({ active });
+    const { events, comeBack, clock } = start(() => Promise.resolve(registration));
+    await settle();
+    comeBack();
+    await settle();
+    expect(events).toHaveLength(1);
+    clock.nowMs = PWA_CONFIG.READINESS_RETRY_MIN_INTERVAL_S * 1000;
+    active.whole = true;
+    comeBack();
+    await settle();
+    expect(events.at(-1)).toBe("ready");
+    // Once ready, coming back looks for a new release instead.
+    expect(registration.updates).toBe(0);
   });
 });

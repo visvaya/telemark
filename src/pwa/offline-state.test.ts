@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_OFFLINE_STATE,
   offlineSupportWanted,
+  errorDetail,
+  readinessRetryDue,
   reduceOffline,
+  reduceReadinessRetry,
   reduceUpdateCheck,
   updateCheckDue,
 } from "./offline-state";
@@ -12,6 +15,7 @@ describe("reduceOffline", () => {
   it("starts without a promise of playing offline", () => {
     expect(INITIAL_OFFLINE_STATE).toEqual({
       readiness: "preparing",
+      unavailable: null,
       updateWaiting: false,
       updateVersion: null,
       updatedElsewhere: false,
@@ -27,12 +31,15 @@ describe("reduceOffline", () => {
       updateWaiting: true,
       updateVersion: null,
     });
-    expect(reduceOffline(waiting, "unavailable")).toMatchObject({ readiness: "unavailable", updateWaiting: true });
+    expect(reduceOffline(waiting, { type: "unavailable", cause: "incomplete", detail: null })).toMatchObject({
+      readiness: "unavailable",
+      updateWaiting: true,
+    });
   });
 
   it("names the version of the waiting update, and forgets both once that release has taken over", () => {
     const named = reduceOffline(
-      { readiness: "ready", updateWaiting: true, updateVersion: null, updatedElsewhere: false, updateFailures: 0 },
+      { ...INITIAL_OFFLINE_STATE, readiness: "ready", updateWaiting: true },
       { type: "update-version", version: "0.10.0" },
     );
     expect(named).toMatchObject({ readiness: "ready", updateWaiting: true, updateVersion: "0.10.0" });
@@ -109,5 +116,44 @@ describe("reduceUpdateCheck", () => {
     expect(reduceUpdateCheck("checking", "start")).toBe("checking");
     expect(reduceUpdateCheck("idle", "found")).toBe("idle");
     expect(reduceUpdateCheck("latest", "found")).toBe("latest");
+  });
+});
+
+describe("the cause of not being ready", () => {
+  it("is kept with the state, and forgotten once the game is ready", () => {
+    const failed = reduceOffline(INITIAL_OFFLINE_STATE, {
+      type: "unavailable",
+      cause: "registration-refused",
+      detail: "SecurityError: denied",
+    });
+    expect(failed).toMatchObject({
+      readiness: "unavailable",
+      unavailable: { cause: "registration-refused", detail: "SecurityError: denied" },
+    });
+    expect(reduceOffline(failed, "ready")).toMatchObject({ readiness: "ready", unavailable: null });
+  });
+
+  it("names an error by its name and message, and nothing else", () => {
+    expect(errorDetail(new DOMException("quota", "QuotaExceededError"))).toBe("QuotaExceededError: quota");
+    expect(errorDetail(new TypeError(""))).toBe("TypeError");
+    expect(errorDetail("text")).toBeNull();
+    expect(errorDetail(null)).toBeNull();
+  });
+});
+
+describe("readinessRetryDue", () => {
+  it("allows a check again only after the interval", () => {
+    const intervalMs = PWA_CONFIG.READINESS_RETRY_MIN_INTERVAL_S * 1000;
+    expect(readinessRetryDue(intervalMs - 1, 0)).toBe(false);
+    expect(readinessRetryDue(intervalMs, 0)).toBe(true);
+  });
+});
+
+describe("reduceReadinessRetry", () => {
+  it("ignores presses while a check runs and takes its answer only then", () => {
+    expect(reduceReadinessRetry("idle", "start")).toBe("checking");
+    expect(reduceReadinessRetry("checking", "start")).toBe("checking");
+    expect(reduceReadinessRetry("checking", "ready")).toBe("ready");
+    expect(reduceReadinessRetry("idle", "unavailable")).toBe("idle");
   });
 });
