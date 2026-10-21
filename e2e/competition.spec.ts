@@ -315,7 +315,9 @@ test("a world cup of two hills runs from the start list to its podium", async ({
   await expect(page.getByText("Wyniki końcowe · 2 konkursy")).toBeVisible();
   const podium = page.getByRole("list", { name: "Podium" });
   await expect(podium).toBeVisible();
-  await expect(podium.getByText(/^1\. miejsce: .+, \d+ pkt$/).first()).toBeAttached();
+  await expect(podium.getByText(/^1\. miejsce: .+, \d+ pkt, \d+ zwycięstw?[oa]?$/).first()).toBeAttached();
+  // Each entrant's wins under the points, as they settle tied points in the final standings.
+  await expect(podium.getByText(/^\d+ zw\.$/).first()).toBeVisible();
   // A player's place is told by the table and the podium alone, with no band of its own.
   await expect(page.locator(".cup-player-band")).toHaveCount(0);
   // No sideways scroll on the end screen.

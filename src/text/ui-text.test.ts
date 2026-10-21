@@ -104,6 +104,15 @@ describe("interface texts", () => {
     expect(UI_TEXT.hud.distance("98,5")).toBe("98,5\u2009ｍ");
     expect(UI_TEXT.menu.filesRemembered(true)).toBe("Pliki (Dsj.exe, Dsj.dat) zapamiętane w tej przeglądarce.");
   });
+
+  it("reads out a podium entry with the wins in the right form of the word", () => {
+    const entry = (wins: number) => UI_TEXT.competition.podiumEntry(1, "K. Morioka", 180, wins);
+    expect(entry(0)).toBe("1. miejsce: K. Morioka, 180 pkt, 0 zwycięstw");
+    expect(entry(1)).toBe("1. miejsce: K. Morioka, 180 pkt, 1 zwycięstwo");
+    expect(entry(3)).toBe("1. miejsce: K. Morioka, 180 pkt, 3 zwycięstwa");
+    expect(entry(5)).toBe("1. miejsce: K. Morioka, 180 pkt, 5 zwycięstw");
+    expect(UI_TEXT.competition.podiumWins(2)).toBe("2 zw.");
+  });
 });
 
 /** A one-letter word followed by an ordinary space: Polish typesetting keeps such a word with the next one. */
