@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/visvaya/telemark.git"
   },
-  "version": "0.22.5",
+  "version": "0.22.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,7 +21,7 @@
     "check:duplicates": "jscpd .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:hills-stability": "cross-env HILL_STABILITY=1 vitest run src/hills/hill-play.stability.test.ts",
+    "test:hills-stability": "cross-env HILL_STABILITY=1 vitest run src/hills/hill-play.stability-",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "test:browser": "playwright test",
     "test:browser:edge": "cross-env BROWSER_TESTS_EDGE=1 playwright test",

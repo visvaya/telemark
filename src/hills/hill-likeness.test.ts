@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHillProfile } from "../sim/hill-setup";
-import { hillDistance, hillShape, LIKENESS } from "./hill-likeness";
+import { hillDistance, hillShape, LIKENESS, NEVER_ALIKE_K_GAP_M } from "./hill-likeness";
 import type { HillSpec } from "./hill-spec";
 import { EXTREME_HILLS, training, variant } from "./test-support/hill-variants";
 
@@ -37,6 +37,18 @@ describe("hill likeness", () => {
     expect(small).toBeGreaterThan(0);
     expect(small).toBeLessThan(LIKENESS.tooAlike);
     expect(hillDistance(training, other)).toBeGreaterThan(LIKENESS.tooAlike);
+  });
+
+  it("never counts hills with K points the gap apart as too alike, whatever their profiles", () => {
+    expect(NEVER_ALIKE_K_GAP_M).toBeCloseTo(9.8, 1);
+    const built = {
+      kPointM: training.kPointM,
+      profile: buildHillProfile(training.profile.inrun, training.profile.landing),
+    };
+    // The K component alone reaches the limit; any other difference only adds to the distance.
+    expect(hillDistance(built, { ...built, kPointM: built.kPointM + NEVER_ALIKE_K_GAP_M })).toBeGreaterThanOrEqual(
+      LIKENESS.tooAlike,
+    );
   });
 
   it("measures a built hill as its data", () => {
