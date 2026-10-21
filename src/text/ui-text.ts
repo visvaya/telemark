@@ -537,6 +537,13 @@ export const UI_TEXT = {
       ready: "Udało się.",
       unavailable: "Nadal nie jest gotowa.",
     },
+    /** Installs the game again when the stored copy cannot be mended otherwise; the page loads again. */
+    reinstall: {
+      button: "Zainstaluj grę od nowa",
+      explanation: "Strona przeładuje się. Zapis, rekordy, powtórki i pliki gry zostaną.",
+      reinstalling: "Instaluję grę od nowa...",
+      failed: "Nie udało się zainstalować gry od nowa: spróbuj ponownie.",
+    },
     /** The error behind it, shown only with the diagnostics on. */
     detail: (detail: string) => `Szczegóły: ${detail}`,
     /** A newer release is stored: what the player does to get it, with its version when the worker told it. */

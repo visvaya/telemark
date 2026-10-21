@@ -80,6 +80,12 @@ export function hillShape(hill: HillSpec | BuiltHill): HillShape {
 const COMPONENT_COUNT = Object.keys(LIKENESS_SCALES).length;
 
 /**
+ * Hills whose K points differ by this much or more are never too alike: the K component alone makes the distance
+ * at least |dK| / scale / sqrt(components), which reaches `LIKENESS.tooAlike` here (9.8 m).
+ */
+export const NEVER_ALIKE_K_GAP_M = LIKENESS.tooAlike * Math.sqrt(COMPONENT_COUNT) * LIKENESS_SCALES.kPointM;
+
+/**
  * How unlike two hills are: the root mean square of the scaled differences of their shapes' components. The
  * landing points form one component (their own root mean square), so the profile does not outweigh the rest by
  * its number of points. Zero for the same hill, symmetric, and never negative.

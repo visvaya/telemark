@@ -1,3 +1,4 @@
+import { NEVER_ALIKE_K_GAP_M } from "../hill-likeness";
 import { OWN_HILL_SPECS } from "../own-hills";
 import {
   generatedHillId,
@@ -390,6 +391,37 @@ export const SET_HILLS_IN_GAME: Readonly<Record<string, string>> = {
   "gen-k120-20cb1b3a-winter1": "own-23",
 };
 
+/** The own hill a character of the set is taken as (`SET_HILLS_IN_GAME`); undefined for one the generator makes. */
+export const setHillInGameOf = (character: HillCharacter): string | undefined =>
+  SET_HILLS_IN_GAME[generatedHillId(character, SET_SEED)];
+
+/**
+ * The characters of the set in `count` parts that can be generated and checked apart, each in the order of the
+ * set. Only hills whose K points are less than `NEVER_ALIKE_K_GAP_M` apart can be too alike, so such hills stay in
+ * one group, and the groups go to the parts in turn: every pair the whole set compares is compared in some part.
+ */
+export function generatedSetParts(count: number): HillCharacter[][] {
+  const byK = GENERATED_HILL_CHARACTERS.toSorted((a, b) => a.kPointM - b.kPointM);
+  // Groups of hills, each closer than the gap to the previous one in K order; built here and not shared.
+  const groups: HillCharacter[][] = [];
+  for (const character of byK) {
+    const last = groups.at(-1);
+    const previous = last?.at(-1);
+    if (last !== undefined && previous !== undefined && character.kPointM - previous.kPointM < NEVER_ALIKE_K_GAP_M) {
+      last.push(character);
+    } else {
+      groups.push([character]);
+    }
+  }
+  const order = (c: HillCharacter) => GENERATED_HILL_CHARACTERS.indexOf(c);
+  return Array.from({ length: count }, (_v, part) =>
+    groups
+      .filter((_g, i) => i % count === part)
+      .flat()
+      .toSorted((a, b) => order(a) - order(b)),
+  );
+}
+
 /**
  * Generates the characters in order (or takes the own hill made from one, `SET_HILLS_IN_GAME`), each checked against
  * the own hills not taken from the set and the hills of the set before it, so no two hills of the set are the same
@@ -404,7 +436,7 @@ export function generatedHillSet(
   const done: GeneratedHill[] = [];
   for (const character of characters) {
     const options = { others: done.map((d) => d.spec), catalog, checkPlay };
-    const ownId = SET_HILLS_IN_GAME[generatedHillId(character, SET_SEED)];
+    const ownId = setHillInGameOf(character);
     const own = OWN_HILL_SPECS.find((spec) => spec.id === ownId);
     if (ownId !== undefined && own === undefined) throw new Error(`no own hill ${ownId}`);
     done.push(own === undefined ? generateHill(character, SET_SEED, options) : keptHill(character, own, options));

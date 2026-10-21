@@ -51,6 +51,8 @@ interface FakeRegistration extends RegistrationLike<FakeWorker> {
   waiting: FakeWorker | null;
   active: FakeWorker | null;
   updates: number;
+  /** How many times the page took the registration away. */
+  unregistered: number;
   /** What the next check for a new release does; the network refuses it unless a test says otherwise. */
   onUpdate: () => Promise<unknown>;
   /** The browser has found a new worker and started to install it. */
@@ -67,6 +69,11 @@ function fakeRegistration(workers: Partial<Pick<FakeRegistration, "installing" |
     active: null,
     ...workers,
     updates: 0,
+    unregistered: 0,
+    unregister() {
+      registration.unregistered += 1;
+      return Promise.resolve(true);
+    },
     onUpdate: () => Promise.reject(new TypeError("no network")),
     addEventListener: (_type, listener) => listeners.push(listener),
     update() {
@@ -103,9 +110,12 @@ interface Setup {
   comeBack: () => void;
   clock: { nowMs: number };
   listening: () => boolean;
+  /** The caches of the origin, by name; the page may delete them. */
+  caches: Set<string>;
 }
 
 function start(register: () => Promise<FakeRegistration>, controlled = false): Setup {
+  const caches = new Set<string>();
   const events: OfflineEvent[] = [];
   const clock = { nowMs: 0 };
   let returnListener: (() => void) | null = null;
@@ -127,6 +137,8 @@ function start(register: () => Promise<FakeRegistration>, controlled = false): S
     reload: () => {
       reloads += 1;
     },
+    cacheNames: () => Promise.resolve([...caches]),
+    deleteCache: (name) => Promise.resolve(caches.delete(name)),
   };
   const support = startOfflineSupport(env, (event) => events.push(event));
   return {
@@ -138,6 +150,7 @@ function start(register: () => Promise<FakeRegistration>, controlled = false): S
     comeBack: () => returnListener?.(),
     clock,
     listening: () => returnListener !== null,
+    caches,
   };
 }
 
@@ -603,5 +616,102 @@ describe("retryReadiness", () => {
     expect(events.at(-1)).toBe("ready");
     // Once ready, coming back looks for a new release instead.
     expect(registration.updates).toBe(0);
+  });
+});
+
+/** A page whose first registration was refused; `next` is what registering again gives. */
+async function refused(next: FakeRegistration | null) {
+  let calls = 0;
+  const setup = start(() => {
+    calls += 1;
+    return calls === 1 || next === null ? Promise.reject(new Error("blocked")) : Promise.resolve(next);
+  });
+  await settle();
+  return setup;
+}
+
+describe("reinstall", () => {
+  const OWN = `${PWA_CONFIG.RELEASE_CACHE_PREFIX}0123456789abcdef`;
+  const FOREIGN = "someone-elses-cache";
+
+  /** A page whose active worker has lost part of its release. */
+  async function incomplete() {
+    const old = fakeRegistration({ active: fakeWorker("activated", false) });
+    let registrations = 0;
+    const setup = start(() => {
+      registrations += 1;
+      return Promise.resolve(old);
+    }, true);
+    setup.caches.add(OWN).add(FOREIGN);
+    await settle();
+    return { ...setup, old, registrations: () => registrations };
+  }
+
+  it("unregisters, deletes only the game's caches and reloads without registering again", async () => {
+    const { support, old, caches, reloads, registrations } = await incomplete();
+    void support.reinstall();
+    await settle();
+    expect(old.unregistered).toBe(1);
+    expect([...caches]).toEqual([FOREIGN]);
+    expect(registrations()).toBe(1);
+    expect(reloads()).toBe(1);
+  });
+
+  it("makes one reinstall of presses that come while it runs", async () => {
+    const { support, old, reloads } = await incomplete();
+    const first = support.reinstall();
+    expect(support.reinstall()).toBe(first);
+    await settle();
+    expect(old.unregistered).toBe(1);
+    expect(reloads()).toBe(1);
+  });
+
+  it("says it failed when the registration cannot be taken away, and can be pressed again", async () => {
+    const { support, old, reloads } = await incomplete();
+    old.unregister = () => Promise.reject(new Error("refused"));
+    const outcome = support.reinstall();
+    expect(await outcome).toBe("failed");
+    expect(reloads()).toBe(0);
+    expect(support.reinstall()).not.toBe(outcome);
+  });
+
+  it("does not reload a page that was stopped meanwhile", async () => {
+    const { support, reloads, stop } = await incomplete();
+    void support.reinstall();
+    stop();
+    await settle();
+    expect(reloads()).toBe(0);
+  });
+
+  describe("where registering was refused", () => {
+    it("registers here and reloads once the new worker is active", async () => {
+      const worker = fakeWorker("installing");
+      const fresh = fakeRegistration({ installing: worker });
+      const { support, reloads } = await refused(fresh);
+      void support.reinstall();
+      await settle();
+      expect(reloads()).toBe(0);
+      fresh.installTo(worker, "activated");
+      await settle();
+      expect(reloads()).toBe(1);
+    });
+
+    it("says it failed when the new worker is dropped", async () => {
+      const worker = fakeWorker("installing");
+      const fresh = fakeRegistration({ installing: worker });
+      const { support, reloads } = await refused(fresh);
+      const outcome = support.reinstall();
+      await settle();
+      fresh.installing = null;
+      worker.become("redundant");
+      expect(await outcome).toBe("failed");
+      expect(reloads()).toBe(0);
+    });
+
+    it("says it failed when the browser refuses again", async () => {
+      const { support, reloads } = await refused(null);
+      expect(await support.reinstall()).toBe("failed");
+      expect(reloads()).toBe(0);
+    });
   });
 });

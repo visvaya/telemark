@@ -1,6 +1,7 @@
 import {
   errorDetail,
   readinessRetryDue,
+  releaseCaches,
   updateCheckDue,
   type OfflineEvent,
   type ReadinessOutcome,
@@ -22,6 +23,7 @@ export interface RegistrationLike<W extends WorkerLike> {
   readonly active: W | null;
   addEventListener(type: "updatefound", listener: () => void): void;
   update(): Promise<unknown>;
+  unregister(): Promise<boolean>;
 }
 
 export interface OfflineEnvironment<W extends WorkerLike> {
@@ -39,6 +41,9 @@ export interface OfflineEnvironment<W extends WorkerLike> {
   askToTakeOver(worker: W): void;
   /** Loads the page again. */
   reload(): void;
+  /** The names of the caches of this origin. */
+  cacheNames(): Promise<string[]>;
+  deleteCache(name: string): Promise<boolean>;
 }
 
 /** What the page can do with the service worker once it has started following it. */
@@ -61,6 +66,12 @@ export interface OfflineSupport {
   installNow: (onFailed: () => void) => boolean;
   /** Loads the page again, to use a release installed from another window. */
   reloadNow: () => void;
+  /**
+   * Installs the game again: takes the registration away, deletes the caches of the game's releases (and no
+   * other storage) and reloads the page, which registers and installs the release anew. The promise settles
+   * only when that failed; a call while it runs joins it.
+   */
+  reinstall: () => Promise<"failed">;
 }
 
 /**
@@ -183,13 +194,13 @@ export function startOfflineSupport<W extends WorkerLike>(
     }
   });
 
-  const checkNow = async (): Promise<UpdateCheckOutcome> => {
-    const registration = await registered;
-    if (registration === null) return "unavailable";
-    lastCheckMs = env.nowMs();
-    return lookForRelease(registration);
-  };
+  const checkNow = () => lookForRelease(registered, () => (lastCheckMs = env.nowMs()));
 
+  const reinstalling = {
+    registered: () => registered,
+    register: () => (registered = register()),
+    stopped: () => stopped,
+  };
   const installer = startInstaller(env, {
     waiting: () => (stopped ? null : (current?.waiting ?? null)),
     asked: (worker) => {
@@ -207,7 +218,59 @@ export function startOfflineSupport<W extends WorkerLike>(
     retryReadiness,
     installNow: installer.installNow,
     reloadNow: () => env.reload(),
+    reinstall: singleFlight(() => reinstallRelease(env, reinstalling)),
   };
+}
+
+/**
+ * Takes the registration away, deletes the caches of the game's releases (never other storage) and reloads the
+ * page, which registers and installs the release anew. Where no registration was made (the browser refused it),
+ * registers here and reloads once the new worker is active. Settles only when that failed.
+ */
+async function reinstallRelease<W extends WorkerLike>(
+  env: Pick<OfflineEnvironment<W>, "cacheNames" | "deleteCache" | "reload">,
+  page: {
+    registered: () => Promise<RegistrationLike<W> | null>;
+    register: () => Promise<RegistrationLike<W> | null>;
+    stopped: () => boolean;
+  },
+): Promise<"failed"> {
+  try {
+    const old = await page.registered();
+    await old?.unregister();
+    const names = releaseCaches(await env.cacheNames());
+    await Promise.all(names.map((name) => env.deleteCache(name)));
+    // While this page still runs, a registration made now would take back the one just taken away (Chromium
+    // does so), with its worker and without its files. A page loaded afterwards is not controlled by it, and
+    // registers and installs the release anew as on a first visit.
+    if (old === null) {
+      const fresh = await page.register();
+      if (fresh === null || !(await activated(fresh))) return "failed";
+    }
+    if (page.stopped()) return "failed";
+    env.reload();
+  } catch {
+    return "failed";
+  }
+  // The page goes away; nothing is left to report.
+  return new Promise<never>(() => undefined);
+}
+
+/**
+ * Waits for the worker of a new registration to become active: true once it is, or at once when there is no
+ * worker to wait for; false when it is dropped instead.
+ */
+function activated<W extends WorkerLike>(registration: RegistrationLike<W>): Promise<boolean> {
+  const worker = registration.installing ?? registration.waiting;
+  if (worker === null) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const onState = () => {
+      if (worker.state !== "activated" && worker.state !== "redundant") return;
+      worker.removeEventListener("statechange", onState);
+      resolve(worker.state === "activated");
+    };
+    worker.addEventListener("statechange", onState);
+  });
 }
 
 /** Asks a waiting worker which version of the game it holds; an older one does not say. */
@@ -225,8 +288,14 @@ function announceVersion<W extends WorkerLike>(
   );
 }
 
-/** Looks for a new release now and says what was found. */
-async function lookForRelease<W extends WorkerLike>(registration: RegistrationLike<W>): Promise<UpdateCheckOutcome> {
+/** Looks for a new release now and says what was found; `onCheck` is called when a check starts. */
+async function lookForRelease<W extends WorkerLike>(
+  registered: Promise<RegistrationLike<W> | null>,
+  onCheck: () => void,
+): Promise<UpdateCheckOutcome> {
+  const registration = await registered;
+  if (registration === null) return "unavailable";
+  onCheck();
   try {
     await registration.update();
   } catch {
@@ -386,5 +455,7 @@ export function browserOfflineEnvironment(container: ServiceWorkerContainer): Of
     controlled: () => container.controller !== null,
     askToTakeOver: (worker) => worker.postMessage({ type: PWA_CONFIG.TAKE_OVER_MESSAGE_TYPE }, []),
     reload: () => window.location.reload(),
+    cacheNames: () => caches.keys(),
+    deleteCache: (name) => caches.delete(name),
   };
 }
