@@ -160,6 +160,18 @@ test("a watched computer jump is shown and can be skipped", async ({ page, trait
   // Before the first jump the table is the start list.
   await expect(page.getByRole("table", { name: "Lista startowa" })).toBeVisible();
   await expectBoard(page, 1);
+  // The start number: a column of its own where the table is wide enough, else in the place's cell before the jump.
+  const numberHeader = page.getByRole("columnheader", { name: "Numer startowy" });
+  const early = page.locator(".contest-row .contest-early-number");
+  if ((page.viewportSize()?.width ?? 0) >= 600) {
+    await expect(numberHeader).toBeVisible();
+    await expect(page.locator(".contest-row .contest-number")).toHaveText("1");
+    await expect(early).toBeHidden();
+  } else {
+    await expect(numberHeader).toHaveCount(0);
+    await expect(early).toBeVisible();
+    await expect(early.locator('[aria-hidden="true"]')).toHaveText("1");
+  }
   for (let round = 1; round <= 2; round++) {
     // Alone in the competition, the jumper's second jump follows the start of the round at once.
     if (round === 1) await press(button(page, /^Dalej: skacze Aatu Lehtovaara/), traits);
@@ -285,13 +297,13 @@ test("a world cup of two hills runs from the start list to its podium", async ({
       await expect(page.getByRole("table", { name: "Klasyfikacja po 1 z 2 konkursach" })).toBeVisible();
       await expect(page.locator(".contest-row")).toHaveCount(4);
       await expect(page.locator(".contest-row").first()).toContainText("lider");
-      // The average place: a column where the screen is wide enough, gone (and not read out) where it is not.
-      const average = page.getByRole("columnheader", { name: "Średnie miejsce" });
+      // The wins: a column where the screen is wide enough, gone (and not read out) where it is not.
+      const wins = page.getByRole("columnheader", { name: "Zwycięstwa" });
       if ((page.viewportSize()?.width ?? 0) >= 600) {
-        await expect(average).toBeVisible();
-        await expect(page.locator(".contest-row").first().locator(".cup-average")).toHaveText("1,0");
+        await expect(wins).toBeVisible();
+        await expect(page.locator(".contest-row").first().locator(".cup-wins")).toHaveText("1");
       } else {
-        await expect(average).toHaveCount(0);
+        await expect(wins).toHaveCount(0);
       }
       const next = button(page, new RegExp(String.raw`^Dalej: ${second.name} K\d+ \(konkurs 2 z 2\)$`));
       await expect(next).toBeFocused();

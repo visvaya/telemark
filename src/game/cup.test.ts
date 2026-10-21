@@ -14,7 +14,7 @@ import {
 import {
   CUP_POINTS,
   competitionCupPoints,
-  cupAveragePlaces,
+  tiedOnPoints,
   cupLeaders,
   cupPhase,
   cupReducer,
@@ -167,23 +167,24 @@ describe("a cup", () => {
     expect(s.entrants).toEqual(s.competition.competitors);
   });
 
-  it("starts the next competition in the reverse order of the cup standings, ties by higher entrant first", () => {
-    // Entrants 0 and 1 tie on top, 5 is last: the rest in between by their index.
-    let s = runCompetition(startCup(settings, ["a", "b"], 4), (c) => (c <= 1 ? 200 : 150 - c));
+  it("starts the next competition in the reverse order of the cup standings", () => {
+    // Entrants 0 and 1 tie on top with a win each, so the lots order them; 5 is last.
+    const run = runCompetition(startCup(settings, ["a", "b"], 4), (c) => (c <= 1 ? 200 : 150 - c));
+    let s: CupState = { ...run, lots: [3, 1, 5, 0, 2, 4] };
     expect(cupPhase(s)).toBe("standings");
     const rows = cupStandings(s);
-    expect(rows.map((r) => [r.entrant, r.place, r.totalPoints, r.lastPoints])).toEqual([
-      [0, 1, 100, 100],
-      [1, 1, 100, 100],
-      [2, 3, 60, 60],
-      [3, 4, 50, 50],
-      [4, 5, 45, 45],
-      [5, 6, 40, 40],
+    expect(rows.map((r) => [r.entrant, r.place, r.totalPoints, r.lastPoints, r.wins])).toEqual([
+      [1, 1, 100, 100, 1],
+      [0, 1, 100, 100, 1],
+      [2, 3, 60, 60, 0],
+      [3, 4, 50, 50, 0],
+      [4, 5, 45, 45, 0],
+      [5, 6, 40, 40, 0],
     ]);
-    expect(cupLeaders(s)).toEqual([0, 1]);
+    expect(cupLeaders(s)).toEqual([1, 0]);
     s = cupReducer(s, { type: "nextCompetition", seed: 5 });
-    expect(s.competition.order).toEqual([5, 4, 3, 2, 1, 0]);
-    expect(s.competition.startOrder).toEqual([5, 4, 3, 2, 1, 0]);
+    expect(s.competition.order).toEqual([5, 4, 3, 2, 0, 1]);
+    expect(s.competition.startOrder).toEqual([5, 4, 3, 2, 0, 1]);
   });
 
   it("runs a cup of two hills to the end with the phases in order", () => {
@@ -199,14 +200,15 @@ describe("a cup", () => {
     expect(phases).toEqual(["competition", "standings", "competition", "over"]);
     expect(s.points).toHaveLength(2);
     const rows = cupStandings(s);
-    // First competition: 5 wins (100), 4 second (80) ... 0 last (40). Second: 0 wins, the rest tie on 80.
-    expect(rows.map((r) => [r.entrant, r.place, r.totalPoints, r.lastPoints])).toEqual([
-      [5, 1, 180, 80],
-      [4, 2, 160, 80],
-      [0, 3, 140, 100],
-      [3, 3, 140, 80],
-      [2, 5, 130, 80],
-      [1, 6, 125, 80],
+    // First competition: 5 wins (100), 4 second (80) ... 0 last (40). Second: 0 wins, the rest tie on 80. 0 and 3
+    // tie on 140; 0 has a win, so the final standings give 0 the third place and 3 the fourth.
+    expect(rows.map((r) => [r.entrant, r.place, r.totalPoints, r.lastPoints, r.wins])).toEqual([
+      [5, 1, 180, 80, 1],
+      [4, 2, 160, 80, 0],
+      [0, 3, 140, 100, 1],
+      [3, 4, 140, 80, 0],
+      [2, 5, 130, 80, 0],
+      [1, 6, 125, 80, 0],
     ]);
     expect(cupLeaders(s)).toEqual([5]);
     expect(standings(s.competition)).toHaveLength(6);
@@ -240,61 +242,173 @@ describe("a cup", () => {
   });
 });
 
-/** A cup whose finished competitions gave these places (null: no place), kept as the cup points they scored. */
-const withPlaces = (places: readonly (readonly (number | null)[])[]): CupState => ({
-  ...startCup(settings, ["a", "b", "c"], 7),
-  points: places.map((row) => row.map((p) => (p === null ? 0 : (CUP_POINTS[p - 1] ?? 0)))),
+/**
+ * A cup of players whose finished competitions gave these places (null: no place), kept as the cup points they
+ * scored; with the lots in entrant order unless given, and over (the final standings) when asked.
+ */
+function withPlaces(
+  places: readonly (readonly (number | null)[])[],
+  { lots, over = false }: { lots?: readonly number[]; over?: boolean } = {},
+): CupState {
+  const base = startCup(settings, ["a", "b", "c"], 7);
+  const count = places[0]?.length ?? 0;
+  const entrants = Array.from({ length: count }, (_v, slot) => ({ kind: "player" as const, slot }));
+  return {
+    ...base,
+    index: over ? base.schedule.length - 1 : base.index,
+    competition: { ...base.competition, finished: over },
+    entrants,
+    points: places.map((row) => row.map((p) => (p === null ? 0 : (CUP_POINTS[p - 1] ?? 0)))),
+    lots: lots ?? entrants.map((_e, i) => i),
+  };
+}
+
+/** The entrants of the standings in order, with their places. */
+const ranked = (s: CupState): number[][] => cupStandings(s).map((r) => [r.entrant, r.place]);
+
+describe("ties in the cup standings", () => {
+  // Cup points: 1st 100, 2nd 80, 3rd 60, 4th 50, 6th 40.
+  it("put the entrant with more wins higher and share the place during the cup", () => {
+    const s = withPlaces([
+      [2, 1],
+      [3, 6],
+    ]);
+    expect(ranked(s)).toEqual([
+      [1, 1],
+      [0, 1],
+    ]);
+    expect(cupStandings(s).map((r) => r.wins)).toEqual([1, 0]);
+  });
+
+  it("go on to second places when the wins are equal", () => {
+    const s = withPlaces([
+      [3, 2],
+      [3, 6],
+    ]);
+    expect(ranked(s)).toEqual([
+      [1, 1],
+      [0, 1],
+    ]);
+  });
+
+  it("go on to the following places", () => {
+    const s = withPlaces([
+      [4, 3],
+      [4, 6],
+    ]);
+    expect(ranked(s)).toEqual([
+      [1, 1],
+      [0, 1],
+    ]);
+  });
+
+  it("are settled by the lots drawn with the cup when everything else is equal", () => {
+    const places = [
+      [1, 1],
+      [3, 2],
+      [2, 3],
+    ];
+    expect(ranked(withPlaces(places, { lots: [1, 0] }))).toEqual([
+      [1, 1],
+      [0, 1],
+    ]);
+    expect(ranked(withPlaces(places, { lots: [0, 1] }))).toEqual([
+      [0, 1],
+      [1, 1],
+    ]);
+  });
+
+  it("leave out a competition without a place", () => {
+    // Both on 100 points: 0 won once, 1 has no place in the first competition and won the second.
+    const s = withPlaces(
+      [
+        [1, null],
+        [null, 1],
+      ],
+      { lots: [1, 0] },
+    );
+    expect(cupStandings(s).map((r) => [r.entrant, r.totalPoints, r.wins])).toEqual([
+      [1, 100, 1],
+      [0, 100, 1],
+    ]);
+  });
+
+  it("give every entrant a place of their own in the final standings", () => {
+    const s = withPlaces(
+      [
+        [2, 1, 1, 5],
+        [3, 6, 6, 5],
+      ],
+      { over: true, lots: [3, 2, 1, 0] },
+    );
+    // 0, 1 and 2 on 140 points: 1 and 2 have a win and the same places, so the lots put 2 first; 3 has 90.
+    expect(cupPhase(s)).toBe("over");
+    expect(ranked(s)).toEqual([
+      [2, 1],
+      [1, 2],
+      [0, 3],
+      [3, 4],
+    ]);
+    expect(cupLeaders(s)).toEqual([2]);
+  });
+
+  it("are told apart from standings without tied points", () => {
+    expect(tiedOnPoints(cupStandings(withPlaces([[1, 2, 3]])))).toBe(false);
+    expect(
+      tiedOnPoints(
+        cupStandings(
+          withPlaces([
+            [1, 2, 3],
+            [3, 2, 1],
+          ]),
+        ),
+      ),
+    ).toBe(true);
+    const tiedAtTheEnd = withPlaces(
+      [
+        [1, 2, 3],
+        [3, 2, 1],
+      ],
+      { over: true },
+    );
+    expect(tiedOnPoints(cupStandings(tiedAtTheEnd))).toBe(true);
+  });
 });
 
-describe("average places", () => {
-  it("are the mean of the places of the finished competitions", () => {
-    const s = withPlaces([
-      [1, 4, 2],
-      [2, 5, 2],
-    ]);
-    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 3) })).toEqual([1.5, 4.5, 2]);
-  });
-
-  it("are the one place after a single competition", () => {
-    const s = withPlaces([[3, 1]]);
-    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 2) })).toEqual([3, 1]);
-  });
-
-  it("leave out a competition without a place, and are null with none at all", () => {
-    const s = withPlaces([
-      [null, 2],
-      [4, null],
-    ]);
-    expect(cupAveragePlaces({ ...s, entrants: s.entrants.slice(0, 2) })).toEqual([4, 2]);
-    const none = withPlaces([[null, 1]]);
-    expect(cupAveragePlaces({ ...none, entrants: none.entrants.slice(0, 2) })).toEqual([null, 1]);
-  });
-
-  it("are null before the first competition ends", () => {
+describe("wins", () => {
+  it("are 0 before the first competition ends", () => {
     const s = startCup(settings, ["a", "b"], 7);
-    expect(cupAveragePlaces(s).every((p) => p === null)).toBe(true);
+    expect(cupStandings(s).every((r) => r.wins === 0)).toBe(true);
   });
 
-  it("count a shared place for each tied entrant", () => {
+  it("count a shared first place for each tied entrant", () => {
     const s = runCompetition(startCup(settings, ["a", "b"], 7), () => 100);
-    expect(cupAveragePlaces(s).every((p) => p === 1)).toBe(true);
+    expect(cupStandings(s).every((r) => r.wins === 1)).toBe(true);
   });
 
-  it("tell every place of a full field of 16 from its cup points", () => {
-    const places = Array.from({ length: CUP_POINTS.length }, (_v, i) => i + 1);
-    const s = {
-      ...withPlaces([places]),
-      entrants: Array.from({ length: CUP_POINTS.length }, () => ({ kind: "player" as const, slot: 0 })),
-    };
-    expect(cupAveragePlaces(s)).toEqual(places);
-  });
-
-  it("leave out a competition in which the entrant was out under the rule of real competitions", () => {
+  it("are not counted for an entrant out under the rule of real competitions", () => {
     let s = startCup({ ...settings, disqualification: "fis" }, ["a", "b"], 5);
     const [a] = s.competition.order;
     s = scored(s, -120, 0);
     s = runCompetition(s, () => 100);
     expect(s.points[0]?.[a ?? -1]).toBe(0);
-    expect(cupAveragePlaces(s)[a ?? -1]).toBeNull();
+    expect(cupStandings(s).find((r) => r.entrant === a)?.wins).toBe(0);
+  });
+});
+
+describe("the lots of a cup", () => {
+  it("are every entrant once, drawn from the seed after the first competition", () => {
+    const a = startCup(settings, ["a", "b"], 41);
+    expect(a.lots.toSorted((x, y) => x - y)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(startCup(settings, ["a", "b"], 41).lots).toEqual(a.lots);
+    const seeds = Array.from({ length: 8 }, (_v, i) => startCup(settings, ["a"], i).lots.join());
+    expect(new Set(seeds).size).toBeGreaterThan(1);
+  });
+
+  it("stay the same through the cup", () => {
+    let s = runCompetition(startCup(settings, ["a", "b"], 9), (c) => 100 + c);
+    const lots = s.lots;
+    s = cupReducer(s, { type: "nextCompetition", seed: 3 });
+    expect(s.lots).toBe(lots);
   });
 });

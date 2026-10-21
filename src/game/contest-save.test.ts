@@ -100,6 +100,13 @@ describe.runIf(first && second)("a kept competition", () => {
     return copy;
   }
 
+  it("keeps the lots, and ranks ties in entrant order in a cup kept before lots were drawn", () => {
+    const reversed = sample.cup.entrants.map((_e, i, list) => list.length - 1 - i);
+    expect(parseSavedContest(changed(["cup", "lots"], reversed))?.cup.lots).toEqual(reversed);
+    const older = parseSavedContest(changed(["cup", "lots"], undefined));
+    expect(older?.cup.lots).toEqual(sample.cup.entrants.map((_e, i) => i));
+  });
+
   it("ignores fields it does not know", () => {
     const extra = { ...sample, note: "x", cup: { ...sample.cup, more: [1] } };
     expect(parseSavedContest(extra)).toEqual(json(sample));
@@ -150,6 +157,10 @@ describe.runIf(first && second)("a kept competition", () => {
     ["finished with jumps to come", changed(["cup", "competition", "finished"], true)],
     ["a rule other than the settings'", changed(["cup", "competition", "disqualification"], "fis")],
     ["points of the wrong count", changed(["cup", "points"], [[], [], [], [], []])],
+    ["lots as a string", changed(["cup", "lots"], "0,1,2,3,4,5")],
+    ["lots short of an entrant", changed(["cup", "lots"], [0, 1, 2, 3, 4])],
+    ["an entrant drawn twice", changed(["cup", "lots"], [0, 0, 2, 3, 4, 5])],
+    ["lots of null", changed(["cup", "lots"], null)],
   ])("refuses %s", (_name, value) => {
     expect(parseSavedContest(value)).toBeNull();
   });

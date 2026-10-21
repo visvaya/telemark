@@ -148,7 +148,7 @@ export function isOut(state: CompetitionState, competitor: number): boolean {
 }
 
 /** Fisher-Yates over 0..count-1 with the original's generator. */
-function shuffled(count: number, rng: BorlandRandom): number[] {
+export function shuffled(count: number, rng: BorlandRandom): number[] {
   const out = Array.from({ length: count }, (_v, i) => i);
   for (let i = count - 1; i > 0; i--) {
     const j = rng.below(i + 1);

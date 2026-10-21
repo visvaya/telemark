@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { currentJumper, isDisqualified, placeOf, type Competitor, type JumpScore } from "../game/competition";
-import { boardRows } from "../game/competition-board";
+import { boardRows, type BoardRow } from "../game/competition-board";
 import { competitionOf, isCup, roundJustEnded, type CompetitionRun } from "../game/competition-run";
 import { keptOf } from "../game/contest-save";
 import { cupPhase } from "../game/cup";
@@ -125,6 +125,23 @@ function NameCell({ competitor, next }: { competitor: Competitor | undefined; ne
   );
 }
 
+/**
+ * The place, or before a competitor's first jump their start number where the table has no column for it (as the
+ * original's table does): without the dot of a place, so it does not read as one, and read out as what it is.
+ */
+function PlaceCell({ row }: { row: BoardRow }) {
+  return <td className="contest-place">{row.place === null ? <EarlyNumber row={row} /> : T.place(row.place)}</td>;
+}
+
+function EarlyNumber({ row }: { row: BoardRow }) {
+  return (
+    <span className="contest-early-number">
+      <span aria-hidden="true">{row.startNumber}</span>
+      <span className="sr-only">{T.startNumberSpoken(row.startNumber)}</span>
+    </span>
+  );
+}
+
 /** What the table is: the start list, the results during or after a round, or the final classification. */
 function captionOf(run: CompetitionRun): string {
   const state = competitionOf(run);
@@ -135,8 +152,8 @@ function captionOf(run: CompetitionRun): string {
 }
 
 /**
- * Every competitor in one table: place, name, a column per round and the total; those still to jump below with
- * no place. The jumps since the board was last shown and the next jumper are marked in words, not colour alone.
+ * Every competitor in one table: place, start number (where the table is wide enough), name, a column per round
+ * and the total; those still to jump below with no place. The jumps since the board was last shown and the next jumper are marked in words, not colour alone.
  */
 function Board({ run }: { run: CompetitionRun }) {
   const state = competitionOf(run);
@@ -150,6 +167,10 @@ function Board({ run }: { run: CompetitionRun }) {
           <th scope="col" className="contest-place">
             <span aria-hidden="true">{T.columns.placeShort}</span>
             <span className="sr-only">{T.columns.place}</span>
+          </th>
+          <th scope="col" className="contest-number">
+            <span aria-hidden="true">{T.columns.startNumberShort}</span>
+            <span className="sr-only">{T.columns.startNumber}</span>
           </th>
           <th scope="col">{T.columns.name}</th>
           <th scope="col" className="contest-jump">
@@ -169,7 +190,8 @@ function Board({ run }: { run: CompetitionRun }) {
           const classes = ["contest-row", c?.kind === "player" && "contest-player"];
           return (
             <tr key={row.competitor} className={classes.filter(Boolean).join(" ")}>
-              <td className="contest-place">{row.place === null ? "" : T.place(row.place)}</td>
+              <PlaceCell row={row} />
+              <td className="contest-number">{row.startNumber}</td>
               <NameCell competitor={c} next={row.competitor === next} />
               {row.scores.map((s, i) => (
                 // oxlint-disable-next-line react/no-array-index-key -- one cell per round, in round order

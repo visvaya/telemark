@@ -158,15 +158,18 @@ export const UI_TEXT = {
     columns: {
       place: "Miejsce",
       placeShort: "M.",
+      /** The start number, as FIS lists name it: shown short, read out in full. */
+      startNumber: "Numer startowy",
+      startNumberShort: "Nr",
       name: "Zawodnik",
       jump: (round: number) => `${round}. seria`,
       total: "Razem",
-      /** The cup tables' average place: shown short, read out in full. */
-      averagePlace: "Średnie miejsce",
-      averagePlaceShort: "Śr. miejsce",
+      /** The cup tables' competitions won. */
+      wins: "Zwycięstwa",
     },
-    /** The average place of an entrant without any place yet. */
-    noAveragePlace: "-",
+    /** Under cup standings in which entrants are on the same points: how they were ordered (FIS rules). */
+    cupTieRule:
+      "Przy równych punktach wyżej jest zawodnik z większą liczbą zwycięstw, potem drugich miejsc i kolejnych; przy pełnej równości decyduje losowanie.",
     distance: (distance: string) => `${distance} m`,
     /** The unit of points in the table: in full, and the letter it shrinks to where the table is narrow. */
     pointsUnit: "pkt",
@@ -177,6 +180,8 @@ export const UI_TEXT = {
     disqualifiedShort: "dyskw.",
     disqualified: "dyskwalifikacja",
     place: (place: number) => `${place}.`,
+    /** A start number where the place stands before the first jump, on a narrow table, as it is read out. */
+    startNumberSpoken: (n: number) => `numer startowy ${n}`,
     noJump: "-",
     /** The mark of the competitor who jumps next, and its shorter word where the table has least room (below 350 px). */
     nextJumper: "skacze teraz",
@@ -490,6 +495,22 @@ export const UI_TEXT = {
         "Przycisk pauzy w rogu ekranu otwiera menu z ustawieniami i tą instrukcją; gra wtedy stoi.",
       ],
     },
+    /** The rules of competitions, under the steps of a jump. */
+    competitionTitle: "Zawody",
+    competition: [
+      {
+        title: "Konkurs",
+        text: "Dwie serie. W drugiej skacze się w odwrotnej kolejności wyników pierwszej, więc prowadzący skacze ostatni.",
+      },
+      {
+        title: "Puchar Świata",
+        text: "Kilka konkursów na zaznaczonych skoczniach. Miejsce w konkursie daje punkty Pucharu: 100, 80, 60, 50, 45, 40 i dalej, do 15 za 16. miejsce. Pierwszy konkurs ma losową kolejność startu, następne odwrotną do klasyfikacji Pucharu: lider startuje ostatni i skacze w żółtym plastronie.",
+      },
+      {
+        title: "Równe punkty w Pucharze",
+        text: "Wyżej jest zawodnik z większą liczbą zwycięstw, potem drugich miejsc i kolejnych; przy pełnej równości decyduje losowanie, jak w zasadach FIS. W trakcie Pucharu tacy zawodnicy dzielą miejsce, w klasyfikacji końcowej każdy ma własne.",
+      },
+    ],
   },
 
   offline: {

@@ -40,6 +40,15 @@ export function HowToScreen({ tilt, onBack, focusOnEntry }: Props) {
       </h1>
       <p className="note">{UI_TEXT.howTo.steering(UI_TEXT.howTo.steeringName[steering])}</p>
       <HowToJump steering={steering} />
+      <h2 className="hill-section-title">{UI_TEXT.howTo.competitionTitle}</h2>
+      <dl className="how-to">
+        {UI_TEXT.howTo.competition.map((rule) => (
+          <div key={rule.title} className="how-to-step">
+            <dt>{rule.title}</dt>
+            <dd>{rule.text}</dd>
+          </div>
+        ))}
+      </dl>
       <div>
         <button type="button" className="pixel-button" onClick={onBack}>
           {UI_TEXT.back}

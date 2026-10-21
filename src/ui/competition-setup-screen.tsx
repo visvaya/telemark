@@ -89,12 +89,18 @@ function Check({
   return (
     <label className="settings-check">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} {...named} />
-      <span id={`${id}-label`}>{label}</span>
-      {note !== undefined && (
-        <span id={`${id}-note`} className="contest-hill-record">
-          {note}
-        </span>
-      )}
+      {/* The note follows the text and, whole, goes to a line of its own when the text leaves it no room. */}
+      <span>
+        <span id={`${id}-label`}>{label}</span>
+        {note !== undefined && (
+          <>
+            {" "}
+            <span id={`${id}-note`} className="contest-hill-record">
+              {note}
+            </span>
+          </>
+        )}
+      </span>
     </label>
   );
 }

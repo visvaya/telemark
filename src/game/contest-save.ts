@@ -210,7 +210,11 @@ function cupOf(v: unknown, settings: CompetitionSettings): CupState | null {
   if (points === null) return null;
   const last = points.at(-1);
   if (competition.finished && (last === undefined || !sameList(last, competitionCupPoints(competition)))) return null;
-  return { schedule, index, entrants, competition, points };
+  const rawLots = fieldOf(v, "lots");
+  // A cup kept before the lots were drawn (0.22.1 and earlier) ranks its ties in entrant order.
+  const lots = rawLots === undefined ? entrants.map((_e, i) => i) : indexesOf(rawLots, n, n);
+  if (lots === null) return null;
+  return { schedule, index, entrants, competition, points, lots };
 }
 
 /** A saved competition, or null for anything that is not a consistent one. Never throws; extra fields are ignored. */
