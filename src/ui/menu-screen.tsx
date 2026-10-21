@@ -237,7 +237,12 @@ export function MenuScreen({
           {message.text}
         </p>
       )}
-      <OfflineNotice state={offline.state} onRetry={offline.updates?.retryReadiness} diagnostics={diagnostics} />
+      <OfflineNotice
+        state={offline.state}
+        onRetry={offline.updates?.retryReadiness}
+        onReinstall={offline.updates?.reinstall}
+        diagnostics={diagnostics}
+      />
     </main>
   );
 }

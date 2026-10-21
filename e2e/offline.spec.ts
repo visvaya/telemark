@@ -145,6 +145,39 @@ test.describe("without a network", () => {
   });
 });
 
+test("a stored release that lost a file is installed again on demand, and the player's data stays", async ({
+  page,
+  context,
+}) => {
+  const server = testServer();
+  await openGame(page, server.origin);
+  await requireServiceWorkers(page);
+  await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+  await page.close();
+  const running = await relaunchUntil(context, server.origin, RELEASE_A);
+  await plantPlayerData(running);
+  // What the browser does to a cache when the device runs short of room: a file of the release is gone.
+  const [release] = await storedReleases(running);
+  await running.evaluate(
+    async ({ name, path }) => {
+      await (await caches.open(name)).delete(path);
+    },
+    { name: release ?? "", path: LICENCE_PATH },
+  );
+  await running.reload();
+  await expect(running.getByText(OFFLINE_NOTE.unavailable)).toBeVisible();
+  await expect(running.getByText(OFFLINE_NOTE.incomplete)).toBeVisible();
+  await expect(running.getByText(OFFLINE_NOTE.reinstallExplanation)).toBeVisible();
+
+  await button(running, OFFLINE_NOTE.reinstall).click();
+  // The page reloads by itself once the release is stored again.
+  await expect(running.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+  await expect(button(running, OFFLINE_NOTE.reinstall)).toHaveCount(0);
+  expect(await storedReleases(running)).toHaveLength(1);
+  expect(await running.evaluate(async (path) => (await caches.match(path)) !== undefined, LICENCE_PATH)).toBe(true);
+  expect(await playerData(running)).toEqual(PLANTED_DATA);
+});
+
 test.describe("when the worker cannot be fetched", () => {
   test.use({ expectedProblems: either(NO_WORKER_SCRIPT, NO_NETWORK) });
 

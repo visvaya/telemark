@@ -10,6 +10,10 @@ import { asSet, setPatternSource } from "./typeset-text";
 export const OFFLINE_NOTE = {
   ready: "Gotowe do gry bez internetu.",
   unavailable: "Gra bez internetu nie jest jeszcze gotowa.",
+  /** Part of the stored release is missing, and the button that installs the game again. */
+  incomplete: /^Części plików gry brakuje w pamięci przeglądarki/,
+  reinstall: "Zainstaluj grę od nowa",
+  reinstallExplanation: "Strona przeładuje się. Zapis, rekordy, powtórki i pliki gry zostaną.",
   /**
    * With the version the waiting worker names: both test releases are built with one. The main menu says it
    * short, beside its install button; the menu of a jump says it with the way to get it.

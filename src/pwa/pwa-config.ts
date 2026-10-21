@@ -13,6 +13,11 @@ export const PWA_CONFIG = {
   RELEASE_ANSWER_TIMEOUT_S: 5,
   /** Type of the message that asks the worker which release it holds, and of its answer. */
   RELEASE_MESSAGE_TYPE: "telemark:release",
+  /**
+   * Start of the name of every cache that holds a release of the game (CACHE_PREFIX in
+   * scripts/lib/release-rules.mjs). A reinstall deletes only these.
+   */
+  RELEASE_CACHE_PREFIX: "telemark-shell-",
   /** Type of the message that asks a waiting worker to take over now. */
   TAKE_OVER_MESSAGE_TYPE: "telemark:take-over",
 } as const;

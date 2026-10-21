@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useState, type ReactNode } from "react";
 import {
   reduceReadinessRetry,
+  reduceReinstall,
+  reinstallOffered,
   reduceUpdateCheck,
   type OfflineState,
   type ReadinessOutcome,
@@ -13,18 +15,30 @@ import type { UpdateControls } from "./use-offline-state";
  * Whether the game can be played without a network; when it cannot, why (as far as the page can tell) and a
  * button that checks again. Presses while a check runs make no second check; its answer is said in a live region
  * that stays after the game has become ready. The error behind it shows only with the diagnostics on.
+ *
+ * When only a new install can mend the stored game (`reinstallOffered`), it also offers that, with the reload it
+ * makes said beside it. Presses while it runs do nothing; a failure is said in its live region.
  */
 export function OfflineNotice({
   state,
   onRetry,
+  onReinstall,
   diagnostics = false,
 }: {
   state: OfflineState | null;
   onRetry?: (() => Promise<ReadinessOutcome>) | undefined;
+  onReinstall?: (() => Promise<"failed">) | undefined;
   diagnostics?: boolean;
 }) {
   const [retry, dispatch] = useReducer(reduceReadinessRetry, "idle");
+  const [reinstall, dispatchReinstall] = useReducer(reduceReinstall, "idle");
   if (state === null) return null;
+  const reinstalling = reinstall === "reinstalling";
+  const onReinstallPress = () => {
+    if (reinstalling || !onReinstall) return;
+    dispatchReinstall("start");
+    void onReinstall().then(dispatchReinstall);
+  };
   const checking = retry === "checking";
   const onPress = () => {
     if (checking || !onRetry) return;
@@ -32,6 +46,7 @@ export function OfflineNotice({
     void onRetry().then(dispatch);
   };
   const cause = state.readiness === "unavailable" ? state.unavailable : null;
+  const offerReinstall = onReinstall !== undefined && cause !== null && reinstallOffered(cause.cause, retry);
   return (
     <div className="offline-notice">
       <p className="note">{UI_TEXT.offline.readiness[state.readiness]}</p>
@@ -44,6 +59,24 @@ export function OfflineNotice({
       )}
       {onRetry && (
         <div aria-live="polite">{retry !== "idle" && <p className="note">{UI_TEXT.offline.retry[retry]}</p>}</div>
+      )}
+      {offerReinstall && (
+        <>
+          <button
+            type="button"
+            className="pixel-button small-button"
+            aria-disabled={reinstalling}
+            onClick={onReinstallPress}
+          >
+            {UI_TEXT.offline.reinstall.button}
+          </button>
+          <p className="note">{UI_TEXT.offline.reinstall.explanation}</p>
+        </>
+      )}
+      {onReinstall && (
+        <div aria-live="polite">
+          {reinstall !== "idle" && <p className="note">{UI_TEXT.offline.reinstall[reinstall]}</p>}
+        </div>
       )}
     </div>
   );

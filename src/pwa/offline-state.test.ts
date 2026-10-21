@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   INITIAL_OFFLINE_STATE,
@@ -5,6 +6,9 @@ import {
   errorDetail,
   readinessRetryDue,
   reduceOffline,
+  reduceReinstall,
+  reinstallOffered,
+  releaseCaches,
   reduceReadinessRetry,
   reduceUpdateCheck,
   updateCheckDue,
@@ -155,5 +159,44 @@ describe("reduceReadinessRetry", () => {
     expect(reduceReadinessRetry("checking", "start")).toBe("checking");
     expect(reduceReadinessRetry("checking", "ready")).toBe("ready");
     expect(reduceReadinessRetry("idle", "unavailable")).toBe("idle");
+  });
+});
+
+describe("releaseCaches", () => {
+  it("picks only the caches of the game's releases", () => {
+    const own = `${PWA_CONFIG.RELEASE_CACHE_PREFIX}0123456789abcdef`;
+    expect(releaseCaches([own, "someone-elses-cache", "telemark", "workbox-precache"])).toEqual([own]);
+  });
+
+  it("uses the prefix the release step gives the worker's caches", () => {
+    const rules = readFileSync(new URL("../../scripts/lib/release-rules.mjs", import.meta.url), "utf8");
+    expect(rules).toContain(`export const CACHE_PREFIX = "${PWA_CONFIG.RELEASE_CACHE_PREFIX}";`);
+  });
+});
+
+describe("reinstallOffered", () => {
+  it("offers a reinstall when part of the release is missing", () => {
+    expect(reinstallOffered("incomplete", "idle")).toBe(true);
+  });
+
+  it("offers it when the worker still does not answer after the player checked again", () => {
+    expect(reinstallOffered("no-answer", "idle")).toBe(false);
+    expect(reinstallOffered("no-answer", "checking")).toBe(false);
+    expect(reinstallOffered("no-answer", "unavailable")).toBe(true);
+  });
+
+  it("does not offer it for the other causes", () => {
+    for (const cause of ["registration-refused", "install-failed"] as const) {
+      expect(reinstallOffered(cause, "unavailable")).toBe(false);
+    }
+  });
+});
+
+describe("reduceReinstall", () => {
+  it("ignores an end that comes while nothing runs, and a failure lets the player press again", () => {
+    expect(reduceReinstall("idle", "failed")).toBe("idle");
+    expect(reduceReinstall("idle", "start")).toBe("reinstalling");
+    expect(reduceReinstall("reinstalling", "failed")).toBe("failed");
+    expect(reduceReinstall("failed", "start")).toBe("reinstalling");
   });
 });

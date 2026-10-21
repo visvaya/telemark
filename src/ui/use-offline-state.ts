@@ -17,6 +17,8 @@ export interface UpdateControls {
   retryReadiness: () => Promise<ReadinessOutcome>;
   installNow: (onFailed: () => void) => boolean;
   reloadNow: () => void;
+  /** Installs the game again and reloads the page; settles only when that failed. */
+  reinstall: () => Promise<"failed">;
 }
 
 /** What the game knows of playing without a network, and what it can ask of the service worker. */
@@ -66,6 +68,7 @@ export function useOfflineState(): OfflineSupportView {
             retryReadiness: () => support.current?.retryReadiness() ?? Promise.resolve("unavailable"),
             installNow: (onFailed) => support.current?.installNow(onFailed) ?? false,
             reloadNow: () => support.current?.reloadNow(),
+            reinstall: () => support.current?.reinstall() ?? Promise.resolve("failed"),
           },
     [container],
   );
