@@ -48,6 +48,9 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
+/** A podium entry of the leader with `wins` wins. */
+const podiumEntryWith = (wins: number) => UI_TEXT.competition.podiumEntry(1, "K. Morioka", 180, wins);
+
 describe("interface texts", () => {
   /**
    * A rough guard: a Polish text written without any diacritic gets past it. Text typed between JSX tags is
@@ -103,6 +106,14 @@ describe("interface texts", () => {
     expect(UI_TEXT.hillLabel("Ćwiczebna", 90)).toBe("Ćwiczebna K90");
     expect(UI_TEXT.hud.distance("98,5")).toBe("98,5\u2009ｍ");
     expect(UI_TEXT.menu.filesRemembered(true)).toBe("Pliki (Dsj.exe, Dsj.dat) zapamiętane w tej przeglądarce.");
+  });
+
+  it("reads out a podium entry with the wins in the right form of the word", () => {
+    expect(podiumEntryWith(0)).toBe("1. miejsce: K. Morioka, 180 pkt, 0 zwycięstw");
+    expect(podiumEntryWith(1)).toBe("1. miejsce: K. Morioka, 180 pkt, 1 zwycięstwo");
+    expect(podiumEntryWith(3)).toBe("1. miejsce: K. Morioka, 180 pkt, 3 zwycięstwa");
+    expect(podiumEntryWith(5)).toBe("1. miejsce: K. Morioka, 180 pkt, 5 zwycięstw");
+    expect(UI_TEXT.competition.podiumWins(2)).toBe("2 zw.");
   });
 });
 

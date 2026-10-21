@@ -9,6 +9,7 @@ import { pluralForm } from "./plural";
  */
 const COMPETITION_WORD = { one: "konkurs", few: "konkursy", many: "konkursów" } as const;
 const competitions = (count: number): string => `${count} ${COMPETITION_WORD[pluralForm(count)]}`;
+const WIN_WORD = { one: "zwycięstwo", few: "zwycięstwa", many: "zwycięstw" } as const;
 
 export const UI_TEXT = {
   appName: "Telemark",
@@ -95,7 +96,10 @@ export const UI_TEXT = {
     repeat: "Powtórz zawody",
     podium: "Podium",
     /** The podium read out: a place and the competitor on it. */
-    podiumEntry: (place: number, name: string, points: number) => `${place}. miejsce: ${name}, ${points} pkt`,
+    podiumEntry: (place: number, name: string, points: number, wins: number) =>
+      `${place}. miejsce: ${name}, ${points} pkt, ${wins} ${WIN_WORD[pluralForm(wins)]}`,
+    /** A podium entrant's wins, short under the points; read out in full with the entry. */
+    podiumWins: (wins: number) => `${wins} zw.`,
     cupPointsText: (points: number) => `${points} pkt`,
     players: "Gracze",
     playerName: (number: number) => `Gracz ${number}`,

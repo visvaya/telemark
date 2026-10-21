@@ -184,12 +184,15 @@ export function CupEndScreen({ run, onAgain, onMenu, focusOnEntry }: EndProps) {
                 const c = cup.entrants[r.entrant];
                 return (
                   <li key={r.entrant} className={c?.kind === "player" ? "cup-step-who contest-player" : "cup-step-who"}>
-                    <span className="sr-only">{T.podiumEntry(step.place, competitorShortName(c), r.totalPoints)}</span>
+                    <span className="sr-only">
+                      {T.podiumEntry(step.place, competitorShortName(c), r.totalPoints, r.wins)}
+                    </span>
                     {/* The flag over the name, so the name has the whole width of its step. */}
                     <span aria-hidden="true">
                       {c?.kind === "cpu" && <FlagIcon country={competitorCountry(c)} />}
                       <span className="cup-step-name">{competitorShortName(c)}</span>
                       <span className="cup-step-points">{T.cupPointsText(r.totalPoints)}</span>
+                      <span className="cup-step-points">{T.podiumWins(r.wins)}</span>
                     </span>
                   </li>
                 );
