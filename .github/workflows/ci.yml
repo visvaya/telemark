@@ -68,6 +68,12 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "push" ]; then
             # A pull request is checked out as its merge, a push as the new head: the first parent is the base.
             if changed=$(git diff --name-only --no-renames HEAD^1 HEAD); then
+              # A pull request that changes the game raises the version in package.json; that line alone does
+              # not touch the hills, so package.json counts only when another line of it changed.
+              if printf '%s\n' "$changed" | grep -qx 'package.json' &&
+                ! git diff -U0 HEAD^1 HEAD -- package.json | grep -E '^[-+] ' | grep -vqE '^[-+]  "version": '; then
+                changed=$(printf '%s\n' "$changed" | grep -vx 'package.json' || true)
+              fi
               relevant=$(printf '%s\n' "$changed" |
                 grep -E '^(src/hills/|src/sim/|src/game/|\.github/workflows/|package\.json$|vite\.config\.ts$)' || true)
               if [ -z "$relevant" ]; then needed=false; fi
