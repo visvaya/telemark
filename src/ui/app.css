@@ -1741,8 +1741,9 @@ h2 {
 }
 
 /*
- * Column headers standing on the rule under them, on one line: the columns are wide enough for them, and only a
- * reader's wider text spacing may break one where the screen is narrow.
+ * Column headers standing on the rule under them, on one line: the columns are wide enough for them. The widths
+ * are fixed at every width of the screen, so a reader's wider text spacing breaks a header rather than pushing it
+ * out of its column.
  */
 .contest-table thead th {
   padding-block: 2px 6px;
@@ -1761,21 +1762,15 @@ h2 {
   white-space: nowrap;
 }
 
-/* The start number, right after the place as in FIS lists, from 600 px; narrower, it stands in the place's cell. */
+/* The start number, right after the place as in FIS lists, from 760 px; narrower, it stands in the place's cell. */
 .contest-table .contest-number {
   width: calc(var(--number-w) + var(--cell-pad-start) + var(--cell-pad-end));
   white-space: nowrap;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 760px) {
   .contest-early-number {
     display: none;
-  }
-}
-
-@media (min-width: 600px) {
-  .contest-table thead th {
-    white-space: nowrap;
   }
 }
 
@@ -1816,10 +1811,26 @@ h2 {
   box-shadow: 1px 0 0 var(--panel);
 }
 
+/*
+ * The name keeps one line on every screen, the mark the second, so every row is as high as the next: the full name
+ * where it fits, the short one where it does not, and an ellipsis only beyond that. The columns take their widths
+ * from the headers alone, whatever the results, and the name the rest; the rare wider total ("-156,0 p", 0.5 em
+ * more) stays within the last cell's room.
+ */
+.contest-table {
+  table-layout: fixed;
+}
+
 .contest-who {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.contest-who .flag-icon {
+  margin-right: 8px;
+  vertical-align: -0.15em;
 }
 
 /* A text with a shorter form: the long one where there is room, the short one (shown, not read) where not. */
@@ -2072,10 +2083,13 @@ h2 {
 }
 
 /*
- * A phone held upright: room before each cell's text and after the last one's, none after the others (the next
- * cell's room keeps them apart), and the short forms.
+ * The compact table, below the width at which the full one fits whole with sixteen competitors (flags, full names,
+ * the start number's column and "pkt": 760 px, measured): room before each cell's text and after the last one's,
+ * none after the others (the next cell's room keeps them apart), and the short forms ("K. Morioka", "p"), shown
+ * and not read, the full name staying in the row's name for screen readers. So a name keeps one line at every
+ * width rather than breaking in a narrow band.
  */
-@media (max-width: 599px) {
+@media (max-width: 759px) {
   .contest-table {
     --cell-pad-start: 6px;
     --cell-pad-end: 0px;
@@ -2105,27 +2119,6 @@ h2 {
     display: none;
   }
 
-  /* The cup tables' wins: no room for them; gone from the table, they are not read out either. */
-  .contest-table .cup-wins {
-    display: none;
-  }
-
-  /*
-   * The name keeps one line, the mark the second: a name with no room ends in an ellipsis rather than breaking.
-   * The columns take their widths from the headers alone, whatever the results, and the name the rest; the rare
-   * wider total ("-156,0 p", 0.5 em more) stays within the last cell's room.
-   */
-  .contest-table {
-    table-layout: fixed;
-  }
-
-  .contest-who {
-    display: block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
   .contest-long {
     position: absolute;
     width: 1px;
@@ -2136,6 +2129,13 @@ h2 {
 
   .contest-short {
     display: inline;
+  }
+}
+
+/* A phone held upright: no room for the cup tables' wins; gone from the table, they are not read out either. */
+@media (max-width: 599px) {
+  .contest-table .cup-wins {
+    display: none;
   }
 }
 
