@@ -512,7 +512,8 @@ export const UI_TEXT = {
     retry: {
       button: "Spróbuj ponownie",
       checking: "Sprawdzam...",
-      ready: "Gotowe do gry bez internetu.",
+      /** The note above says the game is ready; this only answers the press. */
+      ready: "Udało się.",
       unavailable: "Nadal nie jest gotowa.",
     },
     /** The error behind it, shown only with the diagnostics on. */
