@@ -23,6 +23,16 @@ describe("the board's rows", () => {
     const rows = boardRows(s);
     expect(rows.map((r) => r.competitor)).toEqual(s.startOrder);
     expect(rows.every((r) => r.place === null && r.totalPoints === null)).toBe(true);
+    expect(rows.map((r) => r.startNumber)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("keep each competitor's start number through both rounds, as the first round's start list gives it", () => {
+    let s = fresh();
+    const numberOf = (c: number) => s.startOrder.indexOf(c) + 1;
+    while (s.round === 1) s = scored(s, 40 + (currentJumper(s) ?? 0));
+    s = scored(s, 70);
+    expect(s.round).toBe(2);
+    for (const row of boardRows(s)) expect(row.startNumber).toBe(numberOf(row.competitor));
   });
 
   it("put those who jumped first, by total with shared places, the rest below in start order", () => {
