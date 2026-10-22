@@ -4,12 +4,15 @@ import {
   generateHill,
   HillGenerationError,
   landingFallOf,
+  sketchOf,
   type GeneratedHill,
   type GeneratorOptions,
   type HillCharacter,
   type LandingFall,
 } from "./hill-generator";
-import type { HillProblem } from "./hill-spec";
+import { hillShape, NEVER_ALIKE_K_GAP_M, shapeDistance } from "./hill-likeness";
+import type { HillProblem, HillSpec } from "./hill-spec";
+import { OWN_HILL_SPECS } from "./own-hills";
 
 /**
  * Hills from their size alone: the character is drawn from what is typical of the original's hills of that size,
@@ -76,6 +79,11 @@ const AUTO = {
   bestPastKMaxM: 25,
   /** Draws of a character whose landing hill is untypical, before one is generated; each is a few milliseconds. */
   drawsPerAttempt: 200,
+  /**
+   * Typical characters drawn for each attempt; the one farthest from every hill already there is generated. Each
+   * is a few milliseconds, where a generation refused as too alike costs the search of its inrun (about 1.5 s).
+   */
+  candidatesPerAttempt: 8,
   /** Characters generated at most. */
   attempts: 30,
   /** Decimals of the drawn values, so that a character reads well. */
@@ -138,15 +146,37 @@ export function drawCharacter(kPointM: number, rng: BorlandRandom): HillCharacte
   };
 }
 
-/** A typical character of this size: drawn until its landing hill falls away as a typical one does. */
-function typicalCharacter(kPointM: number, rng: BorlandRandom): HillCharacter | undefined {
-  for (let draw = 0; draw < AUTO.drawsPerAttempt; draw++) {
+/** Typical characters of this size: drawn until their landing hill falls away as a typical one does. */
+function typicalCharacters(kPointM: number, rng: BorlandRandom, count: number): HillCharacter[] {
+  const found: HillCharacter[] = [];
+  for (let draw = 0; draw < AUTO.drawsPerAttempt && found.length < count; draw++) {
     const c = drawCharacter(kPointM, rng);
     if (characterProblems(c).length > 0) continue;
     const fall = landingFallOf(c);
-    if (fall !== undefined && isTypicalFall(fall, kPointM)) return c;
+    if (fall !== undefined && isTypicalFall(fall, kPointM)) found.push(c);
   }
-  return undefined;
+  return found;
+}
+
+/**
+ * The candidate farthest from every hill already there, by the likeness distance without the inrun's drop (which
+ * the search sets later; the whole distance is never less). Hills spread over the room the rules leave, and one
+ * too alike to another is refused only where little room is left.
+ */
+function farthest(candidates: readonly HillCharacter[], known: readonly HillSpec[]): HillCharacter | undefined {
+  let best: { c: HillCharacter; distance: number } | undefined;
+  for (const c of candidates) {
+    const sketch = sketchOf(c);
+    if (sketch === undefined) continue;
+    const near = known.filter((k) => Math.abs(k.kPointM - c.kPointM) < NEVER_ALIKE_K_GAP_M);
+    const mine = hillShape(sketch);
+    const distance = Math.min(
+      Number.POSITIVE_INFINITY,
+      ...near.map((k) => shapeDistance(mine, hillShape(k), { withInrun: false })),
+    );
+    if (best === undefined || distance > best.distance) best = { c, distance };
+  }
+  return best?.c;
 }
 
 export interface SizedHill extends GeneratedHill {
@@ -156,7 +186,8 @@ export interface SizedHill extends GeneratedHill {
 }
 
 /**
- * A hill of the given K point and nothing else: a typical character drawn from `seed` and generated with every
+ * A hill of the given K point and nothing else: typical characters drawn from `seed`, the one farthest from the
+ * hills already there (`options.catalog`, the own hills by default, and `options.others`) generated with every
  * check of `generateHill`; a character the generator refuses is drawn again, up to `AUTO.attempts` times. The same
  * size, seed and options make the same hill.
  */
@@ -164,7 +195,8 @@ export function generateHillOfSize(kPointM: number, seed = 1, options: Generator
   const refused: { character: HillCharacter; problems: readonly HillProblem[] }[] = [];
   for (let attempt = 0; attempt < AUTO.attempts; attempt++) {
     const rng = new BorlandRandom((seed * 7919 + attempt * 104_729 + kPointM) % SEED_RANGE);
-    const character = typicalCharacter(kPointM, rng);
+    const known = [...(options.catalog ?? OWN_HILL_SPECS), ...(options.others ?? [])];
+    const character = farthest(typicalCharacters(kPointM, rng, AUTO.candidatesPerAttempt), known);
     if (character === undefined) continue;
     try {
       return { ...generateHill(character, seed, options), character, refused };

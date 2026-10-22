@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHillProfile } from "../sim/hill-setup";
-import { hillDistance, hillShape, LIKENESS, NEVER_ALIKE_K_GAP_M } from "./hill-likeness";
+import { hillDistance, hillShape, LIKENESS, NEVER_ALIKE_K_GAP_M, shapeDistance } from "./hill-likeness";
 import type { HillSpec } from "./hill-spec";
 import { EXTREME_HILLS, training, variant } from "./test-support/hill-variants";
 
@@ -68,6 +68,20 @@ describe("hill likeness", () => {
         true,
       );
       for (const b of hills) expect(Number.isFinite(hillDistance(a, b))).toBe(true);
+    }
+  });
+
+  it("measures a hill's shape once and gives the same shape again", () => {
+    expect(hillShape(training)).toBe(hillShape(training));
+    // Another object with the same data is measured on its own and comes out the same.
+    expect(hillShape({ ...training })).toEqual(hillShape(training));
+  });
+
+  it("never puts two hills further apart without the inrun's drop than with it", () => {
+    for (const [, extreme] of EXTREME_HILLS) {
+      const without = shapeDistance(hillShape(training), hillShape(extreme), { withInrun: false });
+      expect(without).toBeLessThanOrEqual(hillDistance(training, extreme) + 1e-12);
+      expect(shapeDistance(hillShape(training), hillShape(extreme))).toBeCloseTo(hillDistance(training, extreme), 12);
     }
   });
 });

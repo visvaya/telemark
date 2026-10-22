@@ -713,9 +713,23 @@ every check of `generateHill`.
   typical. A character whose landing area would have to give way to K is drawn again instead of searched for.
   Without this check (the values drawn from the originals' full ranges) 19 of 60 characters made a hill that passes
   every rule; with it 11 of 16 played.
+- **The farthest of several.** Eight typical characters are drawn for each attempt, and the one farthest from every
+  hill already there (the catalog and `others`) is generated: by the likeness distance without the inrun's drop,
+  which the search sets later (`shapeDistance` with `withInrun: false`; the whole distance is never less). Hills
+  spread over the room the rules leave, and one too alike to another is refused only where little room is left.
+  A hill's shape is measured once (`hillShape` remembers it by the hill's object), so a large catalog does not
+  slow the likeness check of every new hill.
 - **Drawn again.** A character the generator refuses (an unreachable target, a play rule, a hill too alike to
   another) is drawn again from the next attempt's seed, up to 30 times. The same size, seed and options make the
   same hill.
+
+Capacity [measured 2026-10-22, local, without the bots' evaluation]: hills of random sizes from K45 to K250 added
+one by one, each at least `LIKENESS.tooAlike` from the 37 original hills, the own hills and every one added before.
+Drawing one character at a time, 553 of 817 tries were taken, and the share refused as too alike grew about
+linearly with the hills taken (5% at about 40, 45% at about 520), which puts the room at roughly 1900 to 3200
+hills [estimate], 1300 to 2200 after the play rules. With the farthest of eight candidates, 297 of 300 were taken
+with none refused as too alike, in a median 3.8 s each; the three missed were K245 to K249, where the scene
+leaves no inrun fast enough (`generator.target-unreachable` and `generator.no-room`).
 
 Measured 2026-10-22 on two seeds of each of K45, K70, K95, K120, K150, K180, K210 and K240: every one made a hill
 that passes every rule; 11 of the 16 with the first character drawn, the others after 1 to 4 refused ones (most

@@ -919,6 +919,15 @@ export function landingFallOf(c: HillCharacter): LandingFall | undefined {
   };
 }
 
+/**
+ * The hill of a character at the shortest inrun, built without a jump: its landing hill, takeoff and look are the
+ * generated hill's, its inrun is not yet. Undefined for a character outside its ranges.
+ */
+export function sketchOf(c: HillCharacter, seed = 1): HillSpec | undefined {
+  if (characterProblems(c).length > 0) return undefined;
+  return specOf(c, landingShape(c), G.inrunLineMinM, seed);
+}
+
 /** Measures of a hill's built profile. */
 function geometryOf(spec: HillSpec): HillGeometry {
   const { profile, kPointM } = hillChoiceOf(spec);
