@@ -18,3 +18,22 @@ describe.each(OWN_HILL_SPECS.map((spec) => [spec.id, spec] as const))("own hill 
     expect(lookProblems(spec)).toEqual([]);
   });
 });
+
+describe("own hills together", () => {
+  // The likeness check compares profiles only, since the look does not change how a hill plays; two hills of one
+  // look would still read as one hill painted twice.
+  it("gives every own hill its own scenery: its colours, terrain and trees", () => {
+    const colours = OWN_HILL_SPECS.map(
+      (s) => `${s.look.inrun.wallColour}/${s.look.inrun.gateColour}/${s.look.marks.fenceColour}`,
+    );
+    const terrain = OWN_HILL_SPECS.map((s) => s.look.terrain.seed);
+    const trees = OWN_HILL_SPECS.map((s) => s.look.trees.seed);
+    const repeated = (values: readonly (string | number)[]) =>
+      OWN_HILL_SPECS.filter((_s, i) => values.indexOf(values[i] ?? "") !== i).map((s) => s.id);
+    expect({ colours: repeated(colours), terrain: repeated(terrain), trees: repeated(trees) }).toEqual({
+      colours: [],
+      terrain: [],
+      trees: [],
+    });
+  });
+});
