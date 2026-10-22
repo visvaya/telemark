@@ -11,7 +11,7 @@ import {
 
 /**
  * The generated set: hills of many sizes and shapes made by the generator, for training the player and for tests.
- * Sizes from K45, a little below the original's smallest hill, to K250, its largest, several shapes per size:
+ * Sizes from K45, a little below the original's smallest hill, to K245, near its largest, several shapes per size:
  * steep and gentle landing hills, short and long landing areas, short, medium and long knolls, inruns from 38 to 58
  * degrees, low and high takeoff angles, and each hill its own gate placement, flat part, table height and best jump
  * target, so no two start or play alike. Above K120 the takeoff angles are 6 to 7 degrees and the landing hills
@@ -331,19 +331,6 @@ export const GENERATED_HILL_CHARACTERS: readonly HillCharacter[] = [
     bestPastKM: { minM: 14, maxM: 20 },
     tableHeightM: 2.6,
   },
-  {
-    kPointM: 250,
-    landingSteepnessDeg: 47,
-    landingAreaPastKShare: 0.15,
-    knoll: "long",
-    inrunSteepnessDeg: 57,
-    takeoffAngleDeg: 6.5,
-    look: "winter",
-    gateXM: 10,
-    flatBehindGateM: 3.2,
-    bestPastKM: { minM: 15, maxM: 21 },
-    tableHeightM: 2.2,
-  },
 ];
 
 /** Seed of the scenery of every generated hill of the set. */
@@ -374,7 +361,6 @@ export const SET_HILLS_IN_GAME: Readonly<Record<string, string>> = {
   "gen-k215-ba187031-dusk1": "own-30",
   "gen-k230-42c0fce0-day1": "own-31",
   "gen-k245-1a9b1be0-dusk1": "own-32",
-  "gen-k250-ceeedeb7-winter1": "own-33",
 };
 
 /** The own hill a character of the set is taken as (`SET_HILLS_IN_GAME`); undefined for one the generator makes. */

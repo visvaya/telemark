@@ -140,7 +140,8 @@ const GENERATOR = {
   sceneEndXM: 379,
   /**
    * A jumper coasts up the outrun past its lowest point before stopping: 15 to 23 m on the generated hills from
-   * K135 to K260 (the furthest designed jumps, 2026-10-22), so the lowest point keeps this much of the scene after it.
+   * K135 to K260 as the set had them early on 2026-10-22 (the furthest designed jumps), so the lowest point keeps
+   * this much of the scene after it. The play rules check every hill's jumps stop inside the scene.
    */
   outrunStopMarginM: 25,
   /** Steps of the false position search; each runs the oracle once. */

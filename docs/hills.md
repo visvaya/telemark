@@ -550,7 +550,7 @@ the K point; on `own-3` it lands a few metres beyond it, as on hills of a simila
 `generateHill(character, seed)` (`src/hills/hill-generator.ts`) makes a hill from a few values a person can
 understand instead of fourteen profile numbers. It serves the player training and the tests; it is also the basis
 of a future hill editor for players. Twenty hills of the set are in the game: ten up to K120 (`own-14` to `own-23`,
-since 2026-10-17) and ten from K135 to K250 (`own-24` to `own-33`, since the checks judge hills of every size). Each
+since 2026-10-17) and nine from K135 to K245 (`own-24` to `own-32`, since the checks judge hills of every size). Each
 has its own gate position, flat part, takeoff height, inrun steepness and best jump target (the earlier `own-4` to
 `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers replaced
 them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed, and
@@ -657,8 +657,8 @@ best jump are targets: the report says whether they were reached.
 
 ### Generated set
 
-`src/hills/test-support/generated-hills.ts`: a fixed list of 25 characters from K45 to K250 (a little below the
-smallest hill of the original, up to its largest), generated in turn, each hill checked against the previous
+`src/hills/test-support/generated-hills.ts`: a fixed list of 24 characters from K45 to K245 (a little below the
+smallest hill of the original, up to near its largest), generated in turn, each hill checked against the previous
 ones, so no two are the same hill. The ten hills that are in the game are taken by the set as they are
 (`SET_HILLS_IN_GAME`; in the table 0 oracle runs in the search, and the share of K of the landing area measured).
 
@@ -694,11 +694,11 @@ best jump in calm minus K (m), oracle runs, the similarity distance to the neare
 | 215 | 43° | 0.15 (0.16) | medium | 48° | 6.5° | 16.0 | 5.5 | 9..13 | 2.3 | 50.5 | 10.0 | 0 | 0.86 |
 | 230 | 44° | 0.15 (0.16) | medium | 54° | 6.5° | 13.0 | 1.8 | 13..17 | 1.5 | 32.0 | 14.1 | 0 | 0.91 |
 | 245 | 46° | 0.12 (0.15) | long | 56° | 6° | 7.0 | 2.8 | 14..20 | 2.6 | 27.8 | 14.6 | 0 | 1.15 |
-| 250 | 47° | 0.15 (0.16) | long | 57° | 6.5° | 10.0 | 3.2 | 15..21 | 2.2 | 23.2 | 17.6 | 0 | 0.51 |
 
-Each hill outside the game has its own gate position, flat part, takeoff height and best jump target (gate
-7..25 m, flat part 0.8..3.5 m, takeoff 1.3..2.6 m, targets from K+4..K+7 to K+12..K+16). All are within the
-target and pass every rule, the simulation rules too (the stability test plays all of them); the nearest pair is
+Each of the five hills outside the game (K45, K60, K95, K150 and K200 with 5 or more oracle runs in the table)
+has its own gate position, flat part, takeoff height and best jump target (gate 7..25 m, flat part 0.8..3.5 m,
+takeoff 1.3..2.6 m, targets from K+4..K+7 to K+12..K+16). All hills of the set are within the target and
+pass every rule, the simulation rules too (the stability test plays all of them); the nearest pair is
 0.45 apart. The second K120 hill has a short knoll: with a medium knoll it did not pass the rule of the spread from
 the wind. The local comparison with the original's hills holds every hill of the set against the originals of a
 similar size, not only those in the game.
@@ -711,9 +711,11 @@ landing hills (0.56 to 0.69 of height per length to K from K135 to K185, against
 set now takes off at 6 to 7 degrees, with landing hills of 40 to 47 degrees and medium knolls, and long knolls
 from K245, which keep the slope near the takeoff as gentle as on the original's K250 (15.5 m of drop in the first
 50 m, where a medium knoll drops 20 m and the jumper flies high above the slope). Landing hills steeper than about
-47 degrees throw the bots too far, and above K250 the scene has no room for an inrun fast enough, so the largest
-hill of the set is a K250 (a K260 and a K255 were tried: the K260 cannot be jumped to its K point, the K255 flies
-0.06 s longer than the originals allow). One K230 (a medium knoll, 45 degrees) was dropped: no variant of it
+47 degrees throw the bots too far. The largest hill of the set is a K245: above it the bots' distances turn
+chaotic (a K250 that played inside the originals' range on one sample of winds put the good player's median from
+K+11.5 to K+15.6 m on two others, past the rule's bound, and a degree of the landing hill or half a degree of the
+takeoff moved it by up to 20 m), and above K250 the scene has no room for an inrun fast enough (a K260 cannot be
+jumped to its K point). One K230 (a medium knoll, 45 degrees) was dropped: no variant of it
 reached the originals' range.
 
 A unit test generates the smallest hill of the set (with the simulation rules) and one too large for the scene (a

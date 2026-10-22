@@ -767,42 +767,4 @@ export const OWN_HILL_SPECS: readonly HillSpec[] = [
       marks: { firstMarkM: 230, markCount: 3, fenceColour: 64, fenceStartM: -1 },
     },
   },
-  {
-    schemaVersion: 1,
-    id: "own-33",
-    name: "Olbrzym",
-    kPointM: 250,
-    profile: {
-      inrun: {
-        startXM: 10,
-        flatEndXM: 6.8,
-        lineEndXM: 33.23,
-        takeoffXM: 90.27,
-        lineSlope: -1.5399,
-        lineInterceptM: 298.34,
-        curveA: 0.0125,
-      },
-      landing: {
-        centerXM: 267.04,
-        centerYM: 83.41,
-        amplitudeM: 126.37,
-        widthM: 117.84,
-        outrunStartXM: 302.39,
-        outrunCurveA: 0.009764,
-        knollBlend: 0.3,
-      },
-    },
-    look: {
-      skyRgb6: [44, 52, 58],
-      terrain: { seed: 7919, amplitudeM: 31, baseOverOutrunM: 3 },
-      trees: { firstCount: 75, secondCount: 21, fromXM: 90.27, toXM: 382.65, seed: 39193, hidden: [] },
-      supports: [
-        { fromXM: 4.8, toXM: 7.1, colour: 11, frontColour: 25 },
-        { fromXM: 44.41, toXM: 58.76, colour: 11, frontColour: 25 },
-        { fromXM: 80.31, toXM: 89.87, colour: 11, frontColour: 25 },
-      ],
-      inrun: { platformStartXM: 0, nearWallUpPx: 13, nearWallDownPx: 34, wallColour: 100, gateColour: 67 },
-      marks: { firstMarkM: 235, markCount: 3, fenceColour: 64, fenceStartM: -1 },
-    },
-  },
 ];
