@@ -392,8 +392,10 @@ Rules:
   was 3 frames on five disjoint sets and 1 frame on the sixth;
 - `takeoff-clean`: every seed of the sweep has at least one clean takeoff (a window of at least 1 frame), because a
   wind with which a clean takeoff is impossible would be unfair;
-- `good-median`: the good player's median from K-20 to K+13 m (above K120 plus 1 cm per metre of K), so that the
-  hill jumps to its size;
+- `good-median`: the good player's median from K-3 to K+13 m (above K120 the bound short of K rises by 3 cm and the
+  bound past it by 1 cm per metre of K), so that the hill jumps to its size. On the original's hills the good
+  rival's median lands at K-0.5 m at the least (K165) and at K+2 m at the least from K200 up; the bound short of K
+  stays about 1 to 2.5 m below every original;
 - `levels-ordered`: the medians grow from the weak through the average to the good player, because skill has to
   pay off;
 - `skill-wins`: the good player jumps farther than the average one in at least 70% of the pairs of jumps with the
@@ -404,8 +406,10 @@ Rules:
   landing height spread of 0.5 m, so a single fall is the bot's error, not the hill's, and at 5% one more fall
   reversed the verdict (on the Ćwiczebna hill 0, 1 and 1 fall out of 32 in three disjoint sets). The good player
   should almost never fall. The Ćwiczebna hill also meets the former 5%;
-- `best-short`: the median of the best jumps (over the wind seeds) at least K-10 m, otherwise the hill cannot be
-  jumped to K; the median, not the worst seed, so that one strong head wind does not fail a fair hill;
+- `best-short`: the median of the best jumps (over the wind seeds) at least K, plus 8 cm per metre of K above K120,
+  otherwise the hill cannot be jumped to its size; the median, not the worst seed, so that one strong head wind does
+  not fail a fair hill. On the original's hills it lands at K+2.5 m at the least, and at K+10.8 m at the least from
+  K200 up; the bound stays about 2.5 m or more below every original;
 - `best-past-landing-area`: the longest of the oracle's best jumps (one on the strongest seed of each wind class),
   that is the jump in the most favourable class (the message names it; on the Ćwiczebna hill it is the head wind,
   102.5 m with the end of the area at 120.8 m), at most 5 m behind the end of the landing area, so that nobody
@@ -516,8 +520,10 @@ by the other rules like any new one.
 files (the checks in `src/hills/test-support/original-hills.cases.ts`; the range check is split among two files
 by the own hills' size, so they run in parallel). It works only with `DSJ2_GAME_DIR` set (like the golden tests), never in CI; with the variable set and
 without the files it ends with an error, not a skip. Nothing read from the game files goes into the repository or
-to the disk. It checks that no own hill is too similar to a hill of the original, that each plays within the range
-of the original's hills with a K point within 15 m of its own (the best distance and the good player's median
+to the disk. It checks that no own hill is too similar to a hill of the original, that each own hill, and each
+hill of the generated set the game does not have yet (a candidate for the game, so a change of the generator is
+held against the originals before its hills are taken in), plays within the range of the original's hills with a
+K point within 15 m of its own (the best distance and the good player's median
 relative to K, the speed at the takeoff, the flight time, the takeoff window, the spread from the wind as a share
 of K; the range widened by a margin for the spread of the measurement), that the original's hills pass the format
 check, and that the exact rival keeps within the oracle margin on every band of sizes (comparison with the oracle
@@ -544,7 +550,7 @@ the K point; on `own-3` it lands a few metres beyond it, as on hills of a simila
 `generateHill(character, seed)` (`src/hills/hill-generator.ts`) makes a hill from a few values a person can
 understand instead of fourteen profile numbers. It serves the player training and the tests; it is also the basis
 of a future hill editor for players. Twenty hills of the set are in the game: ten up to K120 (`own-14` to `own-23`,
-since 2026-10-17) and ten from K135 to K260 (`own-24` to `own-33`, since the checks judge hills of every size). Each
+since 2026-10-17) and ten from K135 to K250 (`own-24` to `own-33`, since the checks judge hills of every size). Each
 has its own gate position, flat part, takeoff height, inrun steepness and best jump target (the earlier `own-4` to
 `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers replaced
 them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed, and
@@ -573,7 +579,7 @@ acceptance on a device).
   supports, trees and distance marks follow from the profile;
 - optionally (`CHARACTER_LIMITS`): `gateXM`, where the start gate stands (the start of the inrun, 6..34 m, 10 by
   default); `flatBehindGateM`, the length of the flat part behind the gate (0.5..7 m, 1.4 by default);
-  `bestPastKM`, the target of the oracle's best jump in calm (from K+3 to at most K+18, a width of at least 3 m,
+  `bestPastKM`, the target of the oracle's best jump in calm (from K+3 to at most K+25, a width of at least 3 m,
   the end at least 2 m before the end of the landing area from the character, so that the rule "best jump past
   the landing area" does not fail; K+3..K+8 by default); `tableHeightM`, the height of the takeoff above the
   landing hill (1.2..2.6 m within the rule's 1..3 m, 2 by default). A character outside these ranges is an error
@@ -651,8 +657,8 @@ best jump are targets: the report says whether they were reached.
 
 ### Generated set
 
-`src/hills/test-support/generated-hills.ts`: a fixed list of 26 characters from K45 to K260 (a little below the
-smallest and above the largest hill of the original), generated in turn, each hill checked against the previous
+`src/hills/test-support/generated-hills.ts`: a fixed list of 25 characters from K45 to K250 (a little below the
+smallest hill of the original, up to its largest), generated in turn, each hill checked against the previous
 ones, so no two are the same hill. The ten hills that are in the game are taken by the set as they are
 (`SET_HILLS_IN_GAME`; in the table 0 oracle runs in the search, and the share of K of the landing area measured).
 
@@ -664,11 +670,11 @@ best jump in calm minus K (m), oracle runs, the similarity distance to the neare
 
 | K | landing hill | area past K | knoll | inrun | takeoff | gate | flat | jump target | takeoff height | straight | best - K | oracle | similarity |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 45 | 37° | 0.25 (0.25) | medium | 46° | 10° | 7.0 | 0.8 | 4..8 | 1.6 | 5.5 | 7.1 | 6 | 2.54 |
-| 50 | 39° | 0.30 (0.30) | long | 44° | 11° | 8.0 | 2.5 | 3..7 | 1.6 | 8.9 | 6.3 | 0 | 0.65 |
-| 60 | 38° | 0.26 (0.26) | long | 50° | 11° | 12.0 | 2.5 | 5..9 | 2.4 | 8.2 | 8.3 | 5 | 1.03 |
-| 60 | 36° | 0.24 (0.24) | medium | 52° | 10° | 18.0 | 0.8 | 3..6 | 2.4 | 5.5 | 5.5 | 0 | 0.46 |
-| 70 | 38° | 0.26 (0.26) | medium | 38° | 9° | 11.0 | 5.0 | 3..7 | 2.0 | 24.3 | 7.0 | 0 | 0.79 |
+| 45 | 36° | 0.25 (0.25) | medium | 46° | 11° | 7.0 | 0.8 | 4..7 | 1.6 | 6.8 | 6.0 | 6 | 2.69 |
+| 50 | 39° | 0.30 (0.30) | long | 44° | 11° | 8.0 | 2.5 | 3..7 | 1.6 | 8.9 | 6.3 | 0 | 0.66 |
+| 60 | 38° | 0.26 (0.26) | long | 50° | 9° | 12.0 | 2.5 | 4..8 | 2.4 | 6.8 | 7.3 | 5 | 1.27 |
+| 60 | 36° | 0.24 (0.24) | medium | 52° | 10° | 18.0 | 0.8 | 3..6 | 2.4 | 5.5 | 5.5 | 0 | 0.45 |
+| 70 | 38° | 0.26 (0.26) | medium | 38° | 9° | 11.0 | 5.0 | 3..7 | 2.0 | 24.3 | 7.0 | 0 | 0.66 |
 | 75 | 37° | 0.28 (0.28) | short | 55° | 9° | 20.0 | 1.5 | 3..7 | 1.3 | 5.0 | 6.6 | 0 | 0.65 |
 | 85 | 41° | 0.20 (0.20) | medium | 47° | 8° | 9.0 | 6.0 | 3..7 | 2.2 | 11.1 | 4.3 | 0 | 1.05 |
 | 95 | 39° | 0.24 (0.24) | short | 53° | 10° | 15.0 | 3.5 | 7..11 | 1.3 | 8.7 | 8.0 | 7 | 1.12 |
@@ -677,30 +683,38 @@ best jump in calm minus K (m), oracle runs, the similarity distance to the neare
 | 105 | 42° | 0.18 (0.21) | medium | 45° | 9° | 7.0 | 1.0 | 4..8 | 1.5 | 18.6 | 5.7 | 0 | 0.72 |
 | 115 | 37° | 0.28 (0.28) | short | 53° | 10° | 20.0 | 4.5 | 5..8 | 2.1 | 17.2 | 7.7 | 0 | 1.18 |
 | 120 | 39° | 0.26 (0.26) | short | 48° | 9° | 12.0 | 2.8 | 4..8 | 2.0 | 22.1 | 7.0 | 0 | 0.76 |
-| 135 | 38° | 0.20 (0.20) | medium | 50° | 10° | 20.0 | 5.0 | 10..14 | 2.2 | 33.0 | 10.2 | 8 | 1.76 |
-| 140 | 36° | 0.30 (0.30) | medium | 43° | 8° | 8.0 | 6.0 | 10..13 | 1.8 | 79.6 | 11.3 | 6 | 2.49 |
-| 150 | 40° | 0.25 (0.25) | medium | 45° | 9° | 25.0 | 1.0 | 6..10 | 2.6 | 46.2 | 9.8 | 7 | 1.08 |
-| 160 | 37° | 0.18 (0.18) | medium | 42° | 11° | 14.0 | 4.5 | 9..12 | 1.4 | 100.5 | 11.8 | 6 | 2.30 |
-| 170 | 39° | 0.20 (0.20) | medium | 55° | 10° | 30.0 | 2.0 | 8..12 | 2.1 | 30.0 | 8.2 | 6 | 1.84 |
-| 185 | 39° | 0.20 (0.20) | short | 45° | 10° | 18.0 | 7.0 | 11..15 | 1.2 | 68.3 | 11.4 | 5 | 1.11 |
-| 200 | 40° | 0.18 (0.18) | medium | 47° | 10° | 9.0 | 3.0 | 15..18 | 2.5 | 77.1 | 16.6 | 2 | 1.91 |
-| 200 | 41° | 0.20 (0.20) | short | 48° | 11° | 22.0 | 0.5 | 4..9 | 1.7 | 49.4 | 4.7 | 4 | 1.20 |
-| 215 | 42° | 0.15 (0.15) | medium | 48° | 11° | 16.0 | 5.5 | 9..13 | 2.3 | 64.0 | 9.6 | 2 | 1.19 |
-| 230 | 44° | 0.15 (0.16) | medium | 54° | 10° | 13.0 | 1.8 | 13..17 | 1.5 | 34.0 | 14.9 | 5 | 1.38 |
-| 230 | 45° | 0.12 (0.17) | medium | 54° | 9° | 11.0 | 4.0 | 6..9 | 1.9 | 25.7 | 7.7 | 8 | 1.10 |
-| 245 | 45° | 0.12 (0.16) | medium | 56° | 10° | 7.0 | 2.8 | 6..12 | 2.6 | 24.4 | 7.9 | 8 | 1.09 |
-| 260 | 47° | 0.12 (0.17) | medium | 56° | 10° | 7.5 | 3.2 | 14..18 | 2.2 | 21.9 | 18.0 | 11 | 0.87 |
+| 135 | 41° | 0.20 (0.20) | medium | 50° | 7° | 20.0 | 5.0 | 10..14 | 2.2 | 20.7 | 13.0 | 0 | 1.33 |
+| 140 | 42° | 0.30 (0.30) | medium | 43° | 7° | 8.0 | 6.0 | 10..13 | 1.8 | 38.8 | 10.2 | 0 | 1.04 |
+| 150 | 42° | 0.25 (0.25) | medium | 45° | 7° | 25.0 | 1.0 | 6..10 | 2.6 | 34.0 | 7.3 | 11 | 0.89 |
+| 160 | 40° | 0.18 (0.18) | medium | 42° | 7° | 14.0 | 4.5 | 9..12 | 1.4 | 61.7 | 9.3 | 0 | 2.14 |
+| 170 | 42° | 0.20 (0.20) | medium | 55° | 7° | 30.0 | 2.0 | 8..12 | 2.1 | 15.5 | 8.6 | 0 | 1.16 |
+| 185 | 43° | 0.20 (0.20) | medium | 45° | 6.5° | 18.0 | 7.0 | 12..16 | 1.2 | 48.4 | 15.9 | 0 | 1.09 |
+| 200 | 43° | 0.18 (0.18) | medium | 47° | 7° | 9.0 | 3.0 | 12..16 | 2.5 | 48.4 | 13.8 | 5 | 1.36 |
+| 200 | 42° | 0.20 (0.20) | medium | 48° | 6.5° | 22.0 | 0.5 | 12..16 | 1.7 | 51.8 | 13.4 | 0 | 0.95 |
+| 215 | 43° | 0.15 (0.16) | medium | 48° | 6.5° | 16.0 | 5.5 | 9..13 | 2.3 | 50.5 | 10.0 | 0 | 0.86 |
+| 230 | 44° | 0.15 (0.16) | medium | 54° | 6.5° | 13.0 | 1.8 | 13..17 | 1.5 | 32.0 | 14.1 | 0 | 0.91 |
+| 245 | 46° | 0.12 (0.15) | long | 56° | 6° | 7.0 | 2.8 | 14..20 | 2.6 | 27.8 | 14.6 | 0 | 1.15 |
+| 250 | 47° | 0.15 (0.16) | long | 57° | 6.5° | 10.0 | 3.2 | 15..21 | 2.2 | 23.2 | 17.6 | 0 | 0.51 |
 
 Each hill outside the game has its own gate position, flat part, takeoff height and best jump target (gate
-6.5..30 m, flat part 0.5..7 m, takeoff 1.2..2.6 m, targets from K+3..K+7 to K+14..K+18). All are within the
+7..25 m, flat part 0.8..3.5 m, takeoff 1.3..2.6 m, targets from K+4..K+7 to K+12..K+16). All are within the
 target and pass every rule, the simulation rules too (the stability test plays all of them); the nearest pair is
-0.46 apart. The second K120 hill has a short knoll: with a medium knoll it did not pass the rule of the spread from
-the wind. The large hills changed on 2026-10-22, when the simulation rules began to judge them: a short knoll above
-K120 threw the jumper too high (9.5 to 13.6 m) and a long one made the hill too sensitive to the wind (14 to 22% of
-K), so from K140 the knolls are medium but for two short ones (K185, K200); the hills from K230 have a steep
-landing hill (44..47°) and inrun (54..56°), like the original's K250, so that the outrun stops a jumper inside the
-scene. A second K260 (a short knoll) was dropped: it either flew too high or missed its target. The K245 target is
-6 m wide, because one frame of the takeoff moves its best jump by several metres.
+0.45 apart. The second K120 hill has a short knoll: with a medium knoll it did not pass the rule of the spread from
+the wind. The local comparison with the original's hills holds every hill of the set against the originals of a
+similar size, not only those in the game.
+
+The hills above K120 changed again on 2026-10-22, when that comparison found the first large hills outside the
+originals' range: with a takeoff of 8 to 11 degrees the jumper leaves the table more downwards, so the same
+distance took 97 to 108 km/h from K135 to K200 (72 to 104 km/h on the original's hills of the size), and from
+K245 up the jumps fell short of K. The original's hills from K110 up take off at 3 to 9 degrees and have steeper
+landing hills (0.56 to 0.69 of height per length to K from K135 to K185, against 0.48 to 0.59). Above K120 the
+set now takes off at 6 to 7 degrees, with landing hills of 40 to 47 degrees and medium knolls, and long knolls
+from K245, which keep the slope near the takeoff as gentle as on the original's K250 (15.5 m of drop in the first
+50 m, where a medium knoll drops 20 m and the jumper flies high above the slope). Landing hills steeper than about
+47 degrees throw the bots too far, and above K250 the scene has no room for an inrun fast enough, so the largest
+hill of the set is a K250 (a K260 and a K255 were tried: the K260 cannot be jumped to its K point, the K255 flies
+0.06 s longer than the originals allow). One K230 (a medium knoll, 45 degrees) was dropped: no variant of it
+reached the originals' range.
 
 A unit test generates the smallest hill of the set (with the simulation rules) and one too large for the scene (a
 report with a missed target and a landing area that gave way). The whole set with the simulation rules is
