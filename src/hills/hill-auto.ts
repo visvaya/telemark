@@ -36,7 +36,7 @@ interface TypicalRange {
 }
 
 /** The typical ranges of what the character sets. */
-export const TYPICAL_CHARACTER = {
+const TYPICAL_CHARACTER = {
   landingSteepnessDeg: { trendAtZero: 41.1178, trendPerMetreOfK: 0.019497, below: -4.8776, above: 4.535 },
   inrunSteepnessDeg: { trendAtZero: 46.42, trendPerMetreOfK: 0.030651, below: -5.8318, above: 4.0149 },
   takeoffAngleDeg: { trendAtZero: 5.7965, trendPerMetreOfK: 0.001992, below: -2.7555, above: 2.5653 },
