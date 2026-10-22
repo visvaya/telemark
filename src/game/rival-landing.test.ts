@@ -62,6 +62,10 @@ describe.runIf(hill)("the improved landing of a computer jumper", () => {
     const base = { left: false, right: true, dy: -1 };
     expect(rivalLandingInput("improved", base, flying(2.5, 0.6), pilot(), profile)).toEqual({ ...NONE, dy: -1 });
     expect(rivalLandingInput("original", base, flying(2.5, 0.6), pilot(), profile)).toBe(base);
+    // The same while the flight position is still held, before the first correction.
+    const held = flying(2.5, 0.6, PHASE.flightHold);
+    expect(rivalLandingInput("improved", base, held, pilot(), profile)).toEqual({ ...NONE, dy: -1 });
+    expect(rivalLandingInput("improved", NONE, flying(2.5, 0.48, PHASE.flightHold), pilot(), profile).right).toBe(true);
   });
 
   it("presses the landing button once the ground is nearer than the lead, or the jumper is low", () => {
@@ -83,7 +87,17 @@ describe.runIf(hill)("the improved landing of a computer jumper", () => {
     expect(rivalLandingInput("improved", base, flying(2.5, 0.6), pilot({ blunder: true }), profile)).toBe(base);
   });
 
-  it("makes jumps that are the same from the same seed, and that land later and fall less often than the original's", () => {
+  it("makes the same jump, with the same inputs, from the same seed", () => {
+    const record = { ...drawCpuTalents(2, new BorlandRandom(7)), form1: 0.1, form2: -0.1 };
+    for (const seed of [0x1234abcd, 0x9e3779b1, 0xdeadbeef]) {
+      expect(cpuCompetitionJump(hill, record, seed, "improved")).toEqual(
+        cpuCompetitionJump(hill, record, seed, "improved"),
+      );
+    }
+  });
+
+  // About 4 s alone; several times that beside the other test files under coverage.
+  it("makes jumps that land later and fall less often than the original's", { timeout: 60_000 }, () => {
     const rng = new BorlandRandom(4242);
     const records = [0, 1, 2, 3, 4].flatMap((level) =>
       Array.from({ length: 4 }, () => ({ ...drawCpuTalents(level, rng), ...drawCpuForm(rng) })),
@@ -100,7 +114,6 @@ describe.runIf(hill)("the improved landing of a computer jumper", () => {
         const seed = Math.imul(r * seeds.length + k, 0x9e3779b1) >>> 0;
         const a = cpuCompetitionJump(hill, record, seed, "original");
         const b = cpuCompetitionJump(hill, record, seed, "improved");
-        expect(cpuCompetitionJump(hill, record, seed, "improved")).toEqual(b);
         expect(b.start).toEqual(a.start);
         // A blundered jump is the original's in both; it falls nearly always.
         if (cpuJumpStart(hill, record, seed).pilot.blunder) {

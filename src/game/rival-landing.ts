@@ -53,7 +53,9 @@ function touchdownEstimateS(view: CpuPilotView, hill: HillProfile): number {
 /**
  * The input of a computer jumper in one frame under `landing`, from the input of the original's pilot (`input`)
  * and the pilot's state after it. Only the start of the landing in flight changes: the gate, the takeoff, the
- * flight position, the telemark and a blundered jump stay the original's.
+ * flight position, the telemark button during the landing and a blundered jump stay the original's. The pilot still
+ * runs its impact correction of the telemark delay when its own, earlier lead comes, and a telemark button it gives
+ * in flight before the landing has started is dropped.
  */
 export function rivalLandingInput(
   landing: RivalLanding,
