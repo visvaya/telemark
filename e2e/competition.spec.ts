@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { OWN_HILL_SPECS } from "../src/hills/own-hills";
+import { UI_TEXT } from "../src/text/ui-text";
 import {
   BUILT_IN_HILL_ID,
   button,
@@ -234,7 +235,8 @@ test("the hills of the setup and the double cup are remembered after the page is
   await expect(button(page, TEXT.contestStart)).toHaveAttribute("aria-disabled", "true");
   await expect(page.getByText("Zaznacz co najmniej jedną skocznię.")).toBeVisible();
   await press(button(page, "Zaznacz wszystkie"), traits);
-  await expect(page.getByText(`Puchar Świata: ${OWN_HILL_SPECS.length} konkursów`)).toBeVisible();
+  // The plural depends on the number of hills; its forms are checked in src/text/plural.test.ts.
+  await expect(page.getByText(UI_TEXT.competition.summary(OWN_HILL_SPECS.length), { exact: true })).toBeVisible();
   await press(button(page, "Wyczyść"), traits);
   await press(hillBox(page, OWN_HILL_SPECS[1]?.name ?? "?"), traits);
   await press(hillBox(page, OWN_HILL_SPECS[2]?.name ?? "?"), traits);

@@ -106,8 +106,11 @@ the format check.
   longer jumps need room;
 - `outrun-length`: from the end of the landing area to the lowest point of the outrun at least 30 m horizontally,
   for braking;
-- `outrun-within-scene`: the lowest point of the outrun at most at 380 m, because that is what the scene's layer
-  tables cover (`LAYER_TABLE_LENGTH_M` in `src/render/hill-layer-tables.ts`);
+- `outrun-within-scene`: the lowest point of the outrun at most at 455 m, so that the longest scene of an own hill
+  (480 m) still holds a jumper's coast up the outrun past it (about 25 m). The scene of an own hill reaches as far
+  past the outrun's lowest point as that coast, and at least the original's 380 m (`sceneLengthOf` in
+  `src/render/hill-layer-tables.ts`); the original's hills keep the original's 380 m (`LAYER_TABLE_LENGTH_M`),
+  since some of them have the outrun's lowest point past it and their scene stays as the original draws it;
 - `inrun-descends`, `landing-descends`: the inrun descends from the start to the takeoff, and the landing hill from
   the takeoff to the lowest point of the outrun (samples every 0.1 m; a sample may lie at most 1 mm higher than
   the previous one, because near the bottom of a gentle outrun neighbouring heights differ by less than single
@@ -129,9 +132,8 @@ problems have no level, because by nature they are admission problems):
   - `takeoff-angle`: the original's hills have takeoffs far outside this range and jump well;
   - `landing-area-length`: whether a good player jumps beyond the landing area is checked by the simulation;
   - `outrun-length`: whether the jumper stops within the scene is checked by the simulation;
-  - `outrun-within-scene`: the scene is drawn up to 380 m, but what counts is that the jumper stops before its
-    end, which the simulation checks; the lowest point of the outrun may lie farther (as on two of the original's
-    hills);
+  - `outrun-within-scene`: what counts is that the jumper stops before the scene's end, which the simulation
+    checks; the lowest point of the outrun of two of the original's hills lies past their 380 m scene;
   - `k-near-steepest`, `landing-angle-at-k`: whether a good player lands near K is checked by the simulation.
 
 `geometryProblems` returns the problems of both levels, `admissionProblems` only the admission ones. The tests of
@@ -411,7 +413,8 @@ Rules:
   the family of the original's hills (below);
 - `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
   numbers;
-- `stress-within-scene`: each of them stops before 380 m, where the scene ends;
+- `stress-within-scene`: each of them stops before the hill's scene ends (`sceneLengthOf`: 380 m on every hill up to
+  K250, longer on a ski flying hill whose outrun lies further);
 - `stress-below-terrain`: the jumper's point goes at most 0.5 m below the terrain (0 m was measured on the
   Ćwiczebna hill).
 
@@ -567,18 +570,22 @@ of a future hill editor for players. Twenty hills of the set are in the game: te
 since 2026-10-17) and nine from K135 to K245 (`own-24` to `own-32`, since the checks judge hills of every size). Each
 has its own gate position, flat part, takeoff height, inrun steepness and best jump target (the earlier `own-4` to
 `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers replaced
-them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed (2 to 20 in
-the order of the identifiers; `own-hills.test.ts` checks that no two own hills share the colours of the walls, the
-gate and the fences, the terrain or the trees, since the likeness check compares profiles only, and that hills
-next to each other on the hill list, one after the other or two apart, have inrun walls of different colours, the
-largest patch of colour in the view; the sky and the other colours may repeat), and
+them, and the old ones are retired). Three ski flying hills are made from their size alone (section "Hills from
+their size alone"): `own-33` Lodowiec K265, `own-34` Grzmot K285 and `own-35` Olbrzym K300, from
+`generateHillOfSize(K, seed)` with seeds 21 to 23, each with a scene longer than the original's (412 to 479 m).
+The hills up to K120 are in `own-hills.ts`, the larger ones in `own-hills-large.ts`. Their data is copied there with
+its own scenery seed (2 to 23 in the order of the identifiers; `own-hills.test.ts` checks that no two own hills
+share the colours of the walls, the gate and the fences, the terrain or the trees, since the likeness check
+compares profiles only, and that hills next to each other on the hill list, one after the other or two apart, have
+inrun walls of different colours, the largest patch of colour in the view; the sky and the other colours may
+repeat), and
 `SET_HILLS_IN_GAME` (`src/hills/test-support/generated-hills.ts`) binds the characters of the set to these
 hills. The set takes them as they are in the game (`keptHill`: a measurement of the best jump and the same checks
 as when generating, without the search), instead of generating them anew, because a later change of the
 construction must not change a hill the game already has (records and replays belong to the fingerprint; the
 fingerprints are pinned by `hill-fingerprint.test.ts`). In the similarity check they count like the other hills
-of the set. The larger hills of the set wait for a bot that plays reliably on them. The way into the game is the
-same as for every own hill (section "Adding a hill": data into `own-hills.ts`, a new `id`, checks, snapshot,
+of the set. The way into the game is the same as for every own hill (section "Adding a hill": data into
+`own-hills.ts` or `own-hills-large.ts`, a new `id`, checks, snapshot,
 acceptance on a device).
 
 ### Hill character
@@ -688,6 +695,61 @@ The style rules are targets: the report lists those missed. On 200 random charac
 ms for the first two, and in a median 1.4 s for the third (one to fourteen oracle runs), never by the format or
 an admission rule after the search.
 
+### Hills from their size alone
+
+`generateHillOfSize(kPointM, seed)` (`src/hills/hill-auto.ts`) makes a hill from its K point alone, with no hand
+tuning: it draws a character from what is typical of the original's hills of that size, and generates it with
+every check of `generateHill`.
+
+- **Typical ranges.** Every value of the original's 37 hills follows a linear trend over K: larger hills have
+  steeper landing hills (42 degrees at K50, 46 at K250 on the trend) and inruns (48 and 54), a slightly larger
+  table, and a landing hill that falls away less right under the takeoff. The typical range of a value is the
+  middle 80% of the originals around its trend (from the tenth to the ninetieth percentile of how far they lie from
+  it), measured 2026-10-22 (`TYPICAL_CHARACTER`, `TYPICAL_FALL`). The generator aims for typical hills; the play
+  rules admit the whole family (`hill-family.ts`).
+- **The draw.** The landing hill's and the inrun's steepness, the takeoff angle and the table height are drawn
+  evenly from their typical ranges at the hill's K; the knoll and the sky at random; the landing area from 0.15 to
+  0.3 of K past K (more on a small hill, so that the target fits); the gate from 6 m up to 30 m on a K45 and 0.12 m
+  nearer per metre of K (a large hill needs the scene for its inrun and landing hill); the target of the best jump
+  in calm from 4 to 9% of K past K (around the original's best jumps, 7 to 8% of K on the trend).
+- **The landing hill as a jumper meets it.** Before any jump, the drop under the takeoff at a tenth, a quarter,
+  half and three quarters of K, and the height of the K point over its distance (h/n), must lie in their typical
+  ranges at the hill's K (`landingFallOf`, `isTypicalFall`; about 15 ms a character). Measured on the 57 hills of
+  the original and the game, the flight height grows with the drop at a quarter of K (correlation 0.49) and the
+  takeoff speed falls with h/n (-0.87) and with the landing hill's steepness (-0.86): a typical fall keeps both
+  typical. A character whose landing area would have to give way to K is drawn again instead of searched for.
+  Without this check (the values drawn from the originals' full ranges) 19 of 60 characters made a hill that passes
+  every rule; with it 11 of 16 played.
+- **The farthest of several.** Eight typical characters are drawn for each attempt, and the one farthest from every
+  hill already there (the catalog and `others`) is generated: by the likeness distance without the inrun's drop,
+  which the search sets later (`shapeDistance` with `withInrun: false`; the whole distance is never less). Hills
+  spread over the room the rules leave, and one too alike to another is refused only where little room is left.
+  A hill's shape is measured once (`hillShape` remembers it by the hill's object), so a large catalog does not
+  slow the likeness check of every new hill.
+- **A longer scene for ski flying hills.** The generator builds a hill in the original's scene first (the outrun's
+  lowest point 25 m before 380 m), so a hill it holds is built as it always was. When the landing hill and the
+  outrun leave no room there, or the longest inrun there cannot bring the best jump into its target, it builds the
+  hill again in the longest scene of an own hill (480 m), whose layer tables reach as far as the outrun needs.
+  Measured 2026-10-22: two seeds of each of K260, K280 and K300 made hills that pass every rule, with scenes of
+  412 to 479 m, in 17 to 67 s each; on a large hill the gate stands at least 2.4% of K from the scene's start, so
+  the deck behind it keeps the look rules' share of K.
+- **Drawn again.** A character the generator refuses (an unreachable target, a play rule, a hill too alike to
+  another) is drawn again from the next attempt's seed, up to 30 times. The same size, seed and options make the
+  same hill.
+
+Capacity [measured 2026-10-22, local, without the bots' evaluation]: hills of random sizes from K45 to K250 added
+one by one, each at least `LIKENESS.tooAlike` from the 37 original hills, the own hills and every one added before.
+Drawing one character at a time, 553 of 817 tries were taken, and the share refused as too alike grew about
+linearly with the hills taken (5% at about 40, 45% at about 520), which puts the room at roughly 1900 to 3200
+hills [estimate], 1300 to 2200 after the play rules. With the farthest of eight candidates, 297 of 300 were taken
+with none refused as too alike, in a median 3.8 s each; the three missed were K245 to K249, where the scene
+leaves no inrun fast enough (`generator.target-unreachable` and `generator.no-room`).
+
+Measured 2026-10-22 on two seeds of each of K45, K70, K95, K120, K150, K180, K210 and K240: every one made a hill
+that passes every rule; 11 of the 16 with the first character drawn, the others after 1 to 4 refused ones (most
+of them above K200: a target the scene leaves no inrun for, or a flight too high); 5 to 52 s a hill (median about
+11 s) on a slow laptop, most of it the bots' evaluation.
+
 ### Generated set
 
 `src/hills/test-support/generated-hills.ts`: a fixed list of 24 characters from K45 to K245 (a little below the
@@ -757,7 +819,8 @@ generated by the stability test (`corepack pnpm test:hills-stability`).
 
 ## Adding a hill
 
-1. Copy the data of an existing hill in `src/hills/own-hills.ts`, give it a new `id` and name, change the numbers.
+1. Copy the data of an existing hill in `src/hills/own-hills.ts` (up to K120) or `src/hills/own-hills-large.ts`
+   (larger), give it a new `id` and name, change the numbers.
 2. `corepack pnpm test src/hills`: format, geometry rules, simulation checks and fingerprint (add the new
    fingerprint to the table in the test); then `corepack pnpm test:hills-stability`: the same verdict on disjoint
    samples.

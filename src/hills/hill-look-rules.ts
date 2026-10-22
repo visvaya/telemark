@@ -8,7 +8,7 @@ import type { HillProblem, HillRuleLevel, HillSpec } from "./hill-spec";
  * more than 1 m before the takeoff, as the original's usually is, and a deck of at most 0.10 of K (0.147 looked
  * too long). The generator keeps inside all of them.
  */
-const HILL_LOOK_RULES = {
+export const HILL_LOOK_RULES = {
   /** A hundredth of a metre: lengths of the look are kept to two decimals. */
   slackM: 0.005,
   lastSupportBeforeTakeoffMaxM: 3.5,

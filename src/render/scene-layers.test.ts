@@ -72,8 +72,9 @@ describe("lines across the landing hill", () => {
       // The K point's line, where the original draws it: 0.15 m past the K point.
       const distanceM = hill.kPointM + 0.15;
       const x = landingXAtArcLength(h, h.takeoffXM, distanceM, 1);
-      // The original's walk in 1 m steps drifts from the fine arc as it goes: 0.075 m at K170.
-      expect(Math.abs(landingArcLengthM(h, h.takeoffXM, x, 0.01) - distanceM)).toBeLessThan(0.1);
+      // The original's walk in 1 m steps drifts from the fine arc as it goes: 0.075 m at K170, 0.1 m at K300.
+      const driftMaxM = Math.max(0.1, 0.0005 * hill.kPointM);
+      expect(Math.abs(landingArcLengthM(h, h.takeoffXM, x, 0.01) - distanceM)).toBeLessThan(driftMaxM);
     },
   );
 });

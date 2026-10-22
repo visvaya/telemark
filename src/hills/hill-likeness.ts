@@ -60,6 +60,21 @@ const builtOf = (hill: HillSpec | BuiltHill): BuiltHill =>
  * landing area rather than at fixed metres, and its drops are divided by K, so hills of different sizes compare.
  */
 export function hillShape(hill: HillSpec | BuiltHill): HillShape {
+  const known = shapes.get(hill);
+  if (known !== undefined) return known;
+  const shape = measureShape(hill);
+  shapes.set(hill, shape);
+  return shape;
+}
+
+/**
+ * Shapes already measured, by the hill's object: a hill's data is not changed once made (a new hill is a new
+ * object), and one shape takes a walk along the whole profile, which the generator would repeat for every hill of
+ * its catalog at every hill it makes.
+ */
+const shapes = new WeakMap<HillSpec | BuiltHill, HillShape>();
+
+function measureShape(hill: HillSpec | BuiltHill): HillShape {
   const { kPointM, profile } = builtOf(hill);
   const g = hillGeometry(profile, kPointM);
   const takeoffY = inrunYM(profile, profile.takeoffXM);
@@ -91,8 +106,15 @@ export const NEVER_ALIKE_K_GAP_M = LIKENESS.tooAlike * Math.sqrt(COMPONENT_COUNT
  * its number of points. Zero for the same hill, symmetric, and never negative.
  */
 export function hillDistance(a: HillSpec | BuiltHill, b: HillSpec | BuiltHill): number {
-  const x = hillShape(a);
-  const y = hillShape(b);
+  return shapeDistance(hillShape(a), hillShape(b));
+}
+
+/**
+ * The likeness distance of two shapes (`hillDistance` of the hills they come from). Without the inrun's drop, it is
+ * the distance less that one component: never more than the whole distance, and known before the generator's
+ * search sets the inrun, so a hill it already puts beyond `LIKENESS.tooAlike` is no copy whatever the inrun.
+ */
+export function shapeDistance(x: HillShape, y: HillShape, { withInrun = true } = {}): number {
   const s = LIKENESS_SCALES;
   const drops = Math.sqrt(
     x.landingDropShareOfK.reduce((sum, v, i) => sum + (v - (y.landingDropShareOfK[i] ?? 0)) ** 2, 0) /
@@ -102,7 +124,7 @@ export function hillDistance(a: HillSpec | BuiltHill, b: HillSpec | BuiltHill): 
     (x.kPointM - y.kPointM) / s.kPointM,
     drops / s.landingDropShareOfK,
     (x.landingSpanShareOfK - y.landingSpanShareOfK) / s.landingSpanShareOfK,
-    (x.inrunDropM - y.inrunDropM) / s.inrunDropM,
+    withInrun ? (x.inrunDropM - y.inrunDropM) / s.inrunDropM : 0,
     (x.takeoffAngleDeg - y.takeoffAngleDeg) / s.takeoffAngleDeg,
     (x.tableHeightM - y.tableHeightM) / s.tableHeightM,
   ];

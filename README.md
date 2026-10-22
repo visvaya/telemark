@@ -12,7 +12,7 @@ Telemark is a working title.
 
 As of 2026-10-22: in active development.
 
-- Playable: training mode on 20 built-in hills (K50 to K245) and on the 37 original hills, a replay of the last jump
+- Playable: training mode on 23 built-in hills (K50 to K300) and on the 37 original hills, a replay of the last jump
   (pause, half and quarter speed), the original's `.rpl` replays from your own copy of the game, and competitions
   of two rounds against up to eight computer jumpers with the original's levels and steering (or, as an option, the
   same jumpers landing later and falling less often): one hill, or a World Cup over several hills (also the
@@ -28,7 +28,7 @@ As of 2026-10-22: in active development.
 ## Features
 
 - Jump physics, wind, landing and judges' notes identical to DSJ2 v2.10P (deterministic on every device).
-- 20 built-in hills, from K50 to ski flying hills of K245; the 37 hills of the original become available when you load `Dsj.exe` from your own copy
+- 23 built-in hills, from K50 to ski flying hills of K300; the 37 hills of the original become available when you load `Dsj.exe` from your own copy
   of the game. The file is read in the browser and kept only there; nothing from the original is distributed.
 - Mouse, keyboard and touch controls; on phones tilt steering by default, with the finger as the fallback and the
   choice; haptics where supported.

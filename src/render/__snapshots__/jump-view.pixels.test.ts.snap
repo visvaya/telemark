@@ -1602,3 +1602,168 @@ exports[`jump view pixels of every own hill > own-32: jump with a telemark landi
   },
 }
 `;
+
+exports[`jump view pixels of every own hill > own-33: jump with a telemark landing 1`] = `
+{
+  "after the jump, notes and record shown": {
+    "day, clear, 356 px, mouse": "f6293fd9",
+    "dusk, clear, 356 px, mouse": "20616080",
+    "night, clear, 356 px, mouse": "cf5009da",
+  },
+  "after the jump, record line blinked off": {
+    "day, clear, 356 px, mouse": "f6293fd9",
+    "dusk, clear, 356 px, mouse": "20616080",
+    "night, clear, 356 px, mouse": "cf5009da",
+  },
+  "distance shown, notes appearing": {
+    "day, clear, 356 px, mouse": "a3fe0438",
+    "dusk, clear, 356 px, mouse": "ad1f5b6b",
+    "night, clear, 356 px, mouse": "6fecc58a",
+  },
+  "flight": {
+    "day, clear, 356 px, mouse": "21efd876",
+    "dusk, clear, 356 px, mouse": "ae85aae",
+    "night, clear, 356 px, mouse": "5f0bc01f",
+  },
+  "inrun": {
+    "day, clear, 356 px, mouse": "97ab112a",
+    "dusk, clear, 356 px, mouse": "7102bfe9",
+    "night, clear, 356 px, mouse": "98ad944",
+  },
+  "landing": {
+    "day, clear, 356 px, mouse": "ff63b587",
+    "dusk, clear, 356 px, mouse": "db824d18",
+    "night, clear, 356 px, mouse": "ab0326f4",
+  },
+  "outrun": {
+    "day, clear, 356 px, mouse": "381a79b5",
+    "dusk, clear, 356 px, mouse": "d2bf6009",
+    "night, clear, 356 px, mouse": "9affe43d",
+  },
+  "start gate, half a second in": {
+    "day, clear, 356 px, mouse": "e63f4582",
+    "dusk, clear, 356 px, mouse": "47d2374e",
+    "night, clear, 356 px, mouse": "bf42b0f9",
+  },
+  "takeoff": {
+    "day, clear, 356 px, mouse": "fba58fee",
+    "dusk, clear, 356 px, mouse": "ce4a0883",
+    "night, clear, 356 px, mouse": "c1729658",
+  },
+  "waiting on the start gate": {
+    "day, clear, 356 px, mouse": "e143254e",
+    "dusk, clear, 356 px, mouse": "1427984e",
+    "night, clear, 356 px, mouse": "7e943e59",
+  },
+}
+`;
+
+exports[`jump view pixels of every own hill > own-34: jump with a telemark landing 1`] = `
+{
+  "after the jump, notes and record shown": {
+    "day, clear, 356 px, mouse": "69cbe005",
+    "dusk, clear, 356 px, mouse": "d68e3e18",
+    "night, clear, 356 px, mouse": "e0d98db0",
+  },
+  "after the jump, record line blinked off": {
+    "day, clear, 356 px, mouse": "62d4dff4",
+    "dusk, clear, 356 px, mouse": "192f4a7a",
+    "night, clear, 356 px, mouse": "b1465996",
+  },
+  "distance shown, notes appearing": {
+    "day, clear, 356 px, mouse": "5bef816e",
+    "dusk, clear, 356 px, mouse": "e9ffd4c1",
+    "night, clear, 356 px, mouse": "4138ca03",
+  },
+  "flight": {
+    "day, clear, 356 px, mouse": "a35a5ab7",
+    "dusk, clear, 356 px, mouse": "793fa630",
+    "night, clear, 356 px, mouse": "e22a6d28",
+  },
+  "inrun": {
+    "day, clear, 356 px, mouse": "37d2d907",
+    "dusk, clear, 356 px, mouse": "91d3e576",
+    "night, clear, 356 px, mouse": "c1d6e1bc",
+  },
+  "landing": {
+    "day, clear, 356 px, mouse": "479fd5e3",
+    "dusk, clear, 356 px, mouse": "ffc00a1",
+    "night, clear, 356 px, mouse": "15465a52",
+  },
+  "outrun": {
+    "day, clear, 356 px, mouse": "32809f91",
+    "dusk, clear, 356 px, mouse": "c21b3a",
+    "night, clear, 356 px, mouse": "780504f9",
+  },
+  "start gate, half a second in": {
+    "day, clear, 356 px, mouse": "2287cf17",
+    "dusk, clear, 356 px, mouse": "5477553",
+    "night, clear, 356 px, mouse": "efee5bc4",
+  },
+  "takeoff": {
+    "day, clear, 356 px, mouse": "ed865f0c",
+    "dusk, clear, 356 px, mouse": "87cde105",
+    "night, clear, 356 px, mouse": "c550ad5e",
+  },
+  "waiting on the start gate": {
+    "day, clear, 356 px, mouse": "6ea9c375",
+    "dusk, clear, 356 px, mouse": "16b40038",
+    "night, clear, 356 px, mouse": "ffb3dfe4",
+  },
+}
+`;
+
+exports[`jump view pixels of every own hill > own-35: jump with a telemark landing 1`] = `
+{
+  "after the jump, notes and record shown": {
+    "day, clear, 356 px, mouse": "3385867a",
+    "dusk, clear, 356 px, mouse": "9a053041",
+    "night, clear, 356 px, mouse": "38d3ea2c",
+  },
+  "after the jump, record line blinked off": {
+    "day, clear, 356 px, mouse": "5bf66ea1",
+    "dusk, clear, 356 px, mouse": "276ea24",
+    "night, clear, 356 px, mouse": "fe14d8c",
+  },
+  "distance shown, notes appearing": {
+    "day, clear, 356 px, mouse": "dfa2e5d4",
+    "dusk, clear, 356 px, mouse": "9355ea7",
+    "night, clear, 356 px, mouse": "5d4be4ba",
+  },
+  "flight": {
+    "day, clear, 356 px, mouse": "df55a370",
+    "dusk, clear, 356 px, mouse": "fff54f11",
+    "night, clear, 356 px, mouse": "d8389813",
+  },
+  "inrun": {
+    "day, clear, 356 px, mouse": "d038e7da",
+    "dusk, clear, 356 px, mouse": "c6772368",
+    "night, clear, 356 px, mouse": "1490cb9e",
+  },
+  "landing": {
+    "day, clear, 356 px, mouse": "1a69f00c",
+    "dusk, clear, 356 px, mouse": "b86b5baf",
+    "night, clear, 356 px, mouse": "65823630",
+  },
+  "outrun": {
+    "day, clear, 356 px, mouse": "41dc7d25",
+    "dusk, clear, 356 px, mouse": "2a95dab0",
+    "night, clear, 356 px, mouse": "8bddb8eb",
+  },
+  "start gate, half a second in": {
+    "day, clear, 356 px, mouse": "69cfb854",
+    "dusk, clear, 356 px, mouse": "3b61f65e",
+    "night, clear, 356 px, mouse": "8c1b69e9",
+  },
+  "takeoff": {
+    "day, clear, 356 px, mouse": "22b2df5b",
+    "dusk, clear, 356 px, mouse": "6f8e4af4",
+    "night, clear, 356 px, mouse": "44980eb6",
+  },
+  "waiting on the start gate": {
+    "day, clear, 356 px, mouse": "d4314750",
+    "dusk, clear, 356 px, mouse": "9d2ffba",
+    "night, clear, 356 px, mouse": "d47680b1",
+  },
+}
+`;

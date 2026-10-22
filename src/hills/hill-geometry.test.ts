@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LAYER_TABLE_LENGTH_M } from "../render/hill-layer-tables";
+import { SCENE_LENGTH_MAX_M, SCENE_PAST_OUTRUN_LOWEST_M } from "../render/hill-layer-tables";
 import { buildHillProfile } from "../sim/hill-setup";
 import {
   admissionProblems,
@@ -42,8 +42,8 @@ describe("hill geometry", () => {
     expect(g.joins.landingToOutrun.slopeDeg).toBeLessThan(1e-3);
   });
 
-  it("keeps the scenery's length as the limit of the outrun", () => {
-    expect(HILL_RULES.outrunLowestMaxXM).toBe(LAYER_TABLE_LENGTH_M);
+  it("keeps the outrun's lowest point within the longest scene of an own hill, with room to coast", () => {
+    expect(HILL_RULES.outrunLowestMaxXM).toBe(SCENE_LENGTH_MAX_M - SCENE_PAST_OUTRUN_LOWEST_M);
   });
 
   it.each([
@@ -53,7 +53,7 @@ describe("hill geometry", () => {
     ["geometry.k-near-steepest", variant({ kPointM: 103 })],
     ["geometry.landing-area-length", variant({ kPointM: 80 })],
     ["geometry.outrun-length", variant({ landing: { outrunCurveA: 0.03 } })],
-    ["geometry.outrun-within-scene", variant({ landing: { outrunCurveA: 0.0007 } })],
+    ["geometry.outrun-within-scene", variant({ landing: { outrunCurveA: 0.0004 } })],
   ])("reports %s alone for a hill that breaks only that rule", (rule, spec) => {
     expect(rulesOf(spec)).toEqual([rule]);
   });

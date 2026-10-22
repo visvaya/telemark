@@ -1,4 +1,4 @@
-import { LAYER_TABLE_LENGTH_M } from "../render/hill-layer-tables";
+import { SCENE_LENGTH_MAX_M, SCENE_PAST_OUTRUN_LOWEST_M } from "../render/hill-layer-tables";
 import { inrunSlope, inrunYM, landingArcLengthM, landingSlope, landingYM, type HillProfile } from "../sim/hill-profile";
 import { buildHillProfile } from "../sim/hill-setup";
 import type { HillProblem, HillRuleLevel, HillSpec } from "./hill-spec";
@@ -30,8 +30,11 @@ export const HILL_RULES = {
   landingAreaPastKMinShare: 0.1,
   landingAreaPastKMaxShare: 0.4,
   outrunFlatMinM: 30,
-  /** The scenery is drawn over this much of the hill. */
-  outrunLowestMaxXM: LAYER_TABLE_LENGTH_M,
+  /**
+   * The scenery of an own hill is drawn at most this far, a jumper's coast up the outrun past its lowest point
+   * included (the original's hills keep the original's 380 m).
+   */
+  outrunLowestMaxXM: SCENE_LENGTH_MAX_M - SCENE_PAST_OUTRUN_LOWEST_M,
 } as const;
 
 /** How far the K point may lie from the steepest point of the landing hill, horizontally, on a hill of this K. */

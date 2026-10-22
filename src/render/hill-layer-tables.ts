@@ -12,11 +12,48 @@ import { LAYER_SCALE, layerRows, layerX } from "./scene-layers";
 const MARGIN_INDICES = 480;
 /** Metres of the hill the original's tables cover: past it a hill has no scenery drawn under it. */
 export const LAYER_TABLE_LENGTH_M = 380;
+/**
+ * The longest scene of an own hill: a ski flying hill up to the format's K300 has its outrun's lowest point near
+ * 430 m, and a jumper coasts up to about 25 m past it.
+ */
+export const SCENE_LENGTH_MAX_M = 480;
+/** A jumper coasts this far up the outrun past its lowest point before stopping (15 to 23 m measured, K135 to K260). */
+export const SCENE_PAST_OUTRUN_LOWEST_M = 25;
 /** Columns per metre of the jumper's plane in the original's screen units. */
 const TABLE_PX_PER_M = 14;
-/** Length of the original's tables in the jumper's plane: 5320 = 380 m at 14 px/m, plus 321 entries. */
-const TABLE_LENGTH_PX = LAYER_TABLE_LENGTH_M * TABLE_PX_PER_M;
+/** The original's tables have 321 entries past 380 m at 14 px/m (5320 entries). */
 const TABLE_EXTRA_ENTRIES = 0x141;
+
+/** The lowest point of the outrun: the vertex of its parabola, or its start when that already rises. */
+const outrunLowestXM = (h: HillProfile): number =>
+  Math.max(h.outrunStartXM, h.outrunCurveA > 0 ? -h.outrunCurveB / (2 * h.outrunCurveA) : h.outrunStartXM);
+
+/**
+ * How long the scene of an own hill is: the original's 380 m, or as far past the outrun's lowest point as a jumper
+ * coasts, whichever is longer, at most `SCENE_LENGTH_MAX_M`. The original's hills keep the original's 380 m (some
+ * of them have the outrun's lowest point past it, and their scene stays as the original draws it).
+ */
+export function sceneLengthOf(h: HillProfile): number {
+  return Math.min(
+    SCENE_LENGTH_MAX_M,
+    Math.max(LAYER_TABLE_LENGTH_M, Math.ceil(outrunLowestXM(h) + SCENE_PAST_OUTRUN_LOWEST_M)),
+  );
+}
+
+/** Profiles of own hills, whose scene is as long as `sceneLengthOf` says; every other profile has the original's. */
+const ownProfiles = new WeakSet<HillProfile>();
+
+/**
+ * Marks a profile as an own hill's, before its scene is first drawn: its layer tables then reach as far as its
+ * outrun needs (`sceneLengthOf`). The original's hills are never marked, so they keep the original's tables.
+ */
+export function markOwnHillProfile(h: HillProfile): void {
+  ownProfiles.add(h);
+}
+
+/** The length of the scene drawn for this profile. */
+export const drawnSceneLengthOf = (h: HillProfile): number =>
+  ownProfiles.has(h) ? sceneLengthOf(h) : LAYER_TABLE_LENGTH_M;
 
 /** Indices are computed in chunks of this many, when a frame first needs them. */
 const CHUNK_SHIFT = 6;
@@ -93,10 +130,13 @@ export function colourSource(j: number, every: number): number {
   return every * Math.floor(j / every) + 1;
 }
 
-/** The range of indices of a layer's table: the original's (round(5320 p) + 321 entries) and a margin each side. */
-export function tableRange(layer: number): [number, number] {
+/**
+ * The range of indices of a layer's table: the original's (round(5320 p) + 321 entries for 380 m) and a margin
+ * each side, over a scene of `lengthM`.
+ */
+export function tableRange(layer: number, lengthM: number = LAYER_TABLE_LENGTH_M): [number, number] {
   const p = LAYER_SCALE[layer] ?? 1;
-  return [1 - MARGIN_INDICES, Math.round(TABLE_LENGTH_PX * p) + TABLE_EXTRA_ENTRIES + MARGIN_INDICES];
+  return [1 - MARGIN_INDICES, Math.round(lengthM * TABLE_PX_PER_M * p) + TABLE_EXTRA_ENTRIES + MARGIN_INDICES];
 }
 
 function buildTable(
@@ -108,7 +148,7 @@ function buildTable(
   base: number,
   every: number,
 ): LayerTable {
-  const [first, last] = tableRange(layer);
+  const [first, last] = tableRange(layer, drawnSceneLengthOf(h));
   return lazyTable(
     first,
     last,

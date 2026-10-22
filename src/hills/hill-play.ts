@@ -1,5 +1,5 @@
 import type { HillChoice } from "../game/hill-choice";
-import { LAYER_TABLE_LENGTH_M } from "../render/hill-layer-tables";
+import { sceneLengthOf } from "../render/hill-layer-tables";
 import { buildHillProfile } from "../sim/hill-setup";
 import { FAMILY_BANDS, outsideFamily } from "./hill-family";
 import { hillGeometry } from "./hill-geometry";
@@ -58,8 +58,6 @@ export const PLAY_RULES = {
    * wind class of the sample (the class whose best jump goes furthest).
    */
   bestPastLandingAreaMaxM: 5,
-  /** The scenery ends here; every designed and random jump must stop before it. */
-  finalXMaxM: LAYER_TABLE_LENGTH_M,
   /**
    * How deep the jumper's point may go below the terrain in a designed or random jump. Measured 0 m on the
    * training hill over 316 random jumps; 0.5 m leaves room for rounding on another profile while still catching a
@@ -379,7 +377,10 @@ const problem = (rule: string, message: string): HillProblem => ({ rule: `play.$
 export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProblem[] {
   const r = PLAY_RULES;
   const k = spec.kPointM;
-  const { landingAreaEndM } = hillGeometry(buildHillProfile(spec.profile.inrun, spec.profile.landing), k);
+  const profile = buildHillProfile(spec.profile.inrun, spec.profile.landing);
+  const { landingAreaEndM } = hillGeometry(profile, k);
+  // An own hill's scene reaches past its outrun's lowest point; every designed and random jump stops inside it.
+  const sceneEndXM = sceneLengthOf(profile);
   const checks: readonly [boolean, string, string][] = [
     [
       !(m.windowMedianFrames >= r.windowMinFrames),
@@ -433,9 +434,9 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
       `jumps that produced a number that is not finite: ${m.stressNotFinite.join(", ")}`,
     ],
     [
-      !(m.stressFinalXMaxM <= r.finalXMaxM),
+      !(m.stressFinalXMaxM <= sceneEndXM),
       "stress-within-scene",
-      `jump ${m.stressFinalXMaxName} stopped at ${m.stressFinalXMaxM} m`,
+      `jump ${m.stressFinalXMaxName} stopped at ${m.stressFinalXMaxM} m, past the scene's end at ${sceneEndXM} m`,
     ],
     [
       !(m.stressBelowTerrainMaxM <= r.belowTerrainMaxM),
