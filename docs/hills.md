@@ -543,11 +543,12 @@ the K point; on `own-3` it lands a few metres beyond it, as on hills of a simila
 
 `generateHill(character, seed)` (`src/hills/hill-generator.ts`) makes a hill from a few values a person can
 understand instead of fourteen profile numbers. It serves the player training and the tests; it is also the basis
-of a future hill editor for players. Ten hills of the set up to K120 are in the game (`own-14` to `own-23`, each
-with a different gate position, flat part, takeoff height, inrun steepness and best jump target; the earlier
-`own-4` to `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers
-replaced them, and the old ones are retired): their data is copied into `own-hills.ts` with its own scenery seed,
-and `SET_HILLS_IN_GAME` (`src/hills/test-support/generated-hills.ts`) binds the characters of the set to these
+of a future hill editor for players. Twenty hills of the set are in the game: ten up to K120 (`own-14` to `own-23`,
+since 2026-10-17) and ten from K135 to K260 (`own-24` to `own-33`, since the checks judge hills of every size). Each
+has its own gate position, flat part, takeoff height, inrun steepness and best jump target (the earlier `own-4` to
+`own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers replaced
+them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed, and
+`SET_HILLS_IN_GAME` (`src/hills/test-support/generated-hills.ts`) binds the characters of the set to these
 hills. The set takes them as they are in the game (`keptHill`: a measurement of the best jump and the same checks
 as when generating, without the search), instead of generating them anew, because a later change of the
 construction must not change a hill the game already has (records and replays belong to the fingerprint; the

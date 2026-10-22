@@ -376,6 +376,16 @@ export const SET_HILLS_IN_GAME: Readonly<Record<string, string>> = {
   "gen-k105-02bb6273-day1": "own-21",
   "gen-k115-00c9ea20-dusk1": "own-22",
   "gen-k120-20cb1b3a-winter1": "own-23",
+  "gen-k135-cec0a457-winter1": "own-24",
+  "gen-k140-b9b5790a-dusk1": "own-25",
+  "gen-k160-24cd8313-winter1": "own-26",
+  "gen-k170-95a78a72-dusk1": "own-27",
+  "gen-k185-b33d8b9a-day1": "own-28",
+  "gen-k200-ed35516e-winter1": "own-29",
+  "gen-k215-0157f36b-dusk1": "own-30",
+  "gen-k230-5678d710-day1": "own-31",
+  "gen-k245-39579f37-dusk1": "own-32",
+  "gen-k260-c245713b-winter1": "own-33",
 };
 
 /** The own hill a character of the set is taken as (`SET_HILLS_IN_GAME`); undefined for one the generator makes. */
