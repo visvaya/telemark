@@ -11,6 +11,7 @@ import {
   type LandingFall,
 } from "./hill-generator";
 import { hillShape, NEVER_ALIKE_K_GAP_M, shapeDistance } from "./hill-likeness";
+import { geometryProblems, HILL_RULES } from "./hill-geometry";
 import { HILL_LOOK_RULES } from "./hill-look-rules";
 import type { HillProblem, HillSpec } from "./hill-spec";
 import { OWN_HILL_SPECS } from "./own-hills";
@@ -106,9 +107,14 @@ const trendOf = (r: TypicalRange, kPointM: number): number => r.trendAtZero + r.
 const round = (v: number, decimals: number): number => Number(v.toFixed(decimals));
 
 /** A value drawn evenly from the typical range at this K. */
-function drawTypical(rng: BorlandRandom, r: TypicalRange, kPointM: number): number {
-  const lo = trendOf(r, kPointM) + r.below;
-  const hi = trendOf(r, kPointM) + r.above;
+function drawTypical(
+  rng: BorlandRandom,
+  r: TypicalRange,
+  kPointM: number,
+  within: { min: number; max: number } = { min: Number.NEGATIVE_INFINITY, max: Number.POSITIVE_INFINITY },
+): number {
+  const lo = Math.max(trendOf(r, kPointM) + r.below, within.min);
+  const hi = Math.max(lo, Math.min(trendOf(r, kPointM) + r.above, within.max));
   return round(lo + (rng.below(1001) / 1000) * (hi - lo), AUTO.decimals);
 }
 
@@ -141,11 +147,19 @@ export function drawCharacter(kPointM: number, rng: BorlandRandom): HillCharacte
   );
   return {
     kPointM,
-    landingSteepnessDeg: drawTypical(rng, T.landingSteepnessDeg, kPointM),
+    // Within the style rules every hill of the game passes: the landing at K, never steeper than the steepest point,
+    // at most the rule's, and the takeoff in the rule's range (the original's typical takeoff reaches below it).
+    landingSteepnessDeg: drawTypical(rng, T.landingSteepnessDeg, kPointM, {
+      min: Number.NEGATIVE_INFINITY,
+      max: HILL_RULES.landingAngleAtKMaxDeg,
+    }),
     landingAreaPastKShare: area,
     knoll: KNOLLS[rng.below(KNOLLS.length)] ?? "medium",
     inrunSteepnessDeg: drawTypical(rng, T.inrunSteepnessDeg, kPointM),
-    takeoffAngleDeg: drawTypical(rng, T.takeoffAngleDeg, kPointM),
+    takeoffAngleDeg: drawTypical(rng, T.takeoffAngleDeg, kPointM, {
+      min: HILL_RULES.takeoffAngleMinDeg,
+      max: HILL_RULES.takeoffAngleMaxDeg,
+    }),
     look: LOOKS[rng.below(LOOKS.length)] ?? "day",
     gateXM,
     flatBehindGateM: between(rng, AUTO.flatBehindGateM.min, Math.min(AUTO.flatBehindGateM.max, gateXM), AUTO.decimals),
@@ -161,7 +175,11 @@ function typicalCharacters(kPointM: number, rng: BorlandRandom, count: number): 
     const c = drawCharacter(kPointM, rng);
     if (characterProblems(c).length > 0) continue;
     const fall = landingFallOf(c);
-    if (fall !== undefined && isTypicalFall(fall, kPointM)) found.push(c);
+    if (fall === undefined || !isTypicalFall(fall, kPointM)) continue;
+    // Every geometry rule, the style ones too, as every hill of the game passes them; the inrun does not change
+    // what they judge but its length, which the format and the scene check later.
+    const sketch = sketchOf(c);
+    if (sketch !== undefined && geometryProblems(sketch).length === 0) found.push(c);
   }
   return found;
 }

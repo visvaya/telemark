@@ -162,7 +162,10 @@ export function backgroundLayerTable(h: HillProfile, look: HillLook, layer: numb
 export function drawSky(c: SceneCanvas, pal: Uint32Array): void {
   for (let i = 0; i < SKY_BANDS; i++) {
     const colour = pal[SKY_FIRST_INDEX + i] ?? 0;
-    for (let y = i * SKY_BAND_ROWS; y < (i + 1) * SKY_BAND_ROWS && y <= c.lastRow; y++) {
+    // The last band reaches down to the bottom: the background covers it on every hill of the original's sizes,
+    // but at the gate of a ski flying hill taller than any of them the view is lifted above where it starts.
+    const end = i === SKY_BANDS - 1 ? c.lastRow + 1 : (i + 1) * SKY_BAND_ROWS;
+    for (let y = i * SKY_BAND_ROWS; y < end && y <= c.lastRow; y++) {
       c.fb.pixels.fill(colour, y * c.fb.width, (y + 1) * c.fb.width);
       c.indices.fill(SKY_FIRST_INDEX + i, y * c.fb.width, (y + 1) * c.fb.width);
     }

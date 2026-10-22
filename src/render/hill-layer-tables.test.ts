@@ -34,8 +34,10 @@ function movedBy(byM: number): HillSpec {
 }
 
 describe("the length of the scene", () => {
-  it("keeps the original's 380 m for every hill the game has today", () => {
-    for (const hill of OWN_HILLS) expect(drawnSceneLengthOf(hill.profile)).toBe(LAYER_TABLE_LENGTH_M);
+  it("keeps the original's 380 m for every hill of the game up to the original's largest size", () => {
+    for (const hill of OWN_HILLS.filter((h) => h.kPointM <= 250)) {
+      expect(drawnSceneLengthOf(hill.profile)).toBe(LAYER_TABLE_LENGTH_M);
+    }
   });
 
   it("reaches past the outrun's lowest point as far as a jumper coasts, up to the longest scene", () => {

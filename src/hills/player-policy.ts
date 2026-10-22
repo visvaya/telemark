@@ -82,9 +82,11 @@ export const TRAINED_PLAYER_POLICY: PlayerPolicy = {
 
 /**
  * Scores of `TRAINED_PLAYER_POLICY` printed by the training: the mean points over the training set (the scripted
- * bot before it, `REFERENCE_PLAYER_POLICY`, scored 131.36) and over the game's own hills alone, on the training seeds.
+ * bot before it, `REFERENCE_PLAYER_POLICY`, scored 131.36) and over the game's own hills outside the generated set,
+ * on the training seeds. That was own-3 alone (118.06) until the ski flying hills made from their size alone
+ * joined it; the policy is the same.
  */
-export const TRAINED_POLICY_SCORES = { trainingSet: 137.35061909828656, ownHills: 118.0625 } as const;
+export const TRAINED_POLICY_SCORES = { trainingSet: 137.35061909828656, ownHills: 131.6833349863688 } as const;
 
 /**
  * The scripted bot the play checks used before the policy was trained (aim 14 frames before the edge, one lean of
