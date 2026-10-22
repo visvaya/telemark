@@ -87,7 +87,8 @@ describe("hill generator", () => {
     () => {
       const largest = GENERATED_HILL_CHARACTERS.toSorted((a, b) => b.kPointM - a.kPointM)[0];
       if (largest === undefined) throw new Error("no characters");
-      const { spec } = generateHill(largest, 1, { checkPlay: false });
+      // The largest is in the game, so it is generated against an empty catalog.
+      const { spec } = generateHill(largest, 1, { checkPlay: false, catalog: [] });
       const g = hillGeometry(buildHillProfile(spec.profile.inrun, spec.profile.landing), spec.kPointM);
       // The scene ends at 380 m; a jumper coasts up to 23 m up the outrun past its lowest point.
       expect(g.outrunLowestXM).toBeLessThanOrEqual(380 - 25);

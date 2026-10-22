@@ -29,12 +29,12 @@ const passing: PlayMeasures = {
   windowMedianFrames: 3,
   windowAtLeastMinShare: 1,
   windowMinFrames: 3,
-  bestMedianM: 84,
-  bestMaxM: 94,
+  bestMedianM: 95,
+  bestMaxM: 100,
   bestMaxWindClass: "head",
-  medianWeakM: 63,
-  medianAverageM: 77,
-  medianGoodM: 84,
+  medianWeakM: 72,
+  medianAverageM: 84,
+  medianGoodM: 92,
   goodBeatsAverageShare: 0.9,
   fallRateAverage: 0,
   fallRateGood: 0,
@@ -129,13 +129,15 @@ describe("play rules", () => {
     ["play.takeoff-window-share", { windowAtLeastMinShare: 0.7 }],
     ["play.takeoff-clean", { windowMinFrames: 0 }],
     ["play.good-median", { medianGoodM: 69, medianAverageM: 60, medianWeakM: 50 }],
+    ["play.good-median", { medianGoodM: 86 }],
     ["play.good-median", { medianGoodM: 104 }],
-    ["play.levels-ordered", { medianAverageM: 85 }],
-    ["play.levels-ordered", { medianWeakM: 77 }],
+    ["play.levels-ordered", { medianAverageM: 93 }],
+    ["play.levels-ordered", { medianWeakM: 85 }],
     ["play.skill-wins", { goodBeatsAverageShare: 0.6 }],
     ["play.fall-rate", { fallRateAverage: 0.11 }],
     ["play.fall-rate", { fallRateGood: 0.04 }],
     ["play.best-short", { bestMedianM: 79 }],
+    ["play.best-short", { bestMedianM: 89 }],
     ["play.best-past-landing-area", { bestMaxM: 127 }],
     ["play.flight-time", { medianGoodFlightS: 2.4 }],
     ["play.flight-height", { highestAboveTerrainP90M: 8.6 }],
@@ -186,6 +188,13 @@ describe("play rules", () => {
       large.kPointM + r.goodMedianFromKMaxM + sizeGrowthM(large.kPointM, r.goodMedianFromKMaxGrowthMPerM);
     expect(rulesOf(large, { ...moved, medianGoodM: furthest - 0.1 })).not.toContain("play.good-median");
     expect(rulesOf(large, { ...moved, medianGoodM: furthest + 0.1 })).toContain("play.good-median");
+    const shortest =
+      large.kPointM + r.goodMedianFromKMinM + sizeGrowthM(large.kPointM, r.goodMedianFromKMinGrowthMPerM);
+    expect(rulesOf(large, { ...moved, medianGoodM: shortest + 0.1 })).not.toContain("play.good-median");
+    expect(rulesOf(large, { ...moved, medianGoodM: shortest - 0.1 })).toContain("play.good-median");
+    const best = large.kPointM + r.bestFromKMinM + sizeGrowthM(large.kPointM, r.bestFromKMinGrowthMPerM);
+    expect(rulesOf(large, { ...moved, bestMedianM: best + 0.1 })).not.toContain("play.best-short");
+    expect(rulesOf(large, { ...moved, bestMedianM: best - 0.1 })).toContain("play.best-short");
     expect(rulesOf(training, { highestAboveTerrainP90M: r.highestAboveTerrainP90MaxM + 0.1 })).toEqual([
       "play.flight-height",
     ]);

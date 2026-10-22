@@ -62,8 +62,8 @@ export function policyTakesOff(policy: PlayerPolicy, view: PlayerView, aimShiftS
 
 /**
  * The trained player: `node scripts/train-player.mjs` (about 35 minutes on a slow laptop) printed these numbers.
- * Trained on the generated set (`src/hills/test-support/generated-hills.ts`: 27 hills from K45 to K260 of several
- * landing hill shapes, knolls and inruns), on two jump seeds of each wind class, maximising the mean points of the
+ * Trained on the generated set (`src/hills/test-support/generated-hills.ts`, at the time 27 hills from K45 to K260
+ * of several landing hill shapes, knolls and inruns), on two jump seeds of each wind class, maximising the mean points of the
  * player without noise. The early part of the flight trained away (0 frames) and the wind term stayed 0. To train
  * again, run the script and copy its numbers and scores here.
  */

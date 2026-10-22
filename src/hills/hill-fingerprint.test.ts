@@ -19,6 +19,15 @@ const PINNED: Readonly<Record<string, string>> = {
   "own-21": "01e623c9",
   "own-22": "533b57bd",
   "own-23": "65bb0178",
+  "own-24": "49066b8c",
+  "own-25": "fb2c9ed2",
+  "own-26": "2fcd6ba0",
+  "own-27": "0335caeb",
+  "own-28": "0b63d20d",
+  "own-29": "cb9acafa",
+  "own-30": "4cd85392",
+  "own-31": "ebe361e4",
+  "own-32": "dc33bad0",
 };
 
 describe("hill fingerprint", () => {

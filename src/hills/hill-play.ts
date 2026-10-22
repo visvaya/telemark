@@ -43,9 +43,12 @@ export const PLAY_RULES = {
   /**
    * The good player's median lands near the K point: not far short of it, not far past it. The good rival goes
    * about 3 m further than the trained player did (the median over the hills up to K120), so the bound past it is
-   * 3 m more than the trained player's 10 m.
+   * 3 m more than the trained player's 10 m. Short of K: on the original's hills the good rival's median lands at
+   * K-0.5 m at the least (K165), and at K+2 m at the least from K200 up, so the bound short of it rises with the
+   * hill and stays about 1 to 2.5 m below every original.
    */
-  goodMedianFromKMinM: -20,
+  goodMedianFromKMinM: -3,
+  goodMedianFromKMinGrowthMPerM: 0.03,
   goodMedianFromKMaxM: 13,
   goodMedianFromKMaxGrowthMPerM: 0.01,
   /** Skill must win: the good player beats the average one on at least this share of the same jumps. */
@@ -60,10 +63,13 @@ export const PLAY_RULES = {
   /** No wind class may throw a good player: falls of the good player within any one wind class of the sample. */
   goodFallsPerClassMax: 0,
   /**
-   * The best jump, as the median over the wind seeds, reaches near the K point; less means the hill cannot be
-   * jumped to its size. The median and not the worst seed: one strong head wind must not fail a fair hill.
+   * The best jump, as the median over the wind seeds, reaches past the K point; less means the hill cannot be
+   * jumped to its size. The median and not the worst seed: one strong head wind must not fail a fair hill. On the
+   * original's hills it lands at K+2.5 m at the least, and at K+10.8 m at the least from K200 up: the bound rises
+   * with the hill and stays about 2.5 m or more below every original.
    */
-  bestFromKMinM: -10,
+  bestFromKMinM: 0,
+  bestFromKMinGrowthMPerM: 0.08,
   /**
    * The oracle's best jump (the most points it finds, looking ahead at the wind) on the strongest seed of each wind
    * class stays within the landing area plus this much: no skilled player sails past it, even with the most helpful
@@ -430,7 +436,7 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
     [
       outside(
         m.medianGoodM - k,
-        r.goodMedianFromKMinM,
+        r.goodMedianFromKMinM + grownM(r.goodMedianFromKMinGrowthMPerM),
         r.goodMedianFromKMaxM + grownM(r.goodMedianFromKMaxGrowthMPerM),
       ),
       "good-median",
@@ -456,7 +462,11 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
       "good-falls-in-class",
       `good player's falls by wind class: ${WIND_CLASSES.map((c) => `${c} ${m.goodFallsByClass[c]}`).join(", ")}`,
     ],
-    [!(m.bestMedianM >= k + r.bestFromKMinM), "best-short", `best distance only ${m.bestMedianM} m on K ${k} m`],
+    [
+      !(m.bestMedianM >= k + r.bestFromKMinM + grownM(r.bestFromKMinGrowthMPerM)),
+      "best-short",
+      `best distance only ${m.bestMedianM} m on K ${k} m`,
+    ],
     [
       !(m.bestMaxM <= landingAreaEndM + r.bestPastLandingAreaMaxM),
       "best-past-landing-area",

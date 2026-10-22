@@ -50,7 +50,7 @@ export interface HillCharacter {
   flatBehindGateM?: number;
   /**
    * How far past K the oracle's best jump on the calmest seed is to land, in metres: at least 3 m wide, from K+3 up
-   * to K+18 at most, and short of the end of the landing area the character asks for; K+3..K+8 when not given.
+   * to K+25 at most, and short of the end of the landing area the character asks for; K+3..K+8 when not given.
    */
   bestPastKM?: { readonly minM: number; readonly maxM: number };
   /** Height of the takeoff table over the landing hill, from 1.2 to 2.6 m (within the rule's 1..3 m); 2 m when not given. */
@@ -63,7 +63,7 @@ const CHARACTER_LIMITS = {
   flatBehindGateM: { min: 0.5, max: 7 },
   tableHeightM: { min: 1.2, max: 2.6 },
   /** The best jump's target: its lowest start, its highest end, its least width, metres past K. */
-  bestPastKM: { min: 3, max: 18, minWidthM: 3 },
+  bestPastKM: { min: 3, max: 25, minWidthM: 3 },
   /** The target ends at least this far before the end of the landing area, metres. */
   bestBeforeAreaEndM: 2,
 } as const;
@@ -140,7 +140,8 @@ const GENERATOR = {
   sceneEndXM: 379,
   /**
    * A jumper coasts up the outrun past its lowest point before stopping: 15 to 23 m on the generated hills from
-   * K135 to K260 (the furthest designed jumps, 2026-10-22), so the lowest point keeps this much of the scene after it.
+   * K135 to K260 as the set had them early on 2026-10-22 (the furthest designed jumps), so the lowest point keeps
+   * this much of the scene after it. The play rules check every hill's jumps stop inside the scene.
    */
   outrunStopMarginM: 25,
   /** Steps of the false position search; each runs the oracle once. */

@@ -4,6 +4,7 @@ import { hillChoiceOf, originalHillChoices, type HillChoice } from "../../game/h
 import { readOriginalHills, type OriginalHill } from "../../original/original-hills";
 import { hillGoldenFiles } from "../../sim/test-support/golden-files";
 import { runOf } from "../../test-support/shards";
+import { generatedHillId, generateHill } from "../hill-generator";
 import { GEOMETRY_RULE_LEVELS, geometryProblems } from "../hill-geometry";
 import { hillDistance, LIKENESS } from "../hill-likeness";
 import { jumpScore, oracleJump } from "../hill-oracle";
@@ -12,6 +13,7 @@ import { exactRivalJump } from "../hill-players";
 import type { HillSpec } from "../hill-spec";
 import { OWN_HILL_SPECS } from "../own-hills";
 import { parseHillSpec } from "../parse-hill-spec";
+import { GENERATED_HILL_CHARACTERS, setHillInGameOf } from "./generated-hills";
 
 /**
  * Own hills compared with the hills of the original game. The original's data stays outside the repository, so
@@ -27,8 +29,8 @@ export const ENVELOPE_FILES = 2;
 
 /** Originals with a K point this close to an own hill's are hills of a similar size. */
 const SIMILAR_K_M = 15;
-/** One evaluation of a hill takes about 8 s alone; several run here. */
-const ENVELOPE_TIMEOUT_MS = 600_000;
+/** One evaluation of a hill takes about 8 s alone, a generated hill about as long again to build; several run here. */
+const ENVELOPE_TIMEOUT_MS = 900_000;
 /** The likeness check takes about 4 s alone (measured 2026-10-17) and twice that beside the golden tests. */
 const LIKENESS_TIMEOUT_MS = 60_000;
 
@@ -78,6 +80,27 @@ const ENVELOPE: readonly EnvelopeMeasure[] = [
 
 /** The own hills from the smallest K point to the largest, so that a run of them is a range of sizes. */
 const ownHillsBySize = OWN_HILL_SPECS.map(hillChoiceOf).toSorted((a, b) => a.kPointM - b.kPointM);
+
+/** A hill the range check measures: its id and size are known at once, the hill itself is built when measured. */
+interface EnvelopeHill {
+  id: string;
+  kPointM: number;
+  build: () => HillChoice;
+}
+
+/**
+ * The own hills and the generated set's hills that the game does not have yet, from the smallest K point to the
+ * largest: a generated hill is a candidate for the game, so a change of the generator or of its set is held
+ * against the originals before any of its hills is taken into the game.
+ */
+const envelopeHillsBySize: readonly EnvelopeHill[] = [
+  ...ownHillsBySize.map((hill) => ({ id: hill.id, kPointM: hill.kPointM, build: () => hill })),
+  ...GENERATED_HILL_CHARACTERS.filter((c) => setHillInGameOf(c) === undefined).map((c) => ({
+    id: generatedHillId(c, 1),
+    kPointM: c.kPointM,
+    build: () => hillChoiceOf(generateHill(c, 1, { checkPlay: false }).spec),
+  })),
+].toSorted((a, b) => a.kPointM - b.kPointM);
 
 /** Hill sizes the good rival is compared with the oracle in: K points up to each end, in metres. */
 const SIZE_BUCKET_ENDS_M = [90, 120, 160, Number.POSITIVE_INFINITY];
@@ -232,22 +255,23 @@ export function describeOriginalHillChecks(): void {
 }
 
 /**
- * Each own hill of the `part`-th run of sizes plays inside the range of the originals of a similar size; only the
- * originals near the part's hills are measured.
+ * Each own or generated hill of the `part`-th run of sizes plays inside the range of the originals of a similar
+ * size; only the originals near the part's hills are measured.
  */
 export function describeEnvelopePart(part: number): void {
-  const own = runOf(ownHillsBySize, part, ENVELOPE_FILES);
+  const own = runOf(envelopeHillsBySize, part, ENVELOPE_FILES);
   describe.skipIf(!golden.requested || exePath === undefined)("own hills against the hills of the original", () => {
     it(
       `plays own hills ${own.map((h) => h.id).join(", ")} inside the range of the originals of a similar size`,
       () => {
         const originals = originalHillChoices(load());
-        const near = (hill: HillChoice) => originals.filter((o) => Math.abs(o.kPointM - hill.kPointM) <= SIMILAR_K_M);
+        const near = (hill: EnvelopeHill) => originals.filter((o) => Math.abs(o.kPointM - hill.kPointM) <= SIMILAR_K_M);
         const needed = originals.filter((o) => own.some((hill) => near(hill).includes(o)));
         const measured = new Map(needed.map((o) => [o.id, playMeasures(o)] as const));
-        const outside = own.flatMap((hill) => {
+        const outside = own.flatMap((entry) => {
+          const hill = entry.build();
           const mine = playMeasures(hill);
-          const theirs = near(hill).map((o) => ({ hill: o, m: measured.get(o.id) }));
+          const theirs = near(entry).map((o) => ({ hill: o, m: measured.get(o.id) }));
           if (theirs.length === 0) return [`${hill.id}: no original within ${SIMILAR_K_M} m of K ${hill.kPointM} m`];
           return ENVELOPE.flatMap(({ name, of, marginWidth }) => {
             const values = theirs.flatMap(({ hill: o, m }) => (m === undefined ? [] : [of(m, o)]));
