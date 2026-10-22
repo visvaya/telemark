@@ -82,6 +82,20 @@ describe("hill generator", () => {
     GENERATION_TIMEOUT_MS,
   );
 
+  it(
+    "keeps the lowest point of the outrun far enough before the end of the scene for a jumper to stop there",
+    () => {
+      const largest = GENERATED_HILL_CHARACTERS.toSorted((a, b) => b.kPointM - a.kPointM)[0];
+      if (largest === undefined) throw new Error("no characters");
+      const { spec } = generateHill(largest, 1, { checkPlay: false });
+      const g = hillGeometry(buildHillProfile(spec.profile.inrun, spec.profile.landing), spec.kPointM);
+      // The scene ends at 380 m; a jumper coasts up to 23 m up the outrun past its lowest point.
+      expect(g.outrunLowestXM).toBeLessThanOrEqual(380 - 25);
+      expect(g.outrunFlatM).toBeGreaterThanOrEqual(30);
+    },
+    GENERATION_TIMEOUT_MS,
+  );
+
   it("refuses a character outside its ranges, or one whose best jump would reach the landing area's end", () => {
     const [first] = GENERATED_HILL_CHARACTERS;
     if (first === undefined) throw new Error("no characters");
