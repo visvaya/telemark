@@ -688,6 +688,40 @@ The style rules are targets: the report lists those missed. On 200 random charac
 ms for the first two, and in a median 1.4 s for the third (one to fourteen oracle runs), never by the format or
 an admission rule after the search.
 
+### Hills from their size alone
+
+`generateHillOfSize(kPointM, seed)` (`src/hills/hill-auto.ts`) makes a hill from its K point alone, with no hand
+tuning: it draws a character from what is typical of the original's hills of that size, and generates it with
+every check of `generateHill`.
+
+- **Typical ranges.** Every value of the original's 37 hills follows a linear trend over K: larger hills have
+  steeper landing hills (42 degrees at K50, 46 at K250 on the trend) and inruns (48 and 54), a slightly larger
+  table, and a landing hill that falls away less right under the takeoff. The typical range of a value is the
+  middle 80% of the originals around its trend (from the tenth to the ninetieth percentile of how far they lie from
+  it), measured 2026-10-22 (`TYPICAL_CHARACTER`, `TYPICAL_FALL`). The generator aims for typical hills; the play
+  rules admit the whole family (`hill-family.ts`).
+- **The draw.** The landing hill's and the inrun's steepness, the takeoff angle and the table height are drawn
+  evenly from their typical ranges at the hill's K; the knoll and the sky at random; the landing area from 0.15 to
+  0.3 of K past K (more on a small hill, so that the target fits); the gate from 6 m up to 30 m on a K45 and 0.12 m
+  nearer per metre of K (a large hill needs the scene for its inrun and landing hill); the target of the best jump
+  in calm from 4 to 9% of K past K (around the original's best jumps, 7 to 8% of K on the trend).
+- **The landing hill as a jumper meets it.** Before any jump, the drop under the takeoff at a tenth, a quarter,
+  half and three quarters of K, and the height of the K point over its distance (h/n), must lie in their typical
+  ranges at the hill's K (`landingFallOf`, `isTypicalFall`; about 15 ms a character). Measured on the 57 hills of
+  the original and the game, the flight height grows with the drop at a quarter of K (correlation 0.49) and the
+  takeoff speed falls with h/n (-0.87) and with the landing hill's steepness (-0.86): a typical fall keeps both
+  typical. A character whose landing area would have to give way to K is drawn again instead of searched for.
+  Without this check (the values drawn from the originals' full ranges) 19 of 60 characters made a hill that passes
+  every rule; with it 11 of 16 played.
+- **Drawn again.** A character the generator refuses (an unreachable target, a play rule, a hill too alike to
+  another) is drawn again from the next attempt's seed, up to 30 times. The same size, seed and options make the
+  same hill.
+
+Measured 2026-10-22 on two seeds of each of K45, K70, K95, K120, K150, K180, K210 and K240: every one made a hill
+that passes every rule; 11 of the 16 with the first character drawn, the others after 1 to 4 refused ones (most
+of them above K200: a target the scene leaves no inrun for, or a flight too high); 5 to 52 s a hill (median about
+11 s) on a slow laptop, most of it the bots' evaluation.
+
 ### Generated set
 
 `src/hills/test-support/generated-hills.ts`: a fixed list of 24 characters from K45 to K245 (a little below the

@@ -2,7 +2,8 @@ import { hillChoiceOf } from "../game/hill-choice";
 import type { HillLook } from "../render/hill-look";
 import { BorlandRandom } from "../sim/borland-random";
 import { detCos, detExp, detSin } from "../sim/deterministic-math";
-import type { InrunSpec, LandingSpec } from "../sim/hill-setup";
+import { inrunYM, landingYM } from "../sim/hill-profile";
+import { buildHillProfile, type InrunSpec, type LandingSpec } from "../sim/hill-setup";
 import { geometryProblems, hillGeometry, kFromSteepestMaxM, type HillGeometry } from "./hill-geometry";
 import { lookProblems, supportsUnderInrun } from "./hill-look-rules";
 import { hillDistance, LIKENESS } from "./hill-likeness";
@@ -398,7 +399,17 @@ function outrunOf(tanSteep: number, joinU: number): OutrunCurve {
  * distance (a longer area moves K back towards the takeoff). The knoll does not give way, because a long flat
  * knoll throws the jumper high above the slope.
  */
-function landingShape(c: HillCharacter): LandingShape {
+/**
+ * The landing hill with the landing area the character asks for, and whether K would lie too far from the
+ * steepest point with it (so that the area has to give way).
+ */
+function askedLandingShape(c: HillCharacter): {
+  shape: LandingShape;
+  givesWay: boolean;
+  takeoffU: number;
+  joinU: number;
+  outrun: OutrunCurve;
+} {
   const tanSteep = tanDeg(c.landingSteepnessDeg);
   const ratio = Math.sqrt(tanSteep / tanDeg(G.landingAreaEndDeg));
   // acosh by bisection: where the tanh gets as gentle as the end of the landing area, in widths past the centre.
@@ -408,7 +419,13 @@ function landingShape(c: HillCharacter): LandingShape {
   const takeoffU = -G.knollTakeoffWidths[c.knoll];
   const shape = shapeOf(c, c.landingAreaPastKShare, takeoffU, joinU, outrun);
   const maxM = G.kFromSteepestShareOfRule * kFromSteepestMaxM(c.kPointM);
-  if (Math.abs(shape.kFromCenterM) <= maxM) return shape;
+  return { shape, givesWay: Math.abs(shape.kFromCenterM) > maxM, takeoffU, joinU, outrun };
+}
+
+function landingShape(c: HillCharacter): LandingShape {
+  const { shape, givesWay, takeoffU, joinU, outrun } = askedLandingShape(c);
+  if (!givesWay) return shape;
+  const maxM = G.kFromSteepestShareOfRule * kFromSteepestMaxM(c.kPointM);
   const limitM = Math.sign(shape.kFromCenterM) * maxM;
   const share = bisect(
     G.areaPastKShareRange.min,
@@ -863,6 +880,43 @@ function missMessage(c: HillCharacter, shape: LandingShape, point: SearchPoint):
   }
   if (point.lineM <= G.inrunLineMinM) return `the shortest inrun lands the best jump at K+${fromK}, past ${target}`;
   return `no inrun between the shortest and the longest lands the best jump in ${target}; the closest K+${fromK}`;
+}
+
+/** The landing hill of a character as a jumper meets it, in shares of K: how far it falls under the takeoff. */
+export interface LandingFall {
+  /** Drop under the takeoff edge at a tenth, a quarter, half and three quarters of K horizontally, over K. */
+  dropAtTenthOfK: number;
+  dropAtQuarterOfK: number;
+  dropAtHalfOfK: number;
+  dropAtThreeQuartersOfK: number;
+  /** Drop to the K point over its horizontal distance from the takeoff (h/n). */
+  heightOverLength: number;
+}
+
+/**
+ * How the landing hill of a character falls away under the takeoff, found without a jump in a few milliseconds:
+ * the landing hill and the table do not depend on the inrun's length, so the hill at the shortest inrun shows it.
+ * Undefined for a character outside its ranges, and for one whose landing area has to give way to K (the search
+ * for the area that does takes most of a second; a character drawn at random can be drawn again instead).
+ */
+export function landingFallOf(c: HillCharacter): LandingFall | undefined {
+  if (characterProblems(c).length > 0) return undefined;
+  const { shape, givesWay } = askedLandingShape(c);
+  if (givesWay) return undefined;
+  const { inrun, landing } = profileOf(c, shape, G.inrunLineMinM);
+  const profile = buildHillProfile(inrun, landing);
+  const takeoffYM = inrunYM(profile, profile.takeoffXM);
+  const k = c.kPointM;
+  const drop = (share: number) => (takeoffYM - landingYM(profile, profile.takeoffXM + share * k)) / k;
+  // K lies where the construction put it, from the landing tanh's centre.
+  const kXM = landing.centerXM + shape.kFromCenterM;
+  return {
+    dropAtTenthOfK: drop(0.1),
+    dropAtQuarterOfK: drop(0.25),
+    dropAtHalfOfK: drop(0.5),
+    dropAtThreeQuartersOfK: drop(0.75),
+    heightOverLength: (takeoffYM - landingYM(profile, kXM)) / (kXM - profile.takeoffXM),
+  };
 }
 
 /** Measures of a hill's built profile. */
