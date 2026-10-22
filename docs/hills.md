@@ -396,8 +396,8 @@ part of the set.
 The checks have two levels. The ordinary test run (and the gate before a PR) evaluates in detail the training hill
 (the first own hill), on the sample described above; `corepack pnpm test src/hills` takes a dozen or so seconds.
 The stability test evaluates each own hill (up to the limit of the bots' reliability it must pass all the rules)
-and the whole generated set, about 3.5 minutes on a 4-core laptop with the files in parallel (6.5 minutes in one
-file), so it has a separate command, `corepack pnpm test:hills-stability` (the variable `HILL_STABILITY=1`
+and the whole generated set, about 1.5 minutes on a quiet 4-core laptop with the files in parallel (5.5 to 6.5
+minutes in one file), so it has a separate command, `corepack pnpm test:hills-stability` (the variable `HILL_STABILITY=1`
 includes the files, which `vite.config.ts` otherwise skips). The gate before a PR of a change in these paths also runs them locally. CI runs them in the
 `checks` job when a change touches `src/hills/`, `src/sim/`, `src/game/`, the workflow, `package.json` or
 `vite.config.ts`, and also when it cannot be established what changed (a manual run, no previous commit).
@@ -471,19 +471,20 @@ by the other rules like any new one.
 
 ### Comparison with the original's hills
 
-`src/hills/original-hills.local.test.ts` compares the own hills with the original's hills read from the player's
-files. It works only with `DSJ2_GAME_DIR` set (like the golden tests), never in CI; with the variable set and
+`src/hills/original-hills*.local.test.ts` compare the own hills with the original's hills read from the player's
+files (the checks in `src/hills/test-support/original-hills.cases.ts`; the range check is split among two files
+by the own hills' size, so they run in parallel). It works only with `DSJ2_GAME_DIR` set (like the golden tests), never in CI; with the variable set and
 without the files it ends with an error, not a skip. Nothing read from the game files goes into the repository or
 to the disk. It checks that no own hill is too similar to a hill of the original, that each plays within the range
 of the original's hills with a K point within 15 m of its own (the best distance and the good player's median
 relative to K, the speed at the takeoff, the flight time, the takeoff window, the spread from the wind as a share
 of K; the range widened by a margin for the spread of the measurement), that the original's hills pass the format
 check, and that the trained player keeps within the oracle margin on hills up to the limit
-`botReliableMaxKPointM` (comparison with the oracle above; the table of bands is given by the message when the
-test fails). The whole takes about 2.5 minutes.
+`botReliableMaxKPointM` (comparison with the oracle above; the larger hills are played only when the verdict
+fails, for the table of bands the message then gives).
 
 ```sh
-DSJ2_GAME_DIR=<katalog gry> corepack pnpm test src/hills/original-hills.local.test.ts
+DSJ2_GAME_DIR=<katalog gry> corepack pnpm test src/hills/original-hills
 ```
 
 ## Geometry fingerprint and identifier

@@ -9,6 +9,7 @@ import {
   setHillInGameOf,
 } from "./test-support/generated-hills";
 import { GENERATED_SET_FILES, OWN_HILL_STABILITY_FILES } from "./test-support/hill-stability.cases";
+import { ENVELOPE_FILES } from "./test-support/original-hills.cases";
 
 describe("the parts of the generated set", () => {
   const parts = generatedSetParts(GENERATED_SET_FILES);
@@ -50,5 +51,17 @@ describe("the stability test files", () => {
     expect(files.toSorted()).toEqual(
       [...stabilityFiles("own", OWN_HILL_STABILITY_FILES), ...stabilityFiles("set", GENERATED_SET_FILES)].toSorted(),
     );
+  });
+});
+
+describe("the files of the comparison with the original's hills", () => {
+  it("split the own hills' range check among exactly the files counted for it", () => {
+    const here = fileURLToPath(new URL(".", import.meta.url));
+    const files = readdirSync(here).filter((name) => /^original-hills\.envelope-\d+\.local\.test\.ts$/.test(name));
+    const expected = Array.from(
+      { length: ENVELOPE_FILES },
+      (_v, i) => `original-hills.envelope-${i + 1}.local.test.ts`,
+    );
+    expect(files.toSorted()).toEqual(expected.toSorted());
   });
 });
