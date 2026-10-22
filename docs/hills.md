@@ -174,8 +174,9 @@ data alone.
 The former bots played by a script: the takeoff aim from trying aims in the simulation, in flight one body angle
 (0.3 rad) regardless of the hill, the wind and the phase of the flight, landing at a fixed height, without reading
 the wind and without knowing about points. They were reliable only up to K120, and on 38 hills with a simpler bot
-the spread of distances on large hills (40-60 m) came from the bot, not from the hill. Now they play by a player
-policy that was trained, and the oracle says how much can be got out of a hill at most.
+the spread of distances on large hills (40-60 m) came from the bot, not from the hill. Then they played by a player
+policy that was trained (below), still reliable only up to K120. Now the players of the checks are the original's
+computer jumpers (section "Rival players"), and the oracle says how much can be got out of a hill at most.
 
 ### What the player sees
 
@@ -252,6 +253,28 @@ wind along the hill: a correlation coefficient from -0.88 at K50 to -0.96 at K15
 K185 less for each 1 m/s of tail wind), but the lean has no lever that would make up for it, so reading the wind
 in flight gives the player nothing. The wind matters for the expectations about the distance, not for the control.
 
+### Rival players
+
+The players of the rules are the original's computer jumpers: the ported pilot (`src/sim/cpu-pilot.ts`) with the
+improved landing of competitions (`src/game/rival-landing.ts`). The original's author made the pilot to jump every
+one of its hills from K50 to K250, and the improved landing keeps it on its feet; the trained player above stays
+for the oracle's search and for the designed jumps.
+
+- `rivalJump(hill, seed, level, noiseSeed)`: `seed` sets the jump (wind) as for every bot; `noiseSeed` draws the
+  jumper's talents and form as at the start of a cup and a competition, and the setup of its pilot. A setup with a
+  blundered jump (1 in 40) is drawn again: a player of the checks does not throw a jump on purpose, and the rule
+  `good-falls-in-class` allows no fall of the good player.
+- `RIVAL_PLAYER_LEVELS`: the weak player is level 0, the average one level 2, the good one level 4 ("super").
+- `exactRivalJump(hill, seed, aimFrames?)`: the best level with no talent or form either way and always the same
+  setup, so that only the wind changes; with `aimFrames` both buttons go down that many frames before the edge.
+  It measures the spread from the wind and is the jumper of the takeoff aim search.
+
+The pilot reads the position, the speed and the slope from the simulation, as the original's pilot does, not only
+what the player sees. Against the trained player on the hills up to K120 (11 own and 17 of the original, the same
+seeds): the good median is 3.3 m further (median of the differences; 0.8 to 20.7 m), the 90th percentile of the
+flight height at most 0.4 m higher; the bounds of `good-median` and `flight-height` moved by as much (from K+10 to
+K+13 m, from 8 to 8.5 m).
+
 ### Oracle
 
 `oracleJump` (`src/hills/hill-oracle.ts`) knows the hill and the seed, and so the future wind too. It looks for
@@ -264,9 +287,21 @@ and about 1.3 s.
 
 ### Comparison with the oracle on the original's hills
 
-A local test (with `DSJ2_GAME_DIR`, see below) plays each of the 37 hills of the original with the trained player
+A local test (with `DSJ2_GAME_DIR`, see below) plays each of the 37 hills of the original with the exact rival
 and with the oracle on the strongest seed of each wind class. The distance the oracle adds, as a share of K (mean
-and 90th percentile in the size band), measurement of 2026-10-17 for the current policy:
+and 90th percentile in the size band), measurement of 2026-10-22 for the pilot of the original with the improved
+landing (the exact rival):
+
+| K | hills | mean | 90th percentile | points mean | falls |
+|---|---|---|---|---|---|
+| up to 90 | 10 | 0.016 | 0.032 | 0.1 | 0 |
+| 90-120 | 7 | 0.011 | 0.025 | 0.0 | 0 |
+| 120-160 | 8 | 0.014 | 0.026 | 1.3 | 0 |
+| above 160 | 12 | 0.017 | 0.050 | 3.0 | 0 |
+
+Every band is within the absolute margin below (a mean of 0.06 K and a 90th percentile of 0.12 K), so the rival is
+credible on the largest hills too. With the original's landing a pilot of the same level fell on 23 of 148 jumps
+on these hills and winds. The trained player, measured on 2026-10-17:
 
 | K | hills | mean | 90th percentile | points mean | player falls |
 |---|---|---|---|---|---|
@@ -275,21 +310,25 @@ and 90th percentile in the size band), measurement of 2026-10-17 for the current
 | 120-160 | 8 | 0.091 | 0.163 | 20.3 | 0 |
 | above 160 | 12 | 0.071 | 0.162 | 17.2 | 0 |
 
-The margin is relative, within the same measurement of the same policy: a band is reliable when the mean and the
-90th percentile are at most 1.25 times those of the smallest band (up to K90) and the player does not fall. A
-policy robust to its own errors deliberately leaves distance to the oracle at every size, so what counts is whether
-the bot is as reliable at a given size as at the sizes already accepted. The number 1.25 gives for the earlier
-policy the same verdict as the former absolute margin (mean 0.06 K, 90th percentile 0.12 K): 90-120 had 1.12 and
-0.97 times (passes), 120-160 1.47 and 1.41 (does not pass). For the current policy 90-120 has 1.20 and 1.05 times,
-120-160 1.49 and 1.68, above 160 1.16 and 1.67. The K120 limit (`botReliableMaxKPointM`) stays; the local test
-guards the margin up to it.
+A band is reliable when the bot does not fall there and the mean and the 90th percentile are within the absolute
+margin (0.06 K and 0.12 K) or at most 1.25 times those of the smallest band (up to K90) of the same measurement.
+The relative margin was made for the trained player: a policy robust to its own errors deliberately leaves
+distance to the oracle at every size, so what counted was whether the bot is as reliable at a given size as at the
+sizes already accepted. The number 1.25 gave for the earlier policy the same verdict as the absolute margin:
+90-120 had 1.12 and 0.97 times (passes), 120-160 1.47 and 1.41 (does not pass). For the trained policy 90-120 has
+1.20 and 1.05 times, 120-160 1.49 and 1.68, above 160 1.16 and 1.67; so the trained player was trusted only up to
+K120. The exact rival comes so close on every band that a ratio of its gaps says little (0.050 against 0.032 K is
+1.56 times), so the absolute margin counts as well. The local test
+now guards the margin of the exact rival on every band. The K120 limit (`botReliableMaxKPointM`) stays for now:
+the bounds that are lengths (`good-median`, `flight-height`, the 3 m of the takeoff window) are set on hills up to
+K120 and do not yet grow with a larger hill.
 
 The takeoff window is the number of aim frames (every 1/70 s) at which a jumper without errors lands at most 3 m
 short of the best jump, without a fall or a disqualification. One takeoff frame is worth a few metres: that is a
 property of the game's physics, not of the hill, so the window is counted in frames.
 
-The best takeoff aim is found by `takeoffAimSearch`, with the flight and landing of the trained player without
-noise. The distance as a function of the aim grows by 5-7 m per frame up to a single peak and falls behind it
+The best takeoff aim is found by `takeoffAimSearch`, with the exact rival (the trained player without noise when
+no jumper is given). The distance as a function of the aim grows by 5-7 m per frame up to a single peak and falls behind it
 (with a cliff about 6 frames too early), so the search starts from the best aim of the previous seed (for the
 first one from 14 frames) and goes both ways, until on a given side two aims in a row come out more than 3 m below
 the best or end with a fall; the side on which a new best appears goes on, so a best on the edge widens the
@@ -341,8 +380,8 @@ without a landing (`fallType` 4) fall; the random jumps end in a disqualificatio
 
 Rules:
 
-- `bot-unreliable`: a hill above K120 does not pass the check, because the trained player stays close to the
-  oracle only up to this size (comparison above), and above it the result depends on the bot, not on the hill;
+- `bot-unreliable`: a hill above K120 does not pass the check yet: the bounds that are lengths are set on hills up
+  to this size (comparison above);
 - `takeoff-window`: the median of the takeoff window over the seeds of the sweep at least 2 frames, so that one
   does not have to hit a single frame;
   a single frame;
@@ -352,7 +391,7 @@ Rules:
   was 3 frames on five disjoint sets and 1 frame on the sixth;
 - `takeoff-clean`: every seed of the sweep has at least one clean takeoff (a window of at least 1 frame), because a
   wind with which a clean takeoff is impossible would be unfair;
-- `good-median`: the good player's median from K-20 to K+10 m, so that the hill jumps to its size;
+- `good-median`: the good player's median from K-20 to K+13 m, so that the hill jumps to its size;
 - `levels-ordered`: the medians grow from the weak through the average to the good player, because skill has to
   pay off;
 - `skill-wins`: the good player jumps farther than the average one in at least 70% of the pairs of jumps with the
@@ -371,12 +410,12 @@ Rules:
   jumps beyond it. Previously this was measured by the takeoff aim search, which changed only the aim, while the
   oracle also searches the flight and the landing;
 - `flight-time`: the median of the good player's flight at least 2.5 s, so that it is a real flight;
-- `flight-height`: the 90th percentile of the greatest height above the landing hill at most 8 m, because the
+- `flight-height`: the 90th percentile of the greatest height above the landing hill at most 8.5 m, because the
   jumper flies close to the slope;
 - `takeoff-speed`: the speed at the takeoff from 50 to 120 km/h, within the range of ski jumping hills;
-- `wind-spread`: the standard deviation of the distance of the bot without errors at a fixed aim (wind alone) at
-  most 8% of K, because the same wind carries farther in a longer flight (5.5% of K was measured on the Ćwiczebna
-  hill);
+- `wind-spread`: the standard deviation of the distance of the exact rival (wind alone) at most 11% of K, because
+  the same wind carries farther in a longer flight (5.5% of K on the Ćwiczebna hill, up to 10.7% on the original's
+  hills, at K205; with the trained player 8% was the bound);
 - `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
   numbers;
 - `stress-within-scene`: each of them stops before 380 m, where the scene ends;
@@ -479,9 +518,8 @@ to the disk. It checks that no own hill is too similar to a hill of the original
 of the original's hills with a K point within 15 m of its own (the best distance and the good player's median
 relative to K, the speed at the takeoff, the flight time, the takeoff window, the spread from the wind as a share
 of K; the range widened by a margin for the spread of the measurement), that the original's hills pass the format
-check, and that the trained player keeps within the oracle margin on hills up to the limit
-`botReliableMaxKPointM` (comparison with the oracle above; the larger hills are played only when the verdict
-fails, for the table of bands the message then gives).
+check, and that the exact rival keeps within the oracle margin on every band of sizes (comparison with the oracle
+above; the message gives the table of bands).
 
 ```sh
 DSJ2_GAME_DIR=<katalog gry> corepack pnpm test src/hills/original-hills

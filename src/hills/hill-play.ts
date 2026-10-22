@@ -5,9 +5,9 @@ import { hillGeometry } from "./hill-geometry";
 import { oracleJump, type OracleResult } from "./hill-oracle";
 import type { WindState } from "../sim/wind";
 import {
-  EXACT_PLAYER_LEVEL,
-  PLAYER_LEVELS,
-  playJump,
+  exactRivalJump,
+  RIVAL_PLAYER_LEVELS,
+  rivalJump,
   randomJump,
   scenarioJump,
   startWindOf,
@@ -21,7 +21,10 @@ import { TRAINED_PLAYER_POLICY } from "./player-policy";
 
 /** Thresholds of the simulation checks: what makes a hill play well and fairly, measured with the bots. */
 export const PLAY_RULES = {
-  /** The simple flight steering of the bots is credible up to about this size; above it the bot, not the hill, decides. */
+  /**
+   * The rules judge hills up to this size. The rival players are credible on every size of the original's hills,
+   * but the bounds below that are lengths are set on hills up to this size and do not yet grow with a larger hill.
+   */
   botReliableMaxKPointM: 120,
   /** Takeoff aims within this distance of the best one count as hitting the takeoff. */
   windowToleranceM: 3,
@@ -35,9 +38,13 @@ export const PLAY_RULES = {
   windowAtLeastMinMinShare: 0.75,
   /** Every sweep seed has at least this many clean takeoff aims: no wind may leave no clean takeoff at all. */
   windowCleanMinFrames: 1,
-  /** The good player's median lands near the K point: not far short of it, not far past it. */
+  /**
+   * The good player's median lands near the K point: not far short of it, not far past it. The good rival goes
+   * about 3 m further than the trained player did (the median over the hills up to K120), so the bound past it is
+   * 3 m more than the trained player's 10 m.
+   */
   goodMedianFromKMinM: -20,
-  goodMedianFromKMaxM: 10,
+  goodMedianFromKMaxM: 13,
   /** Skill must win: the good player beats the average one on at least this share of the same jumps. */
   goodBeatsAverageMinShare: 0.7,
   /**
@@ -62,17 +69,20 @@ export const PLAY_RULES = {
   bestPastLandingAreaMaxM: 5,
   /** A real flight: the good player's median time in the air. */
   goodMedianFlightMinS: 2.5,
-  /** Ski jumpers fly close to the slope; a 90th percentile higher than this means the profile throws them up. */
-  highestAboveTerrainP90MaxM: 8,
+  /**
+   * Ski jumpers fly close to the slope; a 90th percentile higher than this means the profile throws them up. The
+   * rivals fly up to 0.4 m higher than the trained player did on the hills up to K120, so 0.5 m more than its 8 m.
+   */
+  highestAboveTerrainP90MaxM: 8.5,
   /** Speed at the takeoff of every bot jump, within what a ski jump hill gives. */
   takeoffSpeedMinKmPerH: 50,
   takeoffSpeedMaxKmPerH: 120,
   /**
    * Wind may move a jump, but by less than skill does: deviation of the good player's distance at a fixed aim, as
-   * a share of the K point, because the same wind carries a jumper further in a longer flight (5.5% measured on
-   * the training hill).
+   * a share of the K point, because the same wind carries a jumper further in a longer flight. Measured with the
+   * exact rival: 5.5% on the training hill, up to 10.7% on the original's hills (K205).
    */
-  windSpreadMaxShareOfK: 0.08,
+  windSpreadMaxShareOfK: 0.11,
   /** The scenery ends here; every designed and random jump must stop before it. */
   finalXMaxM: LAYER_TABLE_LENGTH_M,
   /**
@@ -299,19 +309,24 @@ export function playEvaluation(hill: HillChoice, sample: PlaySample = PLAY_SAMPL
     hill,
     sweepSeeds.map((s) => s.seed),
     PLAY_RULES.windowToleranceM,
+    undefined,
+    undefined,
+    (seed, aim) => exactRivalJump(hill, seed, aim),
   );
   const sweep = searched.map((s, i) => ({ ...s, windClass: sweepSeeds[i]?.windClass ?? "calm" }));
   const windows = sweep.map((s) => s.windowFrames);
+  // The pilot presses the takeoff by the time left to the edge, as the trained player aims, so the designed jumps
+  // take this aim too.
   const aim = Math.round(median(sweep.map((s) => s.bestAimFrames)));
   const playerSeeds = classSeeds(sample.playerSeedsPerClass);
-  const level = (player: (typeof PLAYER_LEVELS)[keyof typeof PLAYER_LEVELS]) =>
-    playerSeeds.map(({ seed }) => playJump(hill, seed, player, seed + NOISE_SEED_OFFSET));
-  const weak = level(PLAYER_LEVELS.weak);
-  const average = level(PLAYER_LEVELS.average);
-  const good = level(PLAYER_LEVELS.good);
+  const level = (rivalLevel: number) =>
+    playerSeeds.map(({ seed }) => rivalJump(hill, seed, rivalLevel, seed + NOISE_SEED_OFFSET));
+  const weak = level(RIVAL_PLAYER_LEVELS.weak);
+  const average = level(RIVAL_PLAYER_LEVELS.average);
+  const good = level(RIVAL_PLAYER_LEVELS.good);
   const players = [...weak, ...average, ...good];
   const lifted = players.filter((o) => o.takeoffSpeedKmPerH > 0).map((o) => o.takeoffSpeedKmPerH);
-  const windOnly = playerSeeds.map(({ seed }) => playJump(hill, seed, EXACT_PLAYER_LEVEL, seed));
+  const windOnly = playerSeeds.map(({ seed }) => exactRivalJump(hill, seed));
   const designed = WIND_CLASSES.flatMap((windClass) => {
     const [seed] = windSeeds[windClass];
     if (seed === undefined) return [];
@@ -386,8 +401,8 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
     return [
       problem(
         "bot-unreliable",
-        `K ${k} m is above ${r.botReliableMaxKPointM} m, where the bots' steering decides more than the hill; ` +
-          "this hill cannot pass until a stronger bot exists",
+        `K ${k} m is above ${r.botReliableMaxKPointM} m, the largest size the length bounds of the rules are set ` +
+          "for; this hill cannot pass until they grow with the hill",
       ),
     ];
   }
