@@ -22,12 +22,14 @@ import { TRAINED_PLAYER_POLICY } from "./player-policy";
 /** Thresholds of the simulation checks: what makes a hill play well and fairly, measured with the bots. */
 export const PLAY_RULES = {
   /**
-   * The rules judge hills up to this size. The rival players are credible on every size of the original's hills,
-   * but the bounds below that are lengths are set on hills up to this size and do not yet grow with a larger hill.
+   * The bounds that are lengths are set on the hills up to this K point; above it they grow with the hill, at their
+   * `...GrowthMPerM` per metre of K, as they do on the original's hills.
    */
-  botReliableMaxKPointM: 120,
+  sizeScaleFromKPointM: 120,
   /** Takeoff aims within this distance of the best one count as hitting the takeoff. */
   windowToleranceM: 3,
+  /** One frame of the takeoff carries a faster jumper further. */
+  windowToleranceGrowthMPerM: 0.025,
   /**
    * No hill may require one exact frame of timing: the median takeoff window over the sweep seeds has at least
    * this many aim frames reaching the best distance. A 1-frame window appears now and then on any hill (the edge
@@ -45,6 +47,7 @@ export const PLAY_RULES = {
    */
   goodMedianFromKMinM: -20,
   goodMedianFromKMaxM: 13,
+  goodMedianFromKMaxGrowthMPerM: 0.01,
   /** Skill must win: the good player beats the average one on at least this share of the same jumps. */
   goodBeatsAverageMinShare: 0.7,
   /**
@@ -74,6 +77,7 @@ export const PLAY_RULES = {
    * rivals fly up to 0.4 m higher than the trained player did on the hills up to K120, so 0.5 m more than its 8 m.
    */
   highestAboveTerrainP90MaxM: 8.5,
+  highestAboveTerrainGrowthMPerM: 0.025,
   /** Speed at the takeoff of every bot jump, within what a ski jump hill gives. */
   takeoffSpeedMinKmPerH: 50,
   takeoffSpeedMaxKmPerH: 120,
@@ -298,6 +302,14 @@ function largest(jumps: readonly NamedJump[], of: (o: JumpOutcome) => number): {
   });
 }
 
+/** How much a length bound grows on a hill of this K point, at `perM` metres per metre of K above the scale's start. */
+export const sizeGrowthM = (kPointM: number, perM: number): number =>
+  Math.max(0, kPointM - PLAY_RULES.sizeScaleFromKPointM) * perM;
+
+/** How far a takeoff aim may fall short of the best and still hit the takeoff, on a hill of this K point. */
+export const windowToleranceOf = (kPointM: number): number =>
+  PLAY_RULES.windowToleranceM + sizeGrowthM(kPointM, PLAY_RULES.windowToleranceGrowthMPerM);
+
 /** Runs the bots on a hill and keeps what they measured, with the seeds and jumps behind the measures. */
 export function playEvaluation(hill: HillChoice, sample: PlaySample = PLAY_SAMPLE): PlayEvaluation {
   const perClass = Math.max(sample.playerSeedsPerClass, sample.sweepSeedsPerClass, 1);
@@ -308,7 +320,7 @@ export function playEvaluation(hill: HillChoice, sample: PlaySample = PLAY_SAMPL
   const searched = takeoffAimSearch(
     hill,
     sweepSeeds.map((s) => s.seed),
-    PLAY_RULES.windowToleranceM,
+    windowToleranceOf(hill.kPointM),
     undefined,
     undefined,
     (seed, aim) => exactRivalJump(hill, seed, aim),
@@ -397,15 +409,7 @@ const outside = (v: number, lo: number, hi: number): boolean => !(v >= lo && v <
 export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProblem[] {
   const r = PLAY_RULES;
   const k = spec.kPointM;
-  if (k > r.botReliableMaxKPointM) {
-    return [
-      problem(
-        "bot-unreliable",
-        `K ${k} m is above ${r.botReliableMaxKPointM} m, the largest size the length bounds of the rules are set ` +
-          "for; this hill cannot pass until they grow with the hill",
-      ),
-    ];
-  }
+  const grownM = (perM: number): number => sizeGrowthM(k, perM);
   const { landingAreaEndM } = hillGeometry(buildHillProfile(spec.profile.inrun, spec.profile.landing), k);
   const checks: readonly [boolean, string, string][] = [
     [
@@ -424,7 +428,11 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
       `a wind with a takeoff window of ${m.windowMinFrames} frames`,
     ],
     [
-      outside(m.medianGoodM - k, r.goodMedianFromKMinM, r.goodMedianFromKMaxM),
+      outside(
+        m.medianGoodM - k,
+        r.goodMedianFromKMinM,
+        r.goodMedianFromKMaxM + grownM(r.goodMedianFromKMaxGrowthMPerM),
+      ),
       "good-median",
       `good player's median ${m.medianGoodM} m on K ${k} m`,
     ],
@@ -457,7 +465,7 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
     ],
     [!(m.medianGoodFlightS >= r.goodMedianFlightMinS), "flight-time", `median flight ${m.medianGoodFlightS} s`],
     [
-      !(m.highestAboveTerrainP90M <= r.highestAboveTerrainP90MaxM),
+      !(m.highestAboveTerrainP90M <= r.highestAboveTerrainP90MaxM + grownM(r.highestAboveTerrainGrowthMPerM)),
       "flight-height",
       `90th percentile of the flight height ${m.highestAboveTerrainP90M} m`,
     ],

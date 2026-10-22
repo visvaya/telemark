@@ -68,7 +68,9 @@ describe("hill generator", () => {
         takeoffAngleDeg: 10,
         look: "day",
       };
-      const { spec, report } = generateHill(huge);
+      // The play rules judge a hill of any size now, and refuse this one: it cannot be jumped to its K point.
+      expect(() => generateHill(huge)).toThrow(/plays badly: .*play\.best-short/);
+      const { spec, report } = generateHill(huge, 1, { checkPlay: false });
       expect(report.bestOnTarget).toBe(false);
       expect(report.bestCalmFromKM).toBeLessThan(GENERATOR_TARGETS.best.fromKMinM);
       expect(report.playJudged).toBe(false);
