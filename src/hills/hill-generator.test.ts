@@ -154,11 +154,12 @@ describe("hill generator", () => {
     const [first] = GENERATED_HILL_CHARACTERS;
     if (first === undefined) throw new Error("no characters");
     // A gentle K300 with the longest landing area and the gate far on: the landing hill and the outrun fill even
-    // the longest scene of an own hill.
+    // the longest scene of an own hill. At 35 degrees K stays near enough to the steepest point that the landing
+    // area need not give way; that search alone takes most of a second on a slow machine.
     const crowded: HillCharacter = {
       ...first,
       kPointM: 300,
-      landingSteepnessDeg: 34,
+      landingSteepnessDeg: 35,
       landingAreaPastKShare: 0.39,
       gateXM: 34,
       bestPastKM: { minM: 10, maxM: 14 },
