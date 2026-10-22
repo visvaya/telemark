@@ -235,7 +235,7 @@ jobs:
           # dpkg installs exactly the kept packages and never asks the archive; apt would resolve them against the
           # image's package lists and fetch what those name.
           if [ "$FROM_CACHE" = "true" ] && [ "${#debs[@]}" -gt 0 ] &&
-            sudo dpkg --install --skip-same-version "${debs[@]}" > "$RUNNER_TEMP/dpkg.log" 2>&1; then
+            sudo dpkg --install --skip-same-version "${debs[@]}" 2>&1 | tee "$RUNNER_TEMP/dpkg.log" > /dev/null; then
             echo "the system packages came from the cache (${#debs[@]})"
             exit 0
           fi
