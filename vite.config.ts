@@ -28,6 +28,10 @@ export default defineConfig({
       ...(process.env["HILL_STABILITY"] === "1" ? [] : ["src/hills/hill-play.stability-*.test.ts"]),
     ],
     globals: false,
+    // Tests that simulate whole jumps take 1 to 3 s alone; on a laptop shared with other work they passed 5 s and
+    // failed at random (2026-10-21: six different tests, each passing alone), while a quiet run never comes close.
+    // Three times the default keeps a hung test caught. Time budgets are checked by their own tests, not by this.
+    testTimeout: 15_000,
     // Coverage is measured where a wrong value does not crash anything but silently gives wrong results: the
     // simulation, the save with records and replays, and the hill format with its checks. Each directory keeps
     // its own thresholds; tests and test helpers are not counted.
