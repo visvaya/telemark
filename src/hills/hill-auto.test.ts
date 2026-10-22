@@ -7,10 +7,13 @@ import {
 } from "../render/hill-layer-tables";
 import { BorlandRandom } from "../sim/borland-random";
 import { buildHillProfile } from "../sim/hill-setup";
-import { drawCharacter, generateHillOfSize, isTypicalFall, TYPICAL_FALL } from "./hill-auto";
+import { drawCharacter, generateHillOfSize, isTypicalFall, noTypicalHill, TYPICAL_FALL } from "./hill-auto";
 import { characterProblems, landingFallOf } from "./hill-generator";
 import { geometryProblems, hillGeometry } from "./hill-geometry";
 import { LIKENESS } from "./hill-likeness";
+
+/** A problem with only its rule, for the reasons a generator gives. */
+const problem = (rule: string) => ({ rule, path: "", message: "" });
 
 /** One hill with the play rules: a search of a few oracle runs and one evaluation, several seconds. */
 const GENERATION_TIMEOUT_MS = 180_000;
@@ -78,6 +81,28 @@ describe("hills from their size alone", () => {
     },
     GENERATION_TIMEOUT_MS,
   );
+
+  it(
+    "keeps away from a hill already there: the same size and seed make another hill beside it",
+    () => {
+      const alone = generateHillOfSize(60, 1, { catalog: [], checkPlay: false });
+      const beside = generateHillOfSize(60, 1, { catalog: [alone.spec], checkPlay: false });
+      expect(beside.character).not.toEqual(alone.character);
+      expect(beside.report.closestDistance).toBeGreaterThanOrEqual(LIKENESS.tooAlike);
+    },
+    GENERATION_TIMEOUT_MS,
+  );
+
+  it("says, when no character of a size makes a hill, why the generator refused each one", () => {
+    const error = noTypicalHill(270, [
+      { problems: [problem("generator.no-room")] },
+      { problems: [problem("geometry.a"), problem("play.b")] },
+    ]);
+    expect(error.problems).toHaveLength(1);
+    expect(error.problems[0]?.rule).toBe("generator.no-typical-hill");
+    expect(error.problems[0]?.message).toBe("generator.no-room; geometry.a,play.b");
+    expect(error.message).toMatch(/^no hill of K 270 m after \d+ characters/);
+  });
 
   it(
     "makes a ski flying hill of the format's largest size in a scene longer than the original's",

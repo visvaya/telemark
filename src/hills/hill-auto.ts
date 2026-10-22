@@ -231,7 +231,15 @@ export function generateHillOfSize(kPointM: number, seed = 1, options: Generator
       refused.push({ character, problems: error.problems });
     }
   }
-  throw new HillGenerationError(`no hill of K ${kPointM} m after ${AUTO.attempts} characters`, [
+  throw noTypicalHill(kPointM, refused);
+}
+
+/** Why no hill of a size came out: the rules the generator gave for each character it refused, in order. */
+export function noTypicalHill(
+  kPointM: number,
+  refused: readonly { problems: readonly HillProblem[] }[],
+): HillGenerationError {
+  return new HillGenerationError(`no hill of K ${kPointM} m after ${AUTO.attempts} characters`, [
     {
       rule: "generator.no-typical-hill",
       path: "",
