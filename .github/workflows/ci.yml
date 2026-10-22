@@ -240,8 +240,9 @@ jobs:
           if [ "${#debs[@]}" -gt 0 ]; then sudo cp "${debs[@]}" /var/cache/apt/archives/; fi
           pnpm exec playwright install-deps "$ENGINE"
           mkdir -p "$HOME/browser-debs"
-          cp /var/cache/apt/archives/*.deb "$HOME/browser-debs/"
-          echo "the system packages came from the archive; $(ls "$HOME"/browser-debs | wc -l) kept for the cache"
+          kept=(/var/cache/apt/archives/*.deb)
+          if [ "${#kept[@]}" -gt 0 ]; then cp "${kept[@]}" "$HOME/browser-debs/"; fi
+          echo "the system packages came from the archive; ${#kept[@]} kept for the cache"
       - name: Keep the browser's system packages
         if: steps.debs.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
