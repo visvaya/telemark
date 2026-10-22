@@ -567,7 +567,11 @@ of a future hill editor for players. Twenty hills of the set are in the game: te
 since 2026-10-17) and nine from K135 to K245 (`own-24` to `own-32`, since the checks judge hills of every size). Each
 has its own gate position, flat part, takeoff height, inrun steepness and best jump target (the earlier `own-4` to
 `own-13` had one gate setting, one inrun look and one target for all, so new ones under new identifiers replaced
-them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed, and
+them, and the old ones are retired). Their data is copied into `own-hills.ts` with its own scenery seed (2 to 20 in
+the order of the identifiers; `own-hills.test.ts` checks that no two own hills share the colours of the walls, the
+gate and the fences, the terrain or the trees, since the likeness check compares profiles only, and that hills
+next to each other on the hill list, one after the other or two apart, have inrun walls of different colours, the
+largest patch of colour in the view; the sky and the other colours may repeat), and
 `SET_HILLS_IN_GAME` (`src/hills/test-support/generated-hills.ts`) binds the characters of the set to these
 hills. The set takes them as they are in the game (`keptHill`: a measurement of the best jump and the same checks
 as when generating, without the search), instead of generating them anew, because a later change of the
