@@ -7,7 +7,7 @@ import { geometryProblems, hillGeometry, kFromSteepestMaxM, type HillGeometry } 
 import { lookProblems, supportsUnderInrun } from "./hill-look-rules";
 import { hillDistance, LIKENESS } from "./hill-likeness";
 import { oracleJump } from "./hill-oracle";
-import { PLAY_RULES, playMeasures, playProblems, windClassSeeds } from "./hill-play";
+import { playMeasures, playProblems, windClassSeeds } from "./hill-play";
 import { HILL_SPEC_SCHEMA_VERSION, type HillProblem, type HillSpec } from "./hill-spec";
 import { OWN_HILL_SPECS } from "./own-hills";
 import { parseHillSpec } from "./parse-hill-spec";
@@ -126,7 +126,7 @@ const GENERATOR = {
   /** The outrun joins the landing tanh this many widths past its centre (the steepest point). */
   outrunJoinWidths: 0.3,
   /** From the end of the landing area to the outrun's lowest point, horizontally: the rule's 30 m with a margin. */
-  outrunFlatM: 40,
+  outrunFlatM: 32,
   /** Step of the arc length integration of the outrun's parabola, in metres. */
   arcStepM: 0.05,
   /** Trees reach this far past the outrun's lowest point. */
@@ -136,8 +136,13 @@ const GENERATOR = {
   inrunLineMinM: 1,
   /** The format's limit of the end of the straight part. */
   inrunLineEndMaxXM: 150,
-  /** The scene is drawn this far; the outrun's lowest point stays before it. */
+  /** The scene is drawn this far; the outrun's lowest point stays `outrunStopMarginM` before it. */
   sceneEndXM: 379,
+  /**
+   * A jumper coasts up the outrun past its lowest point before stopping: 15 to 23 m on the generated hills from
+   * K135 to K260 (the furthest designed jumps, 2026-10-22), so the lowest point keeps this much of the scene after it.
+   */
+  outrunStopMarginM: 25,
   /** Steps of the false position search; each runs the oracle once. */
   searchMaxSteps: 14,
   /** Bisection steps of the landing hill's solution. */
@@ -199,7 +204,7 @@ interface GeneratorReport {
   styleProblems: readonly HillProblem[];
   /** Whether the best jump of the search lies in the target range. */
   bestOnTarget: boolean;
-  /** Whether the play rules judged the hill (up to the bots' limit), with no problem found. */
+  /** Whether the play rules judged the hill, with no problem found. */
   playJudged: boolean;
   /** The closest own or other hill and its likeness distance; under `LIKENESS.tooAlike` is an error. */
   closestId: string | null;
@@ -227,7 +232,7 @@ export interface GeneratorOptions {
   others?: readonly HillSpec[];
   /** The hills already in the game, which the result must not be too alike to: the own hills by default. */
   catalog?: readonly HillSpec[];
-  /** Run the play rules on hills up to the bots' limit (the default); off only to save time where they run elsewhere. */
+  /** Run the play rules (the default); off only to save time where they run elsewhere. */
   checkPlay?: boolean;
 }
 
@@ -644,7 +649,7 @@ function specOf(c: HillCharacter, shape: LandingShape, lineM: number, seed: numb
 function longestLineM(c: HillCharacter, shape: LandingShape): number {
   const probe = profileOf(c, shape, 0);
   const lowestPastLineEndM = probe.landing.centerXM + shape.lowestFromCenterM - probe.inrun.lineEndXM;
-  return Math.min(G.inrunLineEndMaxXM, G.sceneEndXM - lowestPastLineEndM) - gateOf(c);
+  return Math.min(G.inrunLineEndMaxXM, G.sceneEndXM - G.outrunStopMarginM - lowestPastLineEndM) - gateOf(c);
 }
 
 interface SearchPoint {
@@ -720,7 +725,7 @@ export interface GeneratedHillChecks {
 
 /**
  * The checks of a generated hill, cheapest first: the format, the admission rules, the likeness to the catalog
- * and to `options.others`, and the play rules up to the bots' limit. Throws `HillGenerationError` at the first
+ * and to `options.others`, and the play rules. Throws `HillGenerationError` at the first
  * that fails; style problems are returned, because they are targets and not refusals.
  */
 export function checkGeneratedHill(spec: HillSpec, options: GeneratorOptions = {}): GeneratedHillChecks {
@@ -736,7 +741,7 @@ export function checkGeneratedHill(spec: HillSpec, options: GeneratorOptions = {
       { rule: "generator.too-alike", path: "", message: `likeness distance ${closest.distance} to ${closest.id}` },
     ]);
   }
-  const playJudged = (options.checkPlay ?? true) && spec.kPointM <= PLAY_RULES.botReliableMaxKPointM;
+  const playJudged = options.checkPlay ?? true;
   if (playJudged) {
     const play = playProblems(spec, playMeasures(hillChoiceOf(spec)));
     if (play.length > 0) throw new HillGenerationError(`generated hill ${spec.id} plays badly`, play);

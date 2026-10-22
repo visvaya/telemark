@@ -6,8 +6,10 @@ import {
   PLAY_SAMPLE,
   playEvaluation,
   playProblems,
+  sizeGrowthM,
   WIND_CLASSES,
   windClassSeeds,
+  windowToleranceOf,
   type PlayMeasures,
 } from "./hill-play";
 import type { HillSpec } from "./hill-spec";
@@ -161,13 +163,31 @@ describe("play rules", () => {
   });
 
   it("allows wind a spread in proportion to the hill's size", () => {
-    const larger: HillSpec = { ...training, kPointM: PLAY_RULES.botReliableMaxKPointM };
+    const larger: HillSpec = { ...training, kPointM: 120 };
     expect(rulesOf(training, { windSpreadM: 12 })).toEqual(["play.wind-spread"]);
     expect(rulesOf(larger, { windSpreadM: 12 }).filter((r) => r === "play.wind-spread")).toEqual([]);
   });
 
-  it("does not judge a hill above the bots' reach", () => {
-    const large: HillSpec = { ...training, kPointM: PLAY_RULES.botReliableMaxKPointM + 1 };
-    expect(rulesOf(large, {})).toEqual(["play.bot-unreliable"]);
+  it("lets the bounds that are lengths grow with a hill above K120, and not below it", () => {
+    const r = PLAY_RULES;
+    expect(sizeGrowthM(r.sizeScaleFromKPointM, 1)).toBe(0);
+    expect(sizeGrowthM(90, 1)).toBe(0);
+    expect(windowToleranceOf(90)).toBe(r.windowToleranceM);
+    expect(windowToleranceOf(220)).toBeCloseTo(r.windowToleranceM + 100 * r.windowToleranceGrowthMPerM);
+    // A K190 hill whose measures are the training hill's moved by 100 m: 70 m of K above the scale's start.
+    expect(sizeGrowthM(training.kPointM + 100, 1)).toBe(70);
+    const large: HillSpec = { ...training, kPointM: training.kPointM + 100 };
+    const grown = { medianGoodM: passing.medianGoodM + 100, medianAverageM: passing.medianAverageM + 100 };
+    const moved = { ...grown, medianWeakM: passing.medianWeakM + 100, bestMedianM: passing.bestMedianM + 100 };
+    const highest = r.highestAboveTerrainP90MaxM + sizeGrowthM(large.kPointM, r.highestAboveTerrainGrowthMPerM);
+    expect(rulesOf(large, { ...moved, highestAboveTerrainP90M: highest - 0.1 })).not.toContain("play.flight-height");
+    expect(rulesOf(large, { ...moved, highestAboveTerrainP90M: highest + 0.1 })).toContain("play.flight-height");
+    const furthest =
+      large.kPointM + r.goodMedianFromKMaxM + sizeGrowthM(large.kPointM, r.goodMedianFromKMaxGrowthMPerM);
+    expect(rulesOf(large, { ...moved, medianGoodM: furthest - 0.1 })).not.toContain("play.good-median");
+    expect(rulesOf(large, { ...moved, medianGoodM: furthest + 0.1 })).toContain("play.good-median");
+    expect(rulesOf(training, { highestAboveTerrainP90M: r.highestAboveTerrainP90MaxM + 0.1 })).toEqual([
+      "play.flight-height",
+    ]);
   });
 });

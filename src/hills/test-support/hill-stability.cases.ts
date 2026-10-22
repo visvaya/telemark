@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hillChoiceOf, OWN_HILLS } from "../../game/hill-choice";
 import type { HillCharacter } from "../hill-generator";
-import { PLAY_RULES, PLAY_SAMPLE, playMeasures, playProblems } from "../hill-play";
+import { PLAY_SAMPLE, playMeasures, playProblems } from "../hill-play";
 import type { HillSpec } from "../hill-spec";
 import { generatedHillSet, setHillInGameOf } from "./generated-hills";
 
@@ -36,8 +36,8 @@ export function describeOwnHillStability(specs: readonly HillSpec[]): void {
           return playProblems(spec, playMeasures(hill, sample)).map((p) => p.rule);
         };
         const first = verdict(0);
-        // Every own hill within the bots' limit passes; larger ones wait for a bot that plays them reliably.
-        expect(spec.kPointM > PLAY_RULES.botReliableMaxKPointM ? [] : first).toEqual([]);
+        // Every own hill passes.
+        expect(first).toEqual([]);
         expect(verdict(1)).toEqual(first);
         expect(verdict(2)).toEqual(first);
       },
@@ -46,7 +46,7 @@ export function describeOwnHillStability(specs: readonly HillSpec[]): void {
   });
 }
 
-/** One part of the generated set with the play rules on every hill up to the bots' limit: about a minute alone. */
+/** One part of the generated set with the play rules on every hill. */
 const GENERATED_PART_TIMEOUT_MS = 1_200_000;
 
 /**
@@ -63,10 +63,7 @@ export function describeGeneratedSetPart(characters: readonly HillCharacter[]): 
         const part = generatedHillSet(characters, false);
         const missed = part.flatMap(({ spec, report }, i) => {
           const character = characters[i];
-          const notPlayedHere =
-            character === undefined ||
-            setHillInGameOf(character) !== undefined ||
-            spec.kPointM > PLAY_RULES.botReliableMaxKPointM;
+          const notPlayedHere = character === undefined || setHillInGameOf(character) !== undefined;
           const play = notPlayedHere ? [] : playProblems(spec, playMeasures(hillChoiceOf(spec)));
           return [
             ...(report.bestOnTarget ? [] : [`${spec.id}: best calm jump ${report.bestCalmFromKM} m from K`]),
