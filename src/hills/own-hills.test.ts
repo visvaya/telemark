@@ -19,6 +19,10 @@ describe.each(OWN_HILL_SPECS.map((spec) => [spec.id, spec] as const))("own hill 
   });
 });
 
+/** The own hills whose value appears earlier in the list too. */
+const repeated = (values: readonly (string | number)[]): string[] =>
+  OWN_HILL_SPECS.filter((_s, i) => values.indexOf(values[i] ?? "") !== i).map((s) => s.id);
+
 describe("own hills together", () => {
   // The likeness check compares profiles only, since the look does not change how a hill plays; two hills of one
   // look would still read as one hill painted twice.
@@ -28,8 +32,6 @@ describe("own hills together", () => {
     );
     const terrain = OWN_HILL_SPECS.map((s) => s.look.terrain.seed);
     const trees = OWN_HILL_SPECS.map((s) => s.look.trees.seed);
-    const repeated = (values: readonly (string | number)[]) =>
-      OWN_HILL_SPECS.filter((_s, i) => values.indexOf(values[i] ?? "") !== i).map((s) => s.id);
     expect({ colours: repeated(colours), terrain: repeated(terrain), trees: repeated(trees) }).toEqual({
       colours: [],
       terrain: [],
