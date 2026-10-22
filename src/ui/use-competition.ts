@@ -88,7 +88,10 @@ export function useCompetition(show: Show, ownOutfit: Outfit, keep: (contest: Sa
     const competitor = state.competitors[index ?? -1];
     if (index === null || competitor === undefined) return;
     const hudName = UI_TEXT.competition.hudName(competitorName(competitor), state.round);
-    const outcome = competitor.kind === "cpu" ? cpuCompetitionJump(current.hill, competitor.record, newSeed()) : null;
+    const outcome =
+      competitor.kind === "cpu"
+        ? cpuCompetitionJump(current.hill, competitor.record, newSeed(), current.settings.rivalLanding)
+        : null;
     playerScore.current = null;
     const afterJump = (score: JumpScore | null): boolean => {
       if (score === null) return false;

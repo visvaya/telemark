@@ -11,6 +11,7 @@ import {
 import type { CompetitionRun } from "./competition-run";
 import { competitionCupPoints, cupPhase, type CupState } from "./cup";
 import type { HillChoice } from "./hill-choice";
+import { RIVAL_LANDINGS } from "./rival-landing";
 
 /**
  * A competition kept between visits: everything needed to go on where the player was between two jumps. A jump in
@@ -91,7 +92,11 @@ function settingsOf(v: unknown): CompetitionSettings | null {
   const disqualification = DISQUALIFICATION_RULES.find((r) => r === fieldOf(v, "disqualification"));
   if (players === null || cpus === null || disqualification === undefined) return null;
   if (typeof doubleCup !== "boolean" || typeof watchCpu !== "boolean") return null;
-  return { hillIds, doubleCup, players, cpus, watchCpu, disqualification };
+  // Competitions kept before the landing of computer jumpers could be chosen ran with the original's.
+  const rawLanding = fieldOf(v, "rivalLanding");
+  const rivalLanding = rawLanding === undefined ? "original" : RIVAL_LANDINGS.find((l) => l === rawLanding);
+  if (rivalLanding === undefined) return null;
+  return { hillIds, doubleCup, players, cpus, watchCpu, disqualification, rivalLanding };
 }
 
 function competitorOf(v: unknown): Competitor | null {

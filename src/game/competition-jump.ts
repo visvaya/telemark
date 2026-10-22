@@ -7,6 +7,7 @@ import { FRAME_DT_S } from "../sim/physics-constants";
 import { createStartWind } from "../sim/training-wind";
 import type { JumpScore } from "./competition";
 import type { HillChoice } from "./hill-choice";
+import { rivalLandingInput, type RivalLanding } from "./rival-landing";
 import { startComputedJump, type RecordedStart } from "./training-session";
 
 /** A watched jump that does not stop within this is cut here (a jump is 900 to 1600 frames). */
@@ -38,9 +39,15 @@ export function cpuJumpStart(
 /**
  * A computer jumper's jump, computed without drawing as the original computes an unwatched one: the score is the
  * one of the frame the result is ready in (the touchdown). The jump then goes on to where the jumper stops, so a
- * watched jump plays the same frames from the same inputs.
+ * watched jump plays the same frames from the same inputs. `landing` is the competition's landing of computer
+ * jumpers: the original's pilot, or the same pilot with a later landing.
  */
-export function cpuCompetitionJump(hill: HillChoice, record: CpuJumperRecord, seed: number): CpuJumpOutcome {
+export function cpuCompetitionJump(
+  hill: HillChoice,
+  record: CpuJumperRecord,
+  seed: number,
+  landing: RivalLanding,
+): CpuJumpOutcome {
   const { start, pilot: firstPilot } = cpuJumpStart(hill, record, seed);
   const jump = startComputedJump(hill, start);
   let sim = jump.state;
@@ -49,16 +56,12 @@ export function cpuCompetitionJump(hill: HillChoice, record: CpuJumperRecord, se
   let score: JumpScore | null = null;
   while (jumpRunning(sim) && sim.logic.frame < MAX_CPU_JUMP_FRAMES) {
     sim = stepFrame(sim, jump.setup, (frame, at) => {
-      const out = cpuPilotInput(
-        pilot,
-        pilotView(frame, at),
-        hill.profile,
-        FRAME_DT_S,
-        new BorlandRandom(at.randomSeed),
-      );
+      const view = pilotView(frame, at);
+      const out = cpuPilotInput(pilot, view, hill.profile, FRAME_DT_S, new BorlandRandom(at.randomSeed));
       pilot = out.pilot;
-      inputs.push(out.input);
-      return out.input;
+      const input = rivalLandingInput(landing, out.input, view, out.pilot, hill.profile);
+      inputs.push(input);
+      return input;
     });
     if (score === null && sim.logic.finished) {
       score = { distanceM: sim.logic.distanceM, points: sim.logic.points, fell: sim.logic.fallType !== 0 };

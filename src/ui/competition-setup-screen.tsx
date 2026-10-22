@@ -5,11 +5,11 @@ import {
   participantCount,
   type CompetitionSettings,
   type CpuLevelSetting,
-  type DisqualificationRule,
 } from "../game/competition";
 import { RIVALS } from "../game/competition-rivals";
 import { cupSchedule } from "../game/cup";
 import type { HillChoice } from "../game/hill-choice";
+import { RIVAL_LANDINGS } from "../game/rival-landing";
 import type { HillRecord } from "../storage/save-data";
 import { formatDecimal } from "../text/decimal";
 import { UI_TEXT } from "../text/ui-text";
@@ -105,31 +105,42 @@ function Check({
   );
 }
 
-/** The rule for a disqualified jump: the original's penalty points, or out of the competition. */
-function DisqualificationChoice({
+/**
+ * One rule of the competition chosen from a list, the original's first: the rule for a disqualified jump, or how
+ * the computer jumpers land.
+ */
+function RuleChoice<Rule extends string>({
+  id,
+  title,
+  rules,
+  names,
   value,
   onChange,
 }: {
-  value: DisqualificationRule;
-  onChange: (rule: DisqualificationRule) => void;
+  id: string;
+  title: string;
+  rules: readonly Rule[];
+  names: Readonly<Record<Rule, string>>;
+  value: Rule;
+  onChange: (rule: Rule) => void;
 }) {
   return (
-    <section className="settings-group" aria-labelledby="contest-dq">
-      <h2 className="hill-section-title" id="contest-dq">
-        {T.disqualificationRule}
+    <section className="settings-group" aria-labelledby={id}>
+      <h2 className="hill-section-title" id={id}>
+        {title}
       </h2>
       <select
         className="pixel-select"
-        aria-labelledby="contest-dq"
+        aria-labelledby={id}
         value={value}
         onChange={(e) => {
-          const rule = DISQUALIFICATION_RULES.find((r) => r === e.currentTarget.value);
+          const rule = rules.find((r) => r === e.currentTarget.value);
           if (rule !== undefined) onChange(rule);
         }}
       >
-        {DISQUALIFICATION_RULES.map((rule) => (
+        {rules.map((rule) => (
           <option key={rule} value={rule}>
-            {T.disqualificationRules[rule]}
+            {names[rule]}
           </option>
         ))}
       </select>
@@ -358,9 +369,21 @@ export function CompetitionSetupScreen({
         </div>
       </section>
       <RivalsChoice settings={settings} onChange={onChange} />
-      <DisqualificationChoice
+      <RuleChoice
+        id="contest-dq"
+        title={T.disqualificationRule}
+        rules={DISQUALIFICATION_RULES}
+        names={T.disqualificationRules}
         value={settings.disqualification}
         onChange={(disqualification) => onChange({ ...settings, disqualification })}
+      />
+      <RuleChoice
+        id="contest-landing"
+        title={T.rivalLanding}
+        rules={RIVAL_LANDINGS}
+        names={T.rivalLandings}
+        value={settings.rivalLanding}
+        onChange={(rivalLanding) => onChange({ ...settings, rivalLanding })}
       />
       <div className="menu">
         <button

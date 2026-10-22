@@ -1,5 +1,6 @@
 import { BorlandRandom } from "../sim/borland-random";
 import { CPU_LEVEL_COUNT, drawCpuForm, drawCpuTalents, type CpuJumperRecord } from "../sim/cpu-pilot";
+import { RIVAL_LANDINGS, type RivalLanding } from "./rival-landing";
 
 /**
  * A single competition: two rounds on one hill, players and computer jumpers. The state changes only through
@@ -42,6 +43,8 @@ export interface CompetitionSettings {
   /** Whether the computer jumpers' jumps are shown (the original's "watch the opponents' jumps"). */
   watchCpu: boolean;
   disqualification: DisqualificationRule;
+  /** How the computer jumpers land: the original's pilot, or the same pilot landing later. */
+  rivalLanding: RivalLanding;
 }
 
 const DEFAULT_CPU_LEVELS: readonly CpuLevelSetting[] = [2, 3, 1, 4, 2, 2, 2, 2];
@@ -53,6 +56,7 @@ export const DEFAULT_COMPETITION_SETTINGS: CompetitionSettings = {
   cpus: DEFAULT_CPU_LEVELS.map((level, i) => ({ on: i < 4, level })),
   watchCpu: false,
   disqualification: "original",
+  rivalLanding: "original",
 };
 
 const fieldOf = (v: unknown, key: string): unknown =>
@@ -88,6 +92,7 @@ export function parseCompetitionSettings(v: unknown): CompetitionSettings {
   const cpus = fieldOf(v, "cpus");
   const watchCpu = fieldOf(v, "watchCpu");
   const disqualification = DISQUALIFICATION_RULES.find((rule) => rule === fieldOf(v, "disqualification"));
+  const rivalLanding = RIVAL_LANDINGS.find((landing) => landing === fieldOf(v, "rivalLanding"));
   const parsed: CompetitionSettings = {
     hillIds: parseHillIds(fieldOf(v, "hillIds"), fieldOf(v, "hillId")),
     doubleCup: typeof doubleCup === "boolean" ? doubleCup : D.doubleCup,
@@ -102,6 +107,7 @@ export function parseCompetitionSettings(v: unknown): CompetitionSettings {
     }),
     watchCpu: typeof watchCpu === "boolean" ? watchCpu : D.watchCpu,
     disqualification: disqualification ?? D.disqualification,
+    rivalLanding: rivalLanding ?? D.rivalLanding,
   };
   return participantCount(parsed) > 0 ? parsed : { ...parsed, players: D.players };
 }

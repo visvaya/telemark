@@ -115,6 +115,12 @@ export const UI_TEXT = {
       original: "punkty karne (DSJ2)",
       fis: "odpada z konkursu",
     },
+    /** How the computer jumpers land, chosen in the setup; the original's pilot first, as the default. */
+    rivalLanding: "Mechanika lądowania rywali komputerowych",
+    rivalLandings: {
+      original: "zgodna z DSJ2",
+      improved: "ulepszona",
+    },
     start: "Rozpocznij zawody",
     nobody: "Włącz co najmniej jednego zawodnika.",
     boardTitle: "Konkurs",
@@ -513,6 +519,10 @@ export const UI_TEXT = {
       {
         title: "Równe punkty w Pucharze",
         text: "Wyżej jest zawodnik z większą liczbą zwycięstw, potem drugich miejsc i kolejnych; przy pełnej równości decyduje losowanie, jak w zasadach FIS. W trakcie Pucharu tacy zawodnicy dzielą miejsce, w klasyfikacji końcowej każdy ma własne.",
+      },
+      {
+        title: "Lądowanie rywali",
+        text: "W ustawieniach zawodów: „zgodna z DSJ2” to rywale jak w oryginale, którzy szykują się do lądowania wcześnie i przez to częściej upadają. „Ulepszona” to ci sami rywale lądujący później, jak dobry gracz: rzadziej upadają i skaczą trochę dalej.",
       },
     ],
   },
