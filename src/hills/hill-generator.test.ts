@@ -89,6 +89,67 @@ describe("hill generator", () => {
     GENERATION_TIMEOUT_MS,
   );
 
+  it.each<[string, HillCharacter, RegExp]>([
+    [
+      "the shortest inrun already lands past the target",
+      {
+        kPointM: 50,
+        landingSteepnessDeg: 36,
+        landingAreaPastKShare: 0.26,
+        knoll: "long",
+        inrunSteepnessDeg: 56,
+        takeoffAngleDeg: 11,
+        look: "day",
+        gateXM: 17,
+        flatBehindGateM: 2.5,
+        bestPastKM: { minM: 6, maxM: 9 },
+        tableHeightM: 1.8,
+      },
+      /^the shortest inrun lands the best jump at K\+[\d.]+, past K\+6\.\.K\+9$/,
+    ],
+    [
+      "the best jump changes abruptly with the inrun",
+      {
+        kPointM: 120,
+        landingSteepnessDeg: 34,
+        landingAreaPastKShare: 0.16,
+        knoll: "long",
+        inrunSteepnessDeg: 58,
+        takeoffAngleDeg: 12,
+        look: "day",
+        gateXM: 22,
+        flatBehindGateM: 3,
+        bestPastKM: { minM: 7, maxM: 10 },
+        tableHeightM: 1.6,
+      },
+      /^no inrun between the shortest and the longest lands the best jump in K\+7\.\.K\+10/,
+    ],
+  ])(
+    "refuses a target no inrun reaches when %s, before the play rules",
+    (_why, character, message) => {
+      const error = caught(() => generateHill(character, 1, { catalog: [] }));
+      expect(error.problems.map((p) => p.rule)).toEqual(["generator.target-unreachable"]);
+      expect(error.problems[0]?.message).toMatch(message);
+    },
+    GENERATION_TIMEOUT_MS,
+  );
+
+  it("refuses, before a jump, a character whose deck the look rules do not admit", () => {
+    const [first] = GENERATED_HILL_CHARACTERS;
+    if (first === undefined) throw new Error("no characters");
+    // A 7 m flat part behind the gate of a K50: with the platform behind it the deck is 0.15 of K.
+    const pier: HillCharacter = {
+      ...first,
+      kPointM: 50,
+      gateXM: 9,
+      flatBehindGateM: 7,
+      bestPastKM: { minM: 3, maxM: 6 },
+    };
+    const error = caught(() => generateHill(pier));
+    expect(error.message).toMatch(/^the character makes no valid hill/);
+    expect(error.problems.map((p) => p.rule)).toContain("look.deck-share");
+  });
+
   it("refuses at once, before a jump, a character that makes no valid hill at any inrun", () => {
     const [first] = GENERATED_HILL_CHARACTERS;
     if (first === undefined) throw new Error("no characters");
