@@ -63,7 +63,7 @@ export function withUnwatchedJumps(run: CompetitionRun, nextSeed: () => number):
     const state = competitionOf(out);
     const competitor = state.competitors[currentJumper(state) ?? -1];
     if (competitor?.kind !== "cpu") break;
-    out = withScore(out, cpuCompetitionJump(out.hill, competitor.record, nextSeed()).score);
+    out = withScore(out, cpuCompetitionJump(out.hill, competitor.record, nextSeed(), out.settings.rivalLanding).score);
   }
   return out;
 }

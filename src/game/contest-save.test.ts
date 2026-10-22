@@ -62,6 +62,7 @@ const players: CompetitionSettings = {
 const fis: CompetitionSettings = {
   ...players,
   disqualification: "fis",
+  rivalLanding: "improved",
   cpus: players.cpus.map((c) => ({ ...c, level: 5 })),
 };
 
@@ -107,6 +108,13 @@ describe.runIf(first && second)("a kept competition", () => {
     expect(older?.cup.lots).toEqual(sample.cup.entrants.map((_e, i) => i));
   });
 
+  it("reads a competition kept before the landing of computer jumpers could be chosen as one with the original's", () => {
+    expect(sample.settings.rivalLanding).toBe("original");
+    const improved = parseSavedContest(changed(["settings", "rivalLanding"], "improved"));
+    expect(improved?.settings.rivalLanding).toBe("improved");
+    expect(parseSavedContest(changed(["settings", "rivalLanding"], undefined))).toEqual(json(sample));
+  });
+
   it("ignores fields it does not know", () => {
     const extra = { ...sample, note: "x", cup: { ...sample.cup, more: [1] } };
     expect(parseSavedContest(extra)).toEqual(json(sample));
@@ -120,6 +128,7 @@ describe.runIf(first && second)("a kept competition", () => {
     ["settings with seven players", changed(["settings", "players"], [true, false, false, false, false, false, false])],
     ["a level out of range", changed(["settings", "cpus", 0, "level"], 6)],
     ["an unknown rule", changed(["settings", "disqualification"], "none")],
+    ["an unknown landing", changed(["settings", "rivalLanding"], "late")],
     ["an unknown place", changed(["place"], "jump")],
     ["roundStarted as a string", changed(["roundStarted"], "true")],
     ["an empty schedule", changed(["cup", "schedule"], [])],

@@ -82,6 +82,7 @@ describe("save data", () => {
         cpus: DEFAULT_SETTINGS.competition.cpus.map((_c, i) => ({ on: i % 2 === 0, level: 5 })),
         watchCpu: true,
         disqualification: "fis",
+        rivalLanding: "improved",
       },
     };
     const save = withSettings(emptySave(), chosen);

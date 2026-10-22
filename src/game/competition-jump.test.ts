@@ -21,7 +21,7 @@ describe.runIf(hill)("a computer jump in a competition", () => {
         const jump = startComputedJump(hill, start);
         let ref: CpuJumpState = { sim: jump.state, pilot };
         while (cpuJumpRunning(ref, jump.setup)) ref = stepCpuFrame(ref, jump.setup);
-        const out = cpuCompetitionJump(hill, record, seed);
+        const out = cpuCompetitionJump(hill, record, seed, "original");
         const L = ref.sim.logic;
         expect(out.score).toEqual({ distanceM: L.distanceM, points: L.points, fell: L.fallType !== 0 });
         expect(out.start).toEqual(start);

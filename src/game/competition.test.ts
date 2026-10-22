@@ -31,6 +31,7 @@ describe("competition settings", () => {
     expect(d.cpus.slice(0, 4).map((c) => c.level)).toEqual([2, 3, 1, 4]);
     expect(d.watchCpu).toBe(false);
     expect(d.disqualification).toBe("original");
+    expect(d.rivalLanding).toBe("original");
     expect(participantCount(d)).toBe(5);
   });
 
@@ -51,6 +52,9 @@ describe("competition settings", () => {
     expect(s.disqualification).toBe("original");
     expect(parseCompetitionSettings({ disqualification: "fis" }).disqualification).toBe("fis");
     expect(parseCompetitionSettings({ disqualification: "x" }).disqualification).toBe("original");
+    expect(s.rivalLanding).toBe("original");
+    expect(parseCompetitionSettings({ rivalLanding: "improved" }).rivalLanding).toBe("improved");
+    expect(parseCompetitionSettings({ rivalLanding: "late" }).rivalLanding).toBe("original");
     expect(parseCompetitionSettings(undefined)).toEqual(DEFAULT_COMPETITION_SETTINGS);
   });
 
