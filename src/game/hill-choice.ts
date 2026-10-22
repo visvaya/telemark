@@ -4,6 +4,7 @@ import type { HillProfile } from "../sim/hill-profile";
 import { buildHillProfile } from "../sim/hill-setup";
 import type { OriginalHill } from "../original/original-hills";
 import type { CountryCode } from "../render/flags";
+import { markOwnHillProfile } from "../render/hill-layer-tables";
 import { DEFAULT_HILL_LOOK, type HillLook } from "../render/hill-look";
 import { UI_TEXT } from "../text/ui-text";
 
@@ -41,6 +42,9 @@ export const RETIRED_OWN_HILL_IDS: ReadonlySet<string> = new Set([
 
 /** A hill of this project, built from its data. */
 export function hillChoiceOf(spec: HillSpec): HillChoice {
+  const profile = buildHillProfile(spec.profile.inrun, spec.profile.landing);
+  // An own hill's scene reaches as far as its outrun needs; the original's hills keep the original's.
+  markOwnHillProfile(profile);
   return {
     id: spec.id,
     name: spec.name,
@@ -48,7 +52,7 @@ export function hillChoiceOf(spec: HillSpec): HillChoice {
     source: "own",
     country: null,
     look: spec.look,
-    profile: buildHillProfile(spec.profile.inrun, spec.profile.landing),
+    profile,
   };
 }
 

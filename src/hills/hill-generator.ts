@@ -11,6 +11,7 @@ import { oracleJump } from "./hill-oracle";
 import { playMeasures, playProblems, windClassSeeds } from "./hill-play";
 import { HILL_SPEC_SCHEMA_VERSION, type HillProblem, type HillSpec } from "./hill-spec";
 import { HILL_SPEC_LIMITS } from "./hill-spec-limits";
+import { SCENE_LENGTH_MAX_M } from "../render/hill-layer-tables";
 import { OWN_HILL_SPECS } from "./own-hills";
 import { parseHillSpec } from "./parse-hill-spec";
 import { REFERENCE_PLAYER_POLICY } from "./player-policy";
@@ -148,8 +149,13 @@ const GENERATOR = {
   inrunLineMinM: 1,
   /** The format's limit of the end of the straight part. */
   inrunLineEndMaxXM: 150,
-  /** The scene is drawn this far; the outrun's lowest point stays `outrunStopMarginM` before it. */
+  /**
+   * The scene of the original's hills is drawn this far; the outrun's lowest point stays `outrunStopMarginM` before
+   * it. A hill this scene cannot hold (a ski flying hill past about K245) is built in the longest scene of an own
+   * hill instead (`longSceneEndXM`), whose layer tables reach as far as its outrun needs.
+   */
   sceneEndXM: 379,
+  longSceneEndXM: SCENE_LENGTH_MAX_M - 1,
   /**
    * A jumper coasts up the outrun past its lowest point before stopping: 15 to 23 m on the generated hills from
    * K135 to K260 as the set had them early on 2026-10-22 (the furthest designed jumps), so the lowest point keeps
@@ -696,14 +702,14 @@ function specOf(c: HillCharacter, shape: LandingShape, lineM: number, seed: numb
 }
 
 /** The longest straight part of the inrun the format and the scene allow, for this landing hill. */
-function longestLineM(c: HillCharacter, shape: LandingShape): number {
+function longestLineM(c: HillCharacter, shape: LandingShape, sceneEndXM: number = G.sceneEndXM): number {
   const probe = profileOf(c, shape, 0);
   const lowestPastLineEndM = probe.landing.centerXM + shape.lowestFromCenterM - probe.inrun.lineEndXM;
   const bendM = probe.inrun.takeoffXM - probe.inrun.lineEndXM;
   const lineEndMaxXM = Math.min(
     G.inrunLineEndMaxXM,
     HILL_SPEC_LIMITS.inrun.takeoffXM.max - bendM,
-    G.sceneEndXM - G.outrunStopMarginM - lowestPastLineEndM,
+    sceneEndXM - G.outrunStopMarginM - lowestPastLineEndM,
   );
   return lineEndMaxXM - gateOf(c);
 }
@@ -714,8 +720,13 @@ function longestLineM(c: HillCharacter, shape: LandingShape): number {
  * an admission rule of the geometry or of the look. Every inrun between the two lies between them in every number
  * those rules judge, so a character that passes both makes a valid hill at whatever length the search sets.
  */
-function constructionProblems(c: HillCharacter, shape: LandingShape, seed: number): readonly HillProblem[] {
-  const longest = longestLineM(c, shape);
+function constructionProblems(
+  c: HillCharacter,
+  shape: LandingShape,
+  seed: number,
+  sceneEndXM: number,
+): readonly HillProblem[] {
+  const longest = longestLineM(c, shape, sceneEndXM);
   if (!(longest >= G.inrunLineMinM)) {
     return [
       {
@@ -750,7 +761,12 @@ const onTarget = (c: HillCharacter, p: SearchPoint): boolean =>
  * which halves the weight of an end that stays) between the shortest and the longest inrun, on the oracle's best
  * distance on the calmest seed. Returns the closest point found when the range is not reached within the steps.
  */
-function searchInrun(c: HillCharacter, shape: LandingShape, seed: number): { point: SearchPoint; steps: number } {
+function searchInrun(
+  c: HillCharacter,
+  shape: LandingShape,
+  seed: number,
+  sceneEndXM: number,
+): { point: SearchPoint; steps: number } {
   let steps = 0;
   const measure = (lineM: number): SearchPoint => {
     steps++;
@@ -761,7 +777,7 @@ function searchInrun(c: HillCharacter, shape: LandingShape, seed: number): { poi
   const closer = (a: SearchPoint, b: SearchPoint): SearchPoint => (Math.abs(error(b)) < Math.abs(error(a)) ? b : a);
   let lo = measure(G.inrunLineMinM);
   if (error(lo) >= 0 || onTarget(c, lo)) return { point: lo, steps };
-  let hi = measure(longestLineM(c, shape));
+  let hi = measure(longestLineM(c, shape, sceneEndXM));
   if (error(hi) <= 0 || onTarget(c, hi)) return { point: hi, steps };
   let best = closer(lo, hi);
   let loWeight = 1;
@@ -848,12 +864,33 @@ export function generateHill(character: HillCharacter, seed = 1, options: Genera
   const asked = characterProblems(character);
   if (asked.length > 0) throw new HillGenerationError("the character is outside its ranges", asked);
   const shape = landingShape(character);
-  const built = constructionProblems(character, shape, seed);
-  if (built.length > 0) throw new HillGenerationError("the character makes no valid hill", built);
-  const { point, steps } = searchInrun(character, shape, seed);
+  // The original's scene first, so a hill it holds is built as it always was; a longer one only when it does not.
+  const inScene = (
+    sceneEndXM: number,
+  ): { built: readonly HillProblem[]; point: SearchPoint | undefined; steps: number } => {
+    const built = constructionProblems(character, shape, seed, sceneEndXM);
+    return built.length > 0
+      ? { built, point: undefined, steps: 0 }
+      : { built, ...searchInrun(character, shape, seed, sceneEndXM) };
+  };
+  const original = inScene(G.sceneEndXM);
+  const heldByOriginal =
+    original.point !== undefined &&
+    (onTarget(character, original.point) || original.point.lineM < longestLineM(character, shape, G.sceneEndXM));
+  const sceneEndXM = heldByOriginal ? G.sceneEndXM : G.longSceneEndXM;
+  const found = heldByOriginal ? original : inScene(G.longSceneEndXM);
+  if (found.point === undefined) {
+    throw new HillGenerationError("the character makes no valid hill", found.built);
+  }
+  const { point } = found;
+  const { steps } = found;
   if (!onTarget(character, point)) {
     throw new HillGenerationError("the best jump cannot reach its target", [
-      { rule: "generator.target-unreachable", path: "bestPastKM", message: missMessage(character, shape, point) },
+      {
+        rule: "generator.target-unreachable",
+        path: "bestPastKM",
+        message: missMessage(character, shape, point, sceneEndXM),
+      },
     ]);
   }
   const spec = specOf(character, shape, point.lineM, seed);
@@ -872,10 +909,10 @@ export function generateHill(character: HillCharacter, seed = 1, options: Genera
 }
 
 /** Why the search missed the target: the inrun the scene allows is too short, the shortest too long, or neither. */
-function missMessage(c: HillCharacter, shape: LandingShape, point: SearchPoint): string {
+function missMessage(c: HillCharacter, shape: LandingShape, point: SearchPoint, sceneEndXM: number): string {
   const fromK = (point.bestM - c.kPointM).toFixed(1);
   const target = `K+${bestOf(c).minM}..K+${bestOf(c).maxM}`;
-  if (point.lineM >= longestLineM(c, shape)) {
+  if (point.lineM >= longestLineM(c, shape, sceneEndXM)) {
     return `the longest inrun the scene leaves lands the best jump at K+${fromK}, short of ${target}`;
   }
   if (point.lineM <= G.inrunLineMinM) return `the shortest inrun lands the best jump at K+${fromK}, past ${target}`;

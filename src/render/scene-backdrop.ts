@@ -12,6 +12,7 @@ import {
   slopeColour,
   tableRange,
   type LayerTable,
+  drawnSceneLengthOf,
 } from "./hill-layer-tables";
 import type { HillLook } from "./hill-look";
 import { LAYER, layerOffset, layerRows, layerX, originalColumn, type SceneView } from "./scene-layers";
@@ -115,7 +116,7 @@ function buildLayer(h: HillProfile, look: HillLook, waves: readonly Wave[][], de
   const base = backgroundBaseM(h, look.terrain.baseOverOutrunM);
   const set = waves[def.set] ?? [];
   const rest = 1 - def.hill;
-  const [first, last] = tableRange(def.layer);
+  const [first, last] = tableRange(def.layer, drawnSceneLengthOf(h));
   const shade = def.shade;
   return lazyTable(
     first,

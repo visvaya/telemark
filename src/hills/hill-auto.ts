@@ -11,6 +11,7 @@ import {
   type LandingFall,
 } from "./hill-generator";
 import { hillShape, NEVER_ALIKE_K_GAP_M, shapeDistance } from "./hill-likeness";
+import { HILL_LOOK_RULES } from "./hill-look-rules";
 import type { HillProblem, HillSpec } from "./hill-spec";
 import { OWN_HILL_SPECS } from "./own-hills";
 
@@ -69,6 +70,12 @@ const AUTO = {
   gateMaxAtK45M: 30,
   gateNearerPerMetreOfK: 0.12,
   gateMinM: 6,
+  /**
+   * The gate stands at least this share of K from the scene's start: the deck behind it (the flat part and the
+   * platform, which cannot reach behind the scene's start) must be at least the look rules' share of K, so a ski
+   * flying hill's gate stands further on than a small hill's. A little over the rule, for rounding.
+   */
+  gateMinShareOfK: HILL_LOOK_RULES.deckShareOfKMin * 1.1,
   flatBehindGateM: { min: 0.5, max: 4 },
   /**
    * The oracle's best jump in calm lands this share of K past K: around the original's best jumps (7 to 8% of K on
@@ -124,8 +131,9 @@ export function drawCharacter(kPointM: number, rng: BorlandRandom): HillCharacte
   // The landing area holds a target 3 m wide that ends 2 m before its end, with a metre to spare for rounding.
   const areaMin = Math.max(AUTO.landingAreaPastKShare.min, Math.ceil(((bestMinM + 6) / kPointM) * 100) / 100);
   const area = between(rng, areaMin, Math.max(areaMin, AUTO.landingAreaPastKShare.max), 2);
-  const gateMaxM = Math.max(AUTO.gateMinM, AUTO.gateMaxAtK45M - AUTO.gateNearerPerMetreOfK * (kPointM - 45));
-  const gateXM = between(rng, AUTO.gateMinM, gateMaxM, AUTO.decimals);
+  const gateMinM = Math.max(AUTO.gateMinM, Math.ceil(AUTO.gateMinShareOfK * kPointM * 10) / 10);
+  const gateMaxM = Math.max(gateMinM, AUTO.gateMaxAtK45M - AUTO.gateNearerPerMetreOfK * (kPointM - 45));
+  const gateXM = between(rng, gateMinM, gateMaxM, AUTO.decimals);
   const bestMaxM = Math.min(
     Math.max(bestMinM + 3, Math.round(AUTO.bestPastKShare.max * kPointM)),
     Math.floor(area * kPointM) - 2,

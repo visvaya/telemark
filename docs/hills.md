@@ -106,8 +106,11 @@ the format check.
   longer jumps need room;
 - `outrun-length`: from the end of the landing area to the lowest point of the outrun at least 30 m horizontally,
   for braking;
-- `outrun-within-scene`: the lowest point of the outrun at most at 380 m, because that is what the scene's layer
-  tables cover (`LAYER_TABLE_LENGTH_M` in `src/render/hill-layer-tables.ts`);
+- `outrun-within-scene`: the lowest point of the outrun at most at 455 m, so that the longest scene of an own hill
+  (480 m) still holds a jumper's coast up the outrun past it (about 25 m). The scene of an own hill reaches as far
+  past the outrun's lowest point as that coast, and at least the original's 380 m (`sceneLengthOf` in
+  `src/render/hill-layer-tables.ts`); the original's hills keep the original's 380 m (`LAYER_TABLE_LENGTH_M`),
+  since some of them have the outrun's lowest point past it and their scene stays as the original draws it;
 - `inrun-descends`, `landing-descends`: the inrun descends from the start to the takeoff, and the landing hill from
   the takeoff to the lowest point of the outrun (samples every 0.1 m; a sample may lie at most 1 mm higher than
   the previous one, because near the bottom of a gentle outrun neighbouring heights differ by less than single
@@ -129,9 +132,8 @@ problems have no level, because by nature they are admission problems):
   - `takeoff-angle`: the original's hills have takeoffs far outside this range and jump well;
   - `landing-area-length`: whether a good player jumps beyond the landing area is checked by the simulation;
   - `outrun-length`: whether the jumper stops within the scene is checked by the simulation;
-  - `outrun-within-scene`: the scene is drawn up to 380 m, but what counts is that the jumper stops before its
-    end, which the simulation checks; the lowest point of the outrun may lie farther (as on two of the original's
-    hills);
+  - `outrun-within-scene`: what counts is that the jumper stops before the scene's end, which the simulation
+    checks; the lowest point of the outrun of two of the original's hills lies past their 380 m scene;
   - `k-near-steepest`, `landing-angle-at-k`: whether a good player lands near K is checked by the simulation.
 
 `geometryProblems` returns the problems of both levels, `admissionProblems` only the admission ones. The tests of
@@ -411,7 +413,8 @@ Rules:
   the family of the original's hills (below);
 - `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
   numbers;
-- `stress-within-scene`: each of them stops before 380 m, where the scene ends;
+- `stress-within-scene`: each of them stops before the hill's scene ends (`sceneLengthOf`: 380 m on every hill up to
+  K250, longer on a ski flying hill whose outrun lies further);
 - `stress-below-terrain`: the jumper's point goes at most 0.5 m below the terrain (0 m was measured on the
   Ćwiczebna hill).
 
@@ -719,6 +722,13 @@ every check of `generateHill`.
   spread over the room the rules leave, and one too alike to another is refused only where little room is left.
   A hill's shape is measured once (`hillShape` remembers it by the hill's object), so a large catalog does not
   slow the likeness check of every new hill.
+- **A longer scene for ski flying hills.** The generator builds a hill in the original's scene first (the outrun's
+  lowest point 25 m before 380 m), so a hill it holds is built as it always was. When the landing hill and the
+  outrun leave no room there, or the longest inrun there cannot bring the best jump into its target, it builds the
+  hill again in the longest scene of an own hill (480 m), whose layer tables reach as far as the outrun needs.
+  Measured 2026-10-22: two seeds of each of K260, K280 and K300 made hills that pass every rule, with scenes of
+  412 to 479 m, in 17 to 67 s each; on a large hill the gate stands at least 2.4% of K from the scene's start, so
+  the deck behind it keeps the look rules' share of K.
 - **Drawn again.** A character the generator refuses (an unreachable target, a play rule, a hill too alike to
   another) is drawn again from the next attempt's seed, up to 30 times. The same size, seed and options make the
   same hill.

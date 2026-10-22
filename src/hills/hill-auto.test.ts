@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
+import {
+  LAYER_TABLE_LENGTH_M,
+  SCENE_LENGTH_MAX_M,
+  SCENE_PAST_OUTRUN_LOWEST_M,
+  sceneLengthOf,
+} from "../render/hill-layer-tables";
 import { BorlandRandom } from "../sim/borland-random";
+import { buildHillProfile } from "../sim/hill-setup";
 import { drawCharacter, generateHillOfSize, isTypicalFall, TYPICAL_FALL } from "./hill-auto";
 import { characterProblems, landingFallOf } from "./hill-generator";
-import { geometryProblems } from "./hill-geometry";
+import { geometryProblems, hillGeometry } from "./hill-geometry";
 import { LIKENESS } from "./hill-likeness";
 
 /** One hill with the play rules: a search of a few oracle runs and one evaluation, several seconds. */
@@ -68,6 +75,21 @@ describe("hills from their size alone", () => {
       const fall = landingFallOf(hill.character);
       expect(fall !== undefined && isTypicalFall(fall, 60)).toBe(true);
       expect(generateHillOfSize(60, 1, { catalog: [], checkPlay: false }).spec.profile).toEqual(hill.spec.profile);
+    },
+    GENERATION_TIMEOUT_MS,
+  );
+
+  it(
+    "makes a ski flying hill of the format's largest size in a scene longer than the original's",
+    () => {
+      const hill = generateHillOfSize(300, 2, { catalog: [], checkPlay: false });
+      const profile = buildHillProfile(hill.spec.profile.inrun, hill.spec.profile.landing);
+      const g = hillGeometry(profile, 300);
+      expect(g.outrunLowestXM).toBeGreaterThan(LAYER_TABLE_LENGTH_M - SCENE_PAST_OUTRUN_LOWEST_M);
+      expect(g.outrunLowestXM).toBeLessThanOrEqual(SCENE_LENGTH_MAX_M - SCENE_PAST_OUTRUN_LOWEST_M);
+      expect(sceneLengthOf(profile)).toBeGreaterThan(LAYER_TABLE_LENGTH_M);
+      // The gate stands far enough on for the deck behind it to keep its share of K.
+      expect(hill.character.gateXM ?? 0).toBeGreaterThanOrEqual(0.022 * 300);
     },
     GENERATION_TIMEOUT_MS,
   );
