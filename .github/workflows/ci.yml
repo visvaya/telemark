@@ -176,7 +176,8 @@ jobs:
     needs: build
     if: needs.build.outputs.browser_tests == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Room for an install of the system packages from a slow archive while the cache does not hold them yet.
+    timeout-minutes: 30
     strategy:
       # A failure in one job does not stop the others, so one run shows everything that fails.
       fail-fast: false
@@ -206,21 +207,47 @@ jobs:
           name: telemark-dist-${{ github.sha }}
       - name: The package is the one that was built
         run: sha256sum --check --strict --quiet dist.sha256
-      # Not cached: the system packages are installed either way, and with a cached browser this took as long as
-      # downloading it (one run of each, 2026-10-14), as Playwright's guidance on CI expects.
-      # The system packages come from the Ubuntu archive, which now and then stalls: on 2026-10-22 six jobs hung
-      # there until the job's limit, where it takes 0.5 to 2 minutes (once 11.5). An attempt that takes longer than
-      # its limit is stopped and tried again; apt resumes what it downloaded and dpkg finishes what it unpacked.
+      # The browser itself comes from Playwright's download host, quickly, and is not cached: with a cached browser
+      # this took as long as downloading it (one run of each, 2026-10-14). Its system packages come from the Ubuntu
+      # archive, which on 2026-10-22 delivered some 30 packages in 4 minutes, where WebKit needs about 170: eight
+      # jobs hung there until the job's limit. Those packages are kept in the cache, by the runner's image, the
+      # engine and Playwright's version, and installed from it without asking the archive when they are all there.
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Restore the browser's system packages
+        id: debs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/browser-debs
+          key: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
+          restore-keys: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-
       - name: Install the browser and its system packages
         env:
           ENGINE: ${{ matrix.engine }}
+          FROM_CACHE: ${{ steps.debs.outputs.cache-hit }}
         run: |
-          for attempt in 1 2 3; do
-            if timeout 4m pnpm exec playwright install --with-deps "$ENGINE"; then exit 0; fi
-            echo "::warning::installing $ENGINE and its system packages failed or took over 4 minutes (attempt $attempt)"
-            sudo dpkg --configure -a || true
-          done
-          exit 1
+          pnpm exec playwright install "$ENGINE"
+          shopt -s nullglob
+          debs=("$HOME"/browser-debs/*.deb)
+          if [ "$FROM_CACHE" = "true" ] && [ "${#debs[@]}" -gt 0 ] &&
+            sudo apt-get install -y --no-install-recommends --no-download "${debs[@]}"; then
+            echo "the system packages came from the cache (${#debs[@]})"
+            exit 0
+          fi
+          # Packages kept from an earlier version are not downloaded again; the rest come from the archive.
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-downloaded-packages
+          if [ "${#debs[@]}" -gt 0 ]; then sudo cp "${debs[@]}" /var/cache/apt/archives/; fi
+          pnpm exec playwright install-deps "$ENGINE"
+          mkdir -p "$HOME/browser-debs"
+          cp /var/cache/apt/archives/*.deb "$HOME/browser-debs/"
+          echo "the system packages came from the archive; $(ls "$HOME"/browser-debs | wc -l) kept for the cache"
+      - name: Keep the browser's system packages
+        if: steps.debs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/browser-debs
+          key: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
       - name: The game works in real browsers
         if: matrix.suite == 'browser'
         env:
