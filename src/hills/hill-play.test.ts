@@ -12,6 +12,7 @@ import {
   windowToleranceOf,
   type PlayMeasures,
 } from "./hill-play";
+import { FAMILY_BANDS, familyRange } from "./hill-family";
 import type { HillSpec } from "./hill-spec";
 import { OWN_HILL_SPECS } from "./own-hills";
 
@@ -128,22 +129,24 @@ describe("play rules", () => {
     ["play.takeoff-window", { windowMedianFrames: 1.5 }],
     ["play.takeoff-window-share", { windowAtLeastMinShare: 0.7 }],
     ["play.takeoff-clean", { windowMinFrames: 0 }],
-    ["play.good-median", { medianGoodM: 69, medianAverageM: 60, medianWeakM: 50 }],
-    ["play.good-median", { medianGoodM: 86 }],
-    ["play.good-median", { medianGoodM: 104 }],
+    ["play.family-good", { medianGoodM: 69, medianAverageM: 60, medianWeakM: 50 }],
+    ["play.family-good", { medianGoodM: 86 }],
+    ["play.family-good", { medianGoodM: 105 }],
     ["play.levels-ordered", { medianAverageM: 93 }],
     ["play.levels-ordered", { medianWeakM: 85 }],
     ["play.skill-wins", { goodBeatsAverageShare: 0.6 }],
     ["play.fall-rate", { fallRateAverage: 0.11 }],
     ["play.fall-rate", { fallRateGood: 0.04 }],
-    ["play.best-short", { bestMedianM: 79 }],
-    ["play.best-short", { bestMedianM: 89 }],
+    ["play.family-best", { bestMedianM: 79 }],
+    ["play.family-best", { bestMedianM: 89 }],
+    ["play.family-best", { bestMedianM: 108 }],
     ["play.best-past-landing-area", { bestMaxM: 127 }],
-    ["play.flight-time", { medianGoodFlightS: 2.4 }],
-    ["play.flight-height", { highestAboveTerrainP90M: 8.6 }],
-    ["play.takeoff-speed", { takeoffSpeedMinKmPerH: 45 }],
-    ["play.takeoff-speed", { takeoffSpeedMaxKmPerH: 125 }],
-    ["play.wind-spread", { windSpreadM: 10 }],
+    ["play.family-flight", { medianGoodFlightS: 2.4 }],
+    ["play.family-flight", { medianGoodFlightS: 5 }],
+    ["play.family-height", { highestAboveTerrainP90M: 8.6 }],
+    ["play.family-speed", { takeoffSpeedMinKmPerH: 45 }],
+    ["play.family-speed", { takeoffSpeedMaxKmPerH: 125 }],
+    ["play.family-wind", { windSpreadM: 11 }],
     ["play.good-falls-in-class", { goodFallsByClass: { head: 0, calm: 0, tail: 1, variable: 0 } }],
     ["play.stress-ends", { stressNotEnded: ["calm/no landing"] }],
     ["play.stress-finite", { stressNotFinite: ["random/3"] }],
@@ -166,37 +169,63 @@ describe("play rules", () => {
 
   it("allows wind a spread in proportion to the hill's size", () => {
     const larger: HillSpec = { ...training, kPointM: 120 };
-    expect(rulesOf(training, { windSpreadM: 12 })).toEqual(["play.wind-spread"]);
-    expect(rulesOf(larger, { windSpreadM: 12 }).filter((r) => r === "play.wind-spread")).toEqual([]);
+    expect(rulesOf(training, { windSpreadM: 12 })).toEqual(["play.family-wind"]);
+    expect(rulesOf(larger, { windSpreadM: 12 }).filter((r) => r === "play.family-wind")).toEqual([]);
   });
 
-  it("lets the bounds that are lengths grow with a hill above K120, and not below it", () => {
+  it("lets the takeoff window's tolerance grow with a hill above K120, and not below it", () => {
     const r = PLAY_RULES;
     expect(sizeGrowthM(r.sizeScaleFromKPointM, 1)).toBe(0);
     expect(sizeGrowthM(90, 1)).toBe(0);
+    expect(sizeGrowthM(190, 1)).toBe(70);
     expect(windowToleranceOf(90)).toBe(r.windowToleranceM);
     expect(windowToleranceOf(220)).toBeCloseTo(r.windowToleranceM + 100 * r.windowToleranceGrowthMPerM);
-    // A K190 hill whose measures are the training hill's moved by 100 m: 70 m of K above the scale's start.
-    expect(sizeGrowthM(training.kPointM + 100, 1)).toBe(70);
+  });
+
+  it("judges a hill of any size by the family bands at its own K point, at their edges", () => {
+    // A K190 hill whose measures are the training hill's moved by 100 m, each band's edge tried from both sides.
     const large: HillSpec = { ...training, kPointM: training.kPointM + 100 };
-    const grown = { medianGoodM: passing.medianGoodM + 100, medianAverageM: passing.medianAverageM + 100 };
-    const moved = { ...grown, medianWeakM: passing.medianWeakM + 100, bestMedianM: passing.bestMedianM + 100 };
-    const highest = r.highestAboveTerrainP90MaxM + sizeGrowthM(large.kPointM, r.highestAboveTerrainGrowthMPerM);
-    expect(rulesOf(large, { ...moved, highestAboveTerrainP90M: highest - 0.1 })).not.toContain("play.flight-height");
-    expect(rulesOf(large, { ...moved, highestAboveTerrainP90M: highest + 0.1 })).toContain("play.flight-height");
-    const furthest =
-      large.kPointM + r.goodMedianFromKMaxM + sizeGrowthM(large.kPointM, r.goodMedianFromKMaxGrowthMPerM);
-    expect(rulesOf(large, { ...moved, medianGoodM: furthest - 0.1 })).not.toContain("play.good-median");
-    expect(rulesOf(large, { ...moved, medianGoodM: furthest + 0.1 })).toContain("play.good-median");
-    const shortest =
-      large.kPointM + r.goodMedianFromKMinM + sizeGrowthM(large.kPointM, r.goodMedianFromKMinGrowthMPerM);
-    expect(rulesOf(large, { ...moved, medianGoodM: shortest + 0.1 })).not.toContain("play.good-median");
-    expect(rulesOf(large, { ...moved, medianGoodM: shortest - 0.1 })).toContain("play.good-median");
-    const best = large.kPointM + r.bestFromKMinM + sizeGrowthM(large.kPointM, r.bestFromKMinGrowthMPerM);
-    expect(rulesOf(large, { ...moved, bestMedianM: best + 0.1 })).not.toContain("play.best-short");
-    expect(rulesOf(large, { ...moved, bestMedianM: best - 0.1 })).toContain("play.best-short");
-    expect(rulesOf(training, { highestAboveTerrainP90M: r.highestAboveTerrainP90MaxM + 0.1 })).toEqual([
-      "play.flight-height",
-    ]);
+    const k = large.kPointM;
+    const moved = {
+      medianGoodM: passing.medianGoodM + 100,
+      medianAverageM: passing.medianAverageM + 100,
+      medianWeakM: passing.medianWeakM + 100,
+      bestMedianM: passing.bestMedianM + 100,
+      bestMaxM: passing.bestMaxM + 100,
+      medianGoodFlightS: 7,
+      highestAboveTerrainP90M: 7,
+      takeoffSpeedMinKmPerH: 98,
+      takeoffSpeedMaxKmPerH: 100,
+    };
+    // The training hill's landing area is far too short for a K190: only the family bands are looked at here.
+    const family = (change: Partial<PlayMeasures>) =>
+      rulesOf(large, { ...moved, ...change }).filter((rule) => rule.startsWith("play.family-"));
+    expect(family({})).toEqual([]);
+    const good = familyRange(FAMILY_BANDS.good, k);
+    expect(family({ medianGoodM: k * (1 + good.max) - 0.1 })).toEqual([]);
+    expect(family({ medianGoodM: k * (1 + good.max) + 0.1 })).toEqual(["play.family-good"]);
+    expect(family({ medianGoodM: k * (1 + good.min) + 0.1 })).toEqual([]);
+    expect(family({ medianGoodM: k * (1 + good.min) - 0.1 })).toContain("play.family-good");
+    const best = familyRange(FAMILY_BANDS.best, k);
+    expect(family({ bestMedianM: k * (1 + best.min) + 0.1 })).toEqual([]);
+    expect(family({ bestMedianM: k * (1 + best.min) - 0.1 })).toEqual(["play.family-best"]);
+    const height = familyRange(FAMILY_BANDS.height, k);
+    expect(family({ highestAboveTerrainP90M: height.max * Math.sqrt(k) - 0.01 })).toEqual([]);
+    expect(family({ highestAboveTerrainP90M: height.max * Math.sqrt(k) + 0.01 })).toEqual(["play.family-height"]);
+    // A flight can be as low as it likes, and the wind may move a jump as little as it does.
+    expect(height.min).toBe(Number.NEGATIVE_INFINITY);
+    expect(family({ highestAboveTerrainP90M: 0.5, windSpreadM: 0 })).toEqual([]);
+  });
+
+  it("puts every band's range around the originals' trend, widened by the margin, and moves it with K", () => {
+    for (const band of Object.values(FAMILY_BANDS)) {
+      const at = (k: number) => band.trendAtZero + band.trendPerMetreOfK * k;
+      for (const k of [45, 120, 250, 300]) {
+        const range = familyRange(band, k);
+        expect(range.max).toBeCloseTo(at(k) + band.aboveTrend + band.margin, 10);
+        const min = band.boundBelow ? at(k) + band.belowTrend - band.margin : Number.NEGATIVE_INFINITY;
+        expect(range.min === min || Math.abs(range.min - min) < 1e-10).toBe(true);
+      }
+    }
   });
 });

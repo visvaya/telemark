@@ -273,7 +273,7 @@ The pilot reads the position, the speed and the slope from the simulation, as th
 what the player sees. Against the trained player on the hills up to K120 (11 own and 17 of the original, the same
 seeds): the good median is 3.3 m further (median of the differences; 0.8 to 20.7 m), the 90th percentile of the
 flight height at most 0.4 m higher; the bounds of `good-median` and `flight-height` moved by as much (from K+10 to
-K+13 m, from 8 to 8.5 m).
+K+13 m, from 8 to 8.5 m). Both rules have since given way to the family bands (below), measured with the rivals.
 
 ### Oracle
 
@@ -392,10 +392,6 @@ Rules:
   was 3 frames on five disjoint sets and 1 frame on the sixth;
 - `takeoff-clean`: every seed of the sweep has at least one clean takeoff (a window of at least 1 frame), because a
   wind with which a clean takeoff is impossible would be unfair;
-- `good-median`: the good player's median from K-3 to K+13 m (above K120 the bound short of K rises by 3 cm and the
-  bound past it by 1 cm per metre of K), so that the hill jumps to its size. On the original's hills the good
-  rival's median lands at K-0.5 m at the least (K165) and at K+2 m at the least from K200 up; the bound short of K
-  stays about 1 to 2.5 m below every original;
 - `levels-ordered`: the medians grow from the weak through the average to the good player, because skill has to
   pay off;
 - `skill-wins`: the good player jumps farther than the average one in at least 70% of the pairs of jumps with the
@@ -406,27 +402,47 @@ Rules:
   landing height spread of 0.5 m, so a single fall is the bot's error, not the hill's, and at 5% one more fall
   reversed the verdict (on the Ćwiczebna hill 0, 1 and 1 fall out of 32 in three disjoint sets). The good player
   should almost never fall. The Ćwiczebna hill also meets the former 5%;
-- `best-short`: the median of the best jumps (over the wind seeds) at least K, plus 8 cm per metre of K above K120,
-  otherwise the hill cannot be jumped to its size; the median, not the worst seed, so that one strong head wind does
-  not fail a fair hill. On the original's hills it lands at K+2.5 m at the least, and at K+10.8 m at the least from
-  K200 up; the bound stays about 2.5 m or more below every original;
 - `best-past-landing-area`: the longest of the oracle's best jumps (one on the strongest seed of each wind class),
   that is the jump in the most favourable class (the message names it; on the Ćwiczebna hill it is the head wind,
   102.5 m with the end of the area at 120.8 m), at most 5 m behind the end of the landing area, so that nobody
   jumps beyond it. Previously this was measured by the takeoff aim search, which changed only the aim, while the
   oracle also searches the flight and the landing;
-- `flight-time`: the median of the good player's flight at least 2.5 s, so that it is a real flight;
-- `flight-height`: the 90th percentile of the greatest height above the landing hill at most 8.5 m (above K120
-  plus 2.5 cm per metre of K), because the jumper flies close to the slope;
-- `takeoff-speed`: the speed at the takeoff from 50 to 120 km/h, within the range of ski jumping hills;
-- `wind-spread`: the standard deviation of the distance of the exact rival (wind alone) at most 11% of K, because
-  the same wind carries farther in a longer flight (5.5% of K on the Ćwiczebna hill, up to 10.7% on the original's
-  hills, at K205; with the trained player 8% was the bound);
+- `family-speed`, `family-best`, `family-good`, `family-flight`, `family-height`, `family-wind`: the hill plays like
+  the family of the original's hills (below);
 - `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
   numbers;
 - `stress-within-scene`: each of them stops before 380 m, where the scene ends;
 - `stress-below-terrain`: the jumper's point goes at most 0.5 m below the terrain (0 m was measured on the
   Ćwiczebna hill).
+
+### The family of the original's hills
+
+Measured relative to its size, how a hill of the original plays hardly depends on the size: the best jump (the
+median over the wind seeds) lands 2 to 18% of K past K on every one of the 37, the good rival's median 0 to 14%,
+the takeoff window is 2 to 6 frames at every size. So each measure has one band spanning all 37 hills
+(`src/hills/hill-family.ts`): the originals' linear trend over K (least squares) and the furthest any original lies
+from it each way, widened by a margin for the spread between samples of winds. A band judges a hill of any size
+the same way: no step where an original enters or leaves a window of sizes, no narrowing where the original has
+few hills (above K200), and past its largest hill (K250) the trend goes on.
+
+| rule | measure | trend at K50 / K250 | below and above the trend | margin |
+|---|---|---|---|---|
+| `family-speed` | takeoff speed (km/h) / sqrt(K) | 7.89 / 6.60 | -1.15 / +1.86 | 0.15 |
+| `family-best` | (best median - K) / K | 0.077 / 0.071 | -0.052 / +0.101 | 0.015 |
+| `family-good` | (good median - K) / K | 0.050 / 0.026 | -0.043 / +0.091 | 0.015 |
+| `family-flight` | good flight time (s) / K^0.7 | 0.183 / 0.189 | -0.024 / +0.020 | 0.006 |
+| `family-height` | 90th percentile of the flight height (m) / sqrt(K) | 0.623 / 0.585 | (no lower end) / +0.123 | 0.03 |
+| `family-wind` | wind spread of the distance / K | 0.058 / 0.063 | (no lower end) / +0.045 | 0.006 |
+
+The scale of each measure is the one under which the originals hardly change with size: the speed as the square
+root of K, the time in the air as K to the power 0.7, the flight height as the square root of K, the distances and
+the wind spread as K. A lower flight and less wind spread are no problem, so those bands have no lower end. The
+edges are the original's unusual hills: the flat K110 is the fastest for its size and the shortest in the air, the
+steep K220 the slowest and the longest in the air, the K95 lands furthest past K and the K105 the least. Measured
+2026-10-22; every original and every own hill lies inside. The bands replaced six rules with fixed bounds in
+metres, km/h and seconds that grew with the hill only above K120 (`good-median`, `best-short`, `flight-time`,
+`flight-height`, `takeoff-speed`, `wind-spread`), and the local range check against the originals within 15 m of
+K, which stepped when an original came into the window and rested on one or two hills above K200.
 
 ### Verdict stability
 
@@ -517,17 +533,15 @@ by the other rules like any new one.
 ### Comparison with the original's hills
 
 `src/hills/original-hills*.local.test.ts` compare the own hills with the original's hills read from the player's
-files (the checks in `src/hills/test-support/original-hills.cases.ts`; the range check is split among two files
-by the own hills' size, so they run in parallel). It works only with `DSJ2_GAME_DIR` set (like the golden tests), never in CI; with the variable set and
-without the files it ends with an error, not a skip. Nothing read from the game files goes into the repository or
-to the disk. It checks that no own hill is too similar to a hill of the original, that each own hill, and each
-hill of the generated set the game does not have yet (a candidate for the game, so a change of the generator is
-held against the originals before its hills are taken in), plays within the range of the original's hills with a
-K point within 15 m of its own (the best distance and the good player's median
-relative to K, the speed at the takeoff, the flight time, the takeoff window, the spread from the wind as a share
-of K; the range widened by a margin for the spread of the measurement), that the original's hills pass the format
-check, and that the exact rival keeps within the oracle margin on every band of sizes (comparison with the oracle
-above; the message gives the table of bands).
+files (the checks in `src/hills/test-support/original-hills.cases.ts`; the family check is split among two files
+by the originals' size, so they run in parallel). It works only with `DSJ2_GAME_DIR` set (like the golden tests),
+never in CI; with the variable set and without the files it ends with an error, not a skip. Nothing read from the
+game files goes into the repository or to the disk. It checks that no own hill is too similar to a hill of the
+original, that every original hill lies inside the family bands without their margins (so a change of the bots or
+the simulation that moves an original out of them shows, and the bands are measured again), that the original's
+hills pass the format check, and that the exact rival keeps within the oracle margin on every band of sizes
+(comparison with the oracle above; the message gives the table of bands). Whether the own hills and the generated
+set play like the family, CI checks with the play rules.
 
 ```sh
 DSJ2_GAME_DIR=<katalog gry> corepack pnpm test src/hills/original-hills
