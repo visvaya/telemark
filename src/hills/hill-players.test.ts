@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { OWN_HILLS } from "../game/hill-choice";
 import {
+  exactRivalJump,
   EXACT_PLAYER_LEVEL,
   PLAYER_LEVELS,
   playJump,
   randomJump,
+  RIVAL_PLAYER_LEVELS,
+  rivalJump,
   takeoffAimSearch,
   withAimFrames,
 } from "./hill-players";
@@ -25,6 +28,40 @@ describe("hill players", () => {
     expect(playJump(hill, 6, PLAYER_LEVELS.average, 9).finalHash).not.toBe(once.finalHash);
     expect(randomJump(hill, 5, 9).finalHash).toBe(randomJump(hill, 5, 9).finalHash);
   });
+
+  it("plays a rival the same way twice, and another rival from another noise seed", () => {
+    const once = rivalJump(training, 5, RIVAL_PLAYER_LEVELS.average, 9);
+    expect(rivalJump(training, 5, RIVAL_PLAYER_LEVELS.average, 9).finalHash).toBe(once.finalHash);
+    expect(rivalJump(training, 5, RIVAL_PLAYER_LEVELS.average, 10).finalHash).not.toBe(once.finalHash);
+    expect(exactRivalJump(training, 5).finalHash).toBe(exactRivalJump(training, 5).finalHash);
+    expect(exactRivalJump(training, 5, 4).finalHash).not.toBe(exactRivalJump(training, 5, 30).finalHash);
+  });
+
+  it("makes the good rival jump further than the weak one, and neither fall, on most winds", () => {
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    const good = seeds.map((s) => rivalJump(training, s, RIVAL_PLAYER_LEVELS.good, s + 100));
+    const weak = seeds.map((s) => rivalJump(training, s, RIVAL_PLAYER_LEVELS.weak, s + 100));
+    const mean = (v: readonly { distanceM: number }[]) => v.reduce((a, o) => a + o.distanceM, 0) / v.length;
+    expect(mean(good)).toBeGreaterThan(mean(weak));
+    expect(good.filter((o) => o.fell || o.disqualified)).toEqual([]);
+  });
+
+  it(
+    "finds the same best aim, best distance and window for the exact rival as trying every aim",
+    () => {
+      const seeds = [1, 2, 3, 4];
+      const rival = (seed: number, aim: number) => exactRivalJump(training, seed, aim);
+      const searched = takeoffAimSearch(training, seeds, PLAY_RULES.windowToleranceM, undefined, undefined, rival);
+      expect(
+        searched.map(({ bestDistanceM, bestAimFrames, windowFrames }) => ({
+          bestDistanceM,
+          bestAimFrames,
+          windowFrames,
+        })),
+      ).toEqual(fullAimSweep(training, seeds, PLAY_RULES.windowToleranceM, rival));
+    },
+    SWEEP_TIMEOUT_MS,
+  );
 
   it(
     "finds the same best aim, best distance and window as trying every aim",

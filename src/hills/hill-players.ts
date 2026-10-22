@@ -1,6 +1,18 @@
 import type { HillChoice } from "../game/hill-choice";
+import { rivalLandingInput } from "../game/rival-landing";
 import { isJumpOver, startTrainingJump, stepTrainingJump, type TrainingJump } from "../game/training-session";
 import { BorlandRandom } from "../sim/borland-random";
+import { pilotView } from "../sim/cpu-jump";
+import {
+  cpuPilotInput,
+  drawCpuForm,
+  drawCpuTalents,
+  setupCpuPilot,
+  type CpuJumperRecord,
+  type CpuPilotState,
+} from "../sim/cpu-pilot";
+import { stepFrame } from "../sim/jump-sim";
+import { FRAME_DT_S } from "../sim/physics-constants";
 import { landingSlope, terrainYM } from "../sim/hill-profile";
 import { PHASE, type FrameInput } from "../sim/jump-logic";
 import { createStartWind } from "../sim/training-wind";
@@ -225,6 +237,11 @@ function observe(track: Track, jump: TrainingJump): Track {
 }
 
 function run(hill: HillChoice, seed: number, decide: Decide): JumpOutcome {
+  return runSteps(hill, seed, (jump) => stepTrainingJump(jump, decide(jump, jump.state.logic.frame + 1)));
+}
+
+/** A jump from `seed`, one `step` per frame, until it is over or stuck, with what the checks measure of it. */
+function runSteps(hill: HillChoice, seed: number, step: (jump: TrainingJump) => TrainingJump): JumpOutcome {
   let jump = startTrainingJump(hill, seed);
   let track: Track = {
     takeoffSpeedKmPerH: 0,
@@ -236,8 +253,7 @@ function run(hill: HillChoice, seed: number, decide: Decide): JumpOutcome {
   };
   let steps = 0;
   while (!isJumpOver(jump) && steps < BOT_TIMING.maxJumpFrames) {
-    const frame = jump.state.logic.frame + 1;
-    jump = stepTrainingJump(jump, decide(jump, frame));
+    jump = step(jump);
     track = observe(track, jump);
     steps++;
   }
@@ -350,6 +366,70 @@ export function playJump(
   return run(hill, seed, playerBot(policy, player, noiseSeed));
 }
 
+/**
+ * Players of the checks made from the original's computer jumpers, by level (0 the weakest, 4 "super"). The
+ * original's author made them to jump every one of its hills, from K50 to K250, and the improved landing keeps
+ * them on their feet, so they play large hills as reliably as small ones, where the trained player does not.
+ */
+export const RIVAL_PLAYER_LEVELS = { weak: 0, average: 2, good: 4 } as const;
+
+/** Setups drawn until one is not a blundered jump: a player of the checks never blunders on purpose. */
+const MAX_RIVAL_SETUPS = 64;
+
+/**
+ * One jump of a computer jumper of the original on a hill, as a player of the checks: `seed` sets the jump (wind)
+ * as for every bot, `noiseSeed` the jumper's talents and form (as at the start of a cup and a competition) and the
+ * setup of its pilot. The pilot sees what the original's pilot sees and lands as with the improved landing.
+ */
+export function rivalJump(hill: HillChoice, seed: number, level: number, noiseSeed: number): JumpOutcome {
+  const rng = new BorlandRandom(noiseSeed);
+  const record = { ...drawCpuTalents(level, rng), ...drawCpuForm(rng) };
+  return pilotJump(hill, seed, rivalSetup(hill, record, rng));
+}
+
+/** The pilot's setup for `record`, drawn again until it is not a blundered jump. */
+function rivalSetup(hill: HillChoice, record: CpuJumperRecord, rng: BorlandRandom): CpuPilotState {
+  let pilot = setupCpuPilot(record, hill.kPointM, hill.profile, rng);
+  for (let i = 1; pilot.blunder && i < MAX_RIVAL_SETUPS; i++) {
+    pilot = setupCpuPilot(record, hill.kPointM, hill.profile, rng);
+  }
+  return pilot;
+}
+
+/** The exact rival: the best level with no talent or form either way, and always the same setup of its pilot. */
+const EXACT_RIVAL_RECORD: CpuJumperRecord = {
+  form1: 0,
+  form2: 0,
+  talent1: 0,
+  talent2: 0,
+  level: RIVAL_PLAYER_LEVELS.good,
+};
+const EXACT_RIVAL_SETUP_SEED = 1;
+
+/**
+ * One jump of the exact rival, which measures the hill and the wind alone: its takeoff is pressed `aimFrames`
+ * frames before the edge when given (both buttons at once), at the pilot's own lead otherwise.
+ */
+export function exactRivalJump(hill: HillChoice, seed: number, aimFrames?: number): JumpOutcome {
+  const pilot = rivalSetup(hill, EXACT_RIVAL_RECORD, new BorlandRandom(EXACT_RIVAL_SETUP_SEED));
+  const leadS = aimFrames === undefined ? null : aimFrames * FRAME_S;
+  return pilotJump(hill, seed, leadS === null ? pilot : { ...pilot, takeoffLeadS: leadS, secondLeadS: leadS });
+}
+
+/** A jump steered by the original's pilot from `first`, landing as with the improved landing. */
+function pilotJump(hill: HillChoice, seed: number, first: CpuPilotState): JumpOutcome {
+  let pilot = first;
+  return runSteps(hill, seed, (jump) => ({
+    ...jump,
+    state: stepFrame(jump.state, jump.setup, (frame, at) => {
+      const view = pilotView(frame, at);
+      const out = cpuPilotInput(pilot, view, hill.profile, FRAME_DT_S, new BorlandRandom(at.randomSeed));
+      pilot = out.pilot;
+      return rivalLandingInput("improved", out.input, view, out.pilot, hill.profile);
+    }),
+  }));
+}
+
 /** One jump of a player who never errs and follows `plan`: what the oracle tries. */
 export function planJump(hill: HillChoice, seed: number, plan: BotPlan): JumpOutcome {
   return run(hill, seed, planBot(EXACT_PLAYER_LEVEL, noiseFrom(seed), plan));
@@ -428,13 +508,15 @@ export function takeoffAimSearch(
   toleranceM: number,
   startAimFrames: number = DEFAULT_TAKEOFF_AIM_FRAMES,
   policy: PlayerPolicy = TRAINED_PLAYER_POLICY,
+  jumpAt: (seed: number, aimFrames: number) => JumpOutcome = (seed, aim) =>
+    playJump(hill, seed, EXACT_PLAYER_LEVEL, seed, withAimFrames(policy, aim)),
 ): AimSearch[] {
   const results: AimSearch[] = [];
   let start = clamp(startAimFrames, AIM_RANGE_FRAMES.from, AIM_RANGE_FRAMES.to);
   for (const seed of seeds) {
     const tries: AimTry[] = [];
     const tryAim = (aim: number): AimTry => {
-      const t = { aim, outcome: playJump(hill, seed, EXACT_PLAYER_LEVEL, seed, withAimFrames(policy, aim)) };
+      const t = { aim, outcome: jumpAt(seed, aim) };
       tries.push(t);
       return t;
     };

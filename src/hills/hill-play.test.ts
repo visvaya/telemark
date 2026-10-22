@@ -127,7 +127,7 @@ describe("play rules", () => {
     ["play.takeoff-window-share", { windowAtLeastMinShare: 0.7 }],
     ["play.takeoff-clean", { windowMinFrames: 0 }],
     ["play.good-median", { medianGoodM: 69, medianAverageM: 60, medianWeakM: 50 }],
-    ["play.good-median", { medianGoodM: 101 }],
+    ["play.good-median", { medianGoodM: 104 }],
     ["play.levels-ordered", { medianAverageM: 85 }],
     ["play.levels-ordered", { medianWeakM: 77 }],
     ["play.skill-wins", { goodBeatsAverageShare: 0.6 }],
@@ -136,10 +136,10 @@ describe("play rules", () => {
     ["play.best-short", { bestMedianM: 79 }],
     ["play.best-past-landing-area", { bestMaxM: 127 }],
     ["play.flight-time", { medianGoodFlightS: 2.4 }],
-    ["play.flight-height", { highestAboveTerrainP90M: 8.5 }],
+    ["play.flight-height", { highestAboveTerrainP90M: 8.6 }],
     ["play.takeoff-speed", { takeoffSpeedMinKmPerH: 45 }],
     ["play.takeoff-speed", { takeoffSpeedMaxKmPerH: 125 }],
-    ["play.wind-spread", { windSpreadM: 7.3 }],
+    ["play.wind-spread", { windSpreadM: 10 }],
     ["play.good-falls-in-class", { goodFallsByClass: { head: 0, calm: 0, tail: 1, variable: 0 } }],
     ["play.stress-ends", { stressNotEnded: ["calm/no landing"] }],
     ["play.stress-finite", { stressNotFinite: ["random/3"] }],
@@ -162,8 +162,8 @@ describe("play rules", () => {
 
   it("allows wind a spread in proportion to the hill's size", () => {
     const larger: HillSpec = { ...training, kPointM: PLAY_RULES.botReliableMaxKPointM };
-    expect(rulesOf(training, { windSpreadM: 9 })).toEqual(["play.wind-spread"]);
-    expect(rulesOf(larger, { windSpreadM: 9 }).filter((r) => r === "play.wind-spread")).toEqual([]);
+    expect(rulesOf(training, { windSpreadM: 12 })).toEqual(["play.wind-spread"]);
+    expect(rulesOf(larger, { windSpreadM: 12 }).filter((r) => r === "play.wind-spread")).toEqual([]);
   });
 
   it("does not judge a hill above the bots' reach", () => {

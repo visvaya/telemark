@@ -7,8 +7,8 @@ import { runOf } from "../../test-support/shards";
 import { GEOMETRY_RULE_LEVELS, geometryProblems } from "../hill-geometry";
 import { hillDistance, LIKENESS } from "../hill-likeness";
 import { jumpScore, oracleJump } from "../hill-oracle";
-import { PLAY_RULES, playMeasures, WIND_CLASSES, windClassSeeds, type PlayMeasures } from "../hill-play";
-import { EXACT_PLAYER_LEVEL, playJump } from "../hill-players";
+import { playMeasures, WIND_CLASSES, windClassSeeds, type PlayMeasures } from "../hill-play";
+import { exactRivalJump } from "../hill-players";
 import type { HillSpec } from "../hill-spec";
 import { OWN_HILL_SPECS } from "../own-hills";
 import { parseHillSpec } from "../parse-hill-spec";
@@ -79,22 +79,20 @@ const ENVELOPE: readonly EnvelopeMeasure[] = [
 /** The own hills from the smallest K point to the largest, so that a run of them is a range of sizes. */
 const ownHillsBySize = OWN_HILL_SPECS.map(hillChoiceOf).toSorted((a, b) => a.kPointM - b.kPointM);
 
-/** Hill sizes the trained player is compared with the oracle in: K points up to each end, in metres. */
+/** Hill sizes the good rival is compared with the oracle in: K points up to each end, in metres. */
 const SIZE_BUCKET_ENDS_M = [90, 120, 160, Number.POSITIVE_INFINITY];
 
 /**
- * How close the trained player must come to the oracle on a size bucket to be trusted there, relative to the
- * smallest bucket (K up to 90) of the same run: the mean and the 90th percentile of the distance the oracle adds
- * (in shares of K) at most this many times those of the smallest bucket, and no fall. Relative, because a policy
- * trained to be robust to the player's own errors deliberately leaves distance to the oracle at every size; the
- * question is whether the bot is as credible on a size as on the sizes already trusted. 1.25 gives the verdict the
- * earlier absolute margin (0.06 K mean, 0.12 K at the 90th percentile) gave with the earlier policy: K90-120 at 1.12
- * and 0.97 times passed, K120-160 at 1.47 and 1.41 failed; with the robust policy K90-120 is at about 1.20 and 1.05
- * and the larger buckets exceed it on the mean or the 90th percentile.
+ * How close the good rival of the checks must come to the oracle on a size bucket to be trusted there, relative to
+ * the smallest bucket (K up to 90) of the same run: the mean and the 90th percentile of the distance the oracle adds
+ * (in shares of K) at most this many times those of the smallest bucket, and no fall. Relative, because a bot
+ * deliberately leaves distance to the oracle at every size; the question is whether it is as credible on a size as
+ * on the smallest. The trained player, the checks' player before the rivals, stayed within 1.25 times only up to
+ * K120; the rival stays within it on every size.
  */
 const ORACLE_GAP_MAX_RATIO_TO_SMALLEST = 1.25;
 
-/** One original and wind: what the trained player and the oracle made of it. */
+/** One original and wind: what the exact rival and the oracle made of it. */
 interface OracleGap {
   kPointM: number;
   points: number;
@@ -102,10 +100,10 @@ interface OracleGap {
   playerFell: boolean;
 }
 
-/** The trained player against the oracle on one hill, on the strongest seed of each wind class. */
+/** The exact rival against the oracle on one hill, on the strongest seed of each wind class. */
 function oracleGaps(hill: HillChoice, seeds: readonly number[]): OracleGap[] {
   return seeds.map((seed) => {
-    const player = playJump(hill, seed, EXACT_PLAYER_LEVEL, seed);
+    const player = exactRivalJump(hill, seed);
     const best = oracleJump(hill, seed);
     return {
       kPointM: hill.kPointM,
@@ -139,13 +137,12 @@ function sizeBuckets(gaps: readonly OracleGap[], seedCount: number) {
 
 type SizeBucket = ReturnType<typeof sizeBuckets>[number];
 
-/** The trusted buckets outside the margin of the smallest one. */
+/** The buckets outside the margin of the smallest one. */
 function bucketsOutside(buckets: readonly SizeBucket[]): SizeBucket[] {
-  const trusted = buckets.filter((b) => b.start < PLAY_RULES.botReliableMaxKPointM);
   const [smallest] = buckets;
   if (smallest === undefined) throw new Error("no size bucket");
   const r = ORACLE_GAP_MAX_RATIO_TO_SMALLEST;
-  return trusted.filter(
+  return buckets.filter(
     (b) =>
       !(b.meanShareOfK <= r * smallest.meanShareOfK && b.p90ShareOfK <= r * smallest.p90ShareOfK) || b.playerFalls > 0,
   );
@@ -186,19 +183,11 @@ export function describeOriginalHillChecks(): void {
     );
 
     it.skipIf(exePath === undefined)(
-      "keeps the trained player within the margin of the oracle on every size the bots are trusted with",
+      "keeps the exact rival within the margin of the oracle on every size of the original's hills",
       () => {
         const seedsByClass = windClassSeeds(1, 256, 1);
         const seeds = WIND_CLASSES.flatMap((c) => seedsByClass[c]);
-        const hills = originalHillChoices(load());
-        // The verdict needs the trusted sizes only; the larger hills are played for the table when it fails.
-        const trustedEndM = Math.min(...SIZE_BUCKET_ENDS_M.filter((end) => end >= PLAY_RULES.botReliableMaxKPointM));
-        const trustedGaps = hills.filter((h) => h.kPointM <= trustedEndM).flatMap((h) => oracleGaps(h, seeds));
-        const trustedOutside = bucketsOutside(sizeBuckets(trustedGaps, seeds.length));
-        const gaps =
-          trustedOutside.length === 0
-            ? trustedGaps
-            : [...trustedGaps, ...hills.filter((h) => h.kPointM > trustedEndM).flatMap((h) => oracleGaps(h, seeds))];
+        const gaps = originalHillChoices(load()).flatMap((h) => oracleGaps(h, seeds));
         const buckets = sizeBuckets(gaps, seeds.length);
         const table = tableOf(buckets);
         expect({ outside: bucketsOutside(buckets).map((b) => `K ${b.start}..${b.end}`), table }).toEqual({
