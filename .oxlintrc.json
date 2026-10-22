@@ -54,6 +54,7 @@
     "typescript/strict-boolean-expressions": "error",
     "typescript/switch-exhaustiveness-check": "error",
     "typescript/consistent-type-imports": "error",
+    "typescript/no-deprecated": "error",
 
     "import/no-cycle": "error",
     "import/no-default-export": "error",
