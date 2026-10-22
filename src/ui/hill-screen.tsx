@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type FocusEvent } from "react";
 import type { HillChoice } from "../game/hill-choice";
 import type { HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
@@ -17,6 +17,14 @@ interface Props {
   focusOnEntry: boolean;
 }
 
+/**
+ * Brings a focused button of the list wholly onto the screen. Firefox does not scroll a button that is partly
+ * visible when Tab moves the focus to it, so a hill at the bottom edge of the window stayed half hidden.
+ */
+const revealFocused = (event: FocusEvent<HTMLButtonElement>): void => {
+  event.currentTarget.scrollIntoView({ block: "nearest" });
+};
+
 type ListProps = Pick<Props, "hills" | "records" | "onPick"> & {
   recordReplays?: { hillIds: ReadonlySet<string>; onWatch: (hill: HillChoice) => void };
 };
@@ -31,7 +39,7 @@ function HillList({ title, hills, records, onPick, recordReplays }: ListProps & 
           const record = records[h.id];
           return (
             <li key={h.id} className="hill-row">
-              <button type="button" className="hill-item" onClick={() => onPick(h)}>
+              <button type="button" className="hill-item" onClick={() => onPick(h)} onFocus={revealFocused}>
                 <FlagIcon country={h.country} />
                 <span className="hill-item-name">{h.name}</span>
                 <span className="hill-item-k">{UI_TEXT.hills.kPoint(h.kPointM)}</span>
@@ -45,6 +53,7 @@ function HillList({ title, hills, records, onPick, recordReplays }: ListProps & 
                   className="pixel-button small-button hill-replay"
                   aria-label={UI_TEXT.hills.watchRecordLabel(UI_TEXT.hillLabel(h.name, h.kPointM))}
                   onClick={() => recordReplays.onWatch(h)}
+                  onFocus={revealFocused}
                 >
                   {UI_TEXT.hills.watchRecord}
                 </button>
