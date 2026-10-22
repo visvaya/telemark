@@ -212,16 +212,18 @@ jobs:
       # archive, which on 2026-10-22 delivered some 30 packages in 4 minutes, where WebKit needs about 170: eight
       # jobs hung there until the job's limit. Those packages are kept in the cache, by the runner's image, the
       # engine and Playwright's version, and installed from it without asking the archive when they are all there.
-      - name: Playwright's version
+      - name: Playwright's version and the runner's image
         id: playwright
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageOS" >> "$GITHUB_OUTPUT"
       - name: Restore the browser's system packages
         id: debs
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/browser-debs
-          key: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
-          restore-keys: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-
+          key: browser-debs-v1-${{ steps.playwright.outputs.image }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
+          restore-keys: browser-debs-v1-${{ steps.playwright.outputs.image }}-${{ matrix.engine }}-
       - name: Install the browser and its system packages
         env:
           ENGINE: ${{ matrix.engine }}
@@ -230,12 +232,17 @@ jobs:
           pnpm exec playwright install "$ENGINE"
           shopt -s nullglob
           debs=("$HOME"/browser-debs/*.deb)
+          # dpkg installs exactly the kept packages and never asks the archive; apt would resolve them against the
+          # image's package lists and fetch what those name.
           if [ "$FROM_CACHE" = "true" ] && [ "${#debs[@]}" -gt 0 ] &&
-            sudo apt-get install -y --no-install-recommends --no-download "${debs[@]}"; then
+            sudo dpkg --install --skip-same-version "${debs[@]}" > "$RUNNER_TEMP/dpkg.log" 2>&1; then
             echo "the system packages came from the cache (${#debs[@]})"
             exit 0
           fi
-          # Packages kept from an earlier version are not downloaded again; the rest come from the archive.
+          if [ "$FROM_CACHE" = "true" ]; then tail -20 "$RUNNER_TEMP/dpkg.log" || true; fi
+          sudo dpkg --configure -a || true
+          # Packages kept from an earlier version (or that dpkg could not install alone) are not downloaded again;
+          # the rest come from the archive.
           echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-downloaded-packages
           if [ "${#debs[@]}" -gt 0 ]; then sudo cp "${debs[@]}" /var/cache/apt/archives/; fi
           pnpm exec playwright install-deps "$ENGINE"
@@ -248,7 +255,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/browser-debs
-          key: browser-debs-v1-${{ env.ImageOS }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
+          key: browser-debs-v1-${{ steps.playwright.outputs.image }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
       - name: The game works in real browsers
         if: matrix.suite == 'browser'
         env:
