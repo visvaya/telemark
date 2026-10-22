@@ -208,15 +208,26 @@ jobs:
         run: sha256sum --check --strict --quiet dist.sha256
       # Not cached: the system packages are installed either way, and with a cached browser this took as long as
       # downloading it (one run of each, 2026-10-14), as Playwright's guidance on CI expects.
-      # The system packages come from the Ubuntu archive, which now and then stalls: on 2026-10-22 six jobs hung
+      # The system packages come from the Ubuntu archive, which now and then stalls: on 2026-10-22 eight jobs hung
       # there until the job's limit, where it takes 0.5 to 2 minutes (once 11.5). An attempt that takes longer than
-      # its limit is stopped and tried again; apt resumes what it downloaded and dpkg finishes what it unpacked.
+      # 4 minutes is stopped and tried again; apt resumes what it downloaded and dpkg finishes what it unpacked.
+      # `timeout` alone did not stop it: it signals only Playwright's process, while apt runs on under sudo. Each
+      # attempt runs in a session of its own, and a watchdog in another stops the whole session: first politely,
+      # which sudo passes on to apt, then by force.
       - name: Install the browser and its system packages
         env:
           ENGINE: ${{ matrix.engine }}
         run: |
           for attempt in 1 2 3; do
-            if timeout 4m pnpm exec playwright install --with-deps "$ENGINE"; then exit 0; fi
+            setsid pnpm exec playwright install --with-deps "$ENGINE" &
+            install=$!
+            setsid bash -c "sleep 240; sudo kill -TERM -- -$install; sleep 15; sudo kill -KILL -- -$install"               > /dev/null 2>&1 &
+            watchdog=$!
+            if wait "$install"; then
+              kill -- "-$watchdog" 2> /dev/null || true
+              exit 0
+            fi
+            kill -- "-$watchdog" 2> /dev/null || true
             echo "::warning::installing $ENGINE and its system packages failed or took over 4 minutes (attempt $attempt)"
             sudo dpkg --configure -a || true
           done
