@@ -83,14 +83,16 @@ const ownHillsBySize = OWN_HILL_SPECS.map(hillChoiceOf).toSorted((a, b) => a.kPo
 const SIZE_BUCKET_ENDS_M = [90, 120, 160, Number.POSITIVE_INFINITY];
 
 /**
- * How close the good rival of the checks must come to the oracle on a size bucket to be trusted there, relative to
- * the smallest bucket (K up to 90) of the same run: the mean and the 90th percentile of the distance the oracle adds
- * (in shares of K) at most this many times those of the smallest bucket, and no fall. Relative, because a bot
- * deliberately leaves distance to the oracle at every size; the question is whether it is as credible on a size as
- * on the smallest. The trained player, the checks' player before the rivals, stayed within 1.25 times only up to
- * K120; the rival stays within it on every size.
+ * How close the exact rival must come to the oracle on a size bucket to be trusted there, by the mean and the 90th
+ * percentile of the distance the oracle adds (in shares of K), and no fall: within the absolute margin, or within
+ * this many times those of the smallest bucket (K up to 90) of the same run. The relative margin was made for the
+ * trained player, which left distance to the oracle at every size and stayed within 1.25 times only up to K120. The
+ * rival comes so close on every size (2026-10-22: a mean of 0.011 to 0.017 K, a 90th percentile of 0.025 to 0.050 K)
+ * that a ratio of such small gaps says little, so the absolute margin of the earlier checks counts too.
  */
 const ORACLE_GAP_MAX_RATIO_TO_SMALLEST = 1.25;
+const ORACLE_GAP_MAX_MEAN_SHARE_OF_K = 0.06;
+const ORACLE_GAP_MAX_P90_SHARE_OF_K = 0.12;
 
 /** One original and wind: what the exact rival and the oracle made of it. */
 interface OracleGap {
@@ -142,10 +144,11 @@ function bucketsOutside(buckets: readonly SizeBucket[]): SizeBucket[] {
   const [smallest] = buckets;
   if (smallest === undefined) throw new Error("no size bucket");
   const r = ORACLE_GAP_MAX_RATIO_TO_SMALLEST;
-  return buckets.filter(
-    (b) =>
-      !(b.meanShareOfK <= r * smallest.meanShareOfK && b.p90ShareOfK <= r * smallest.p90ShareOfK) || b.playerFalls > 0,
-  );
+  const relative = (b: SizeBucket) =>
+    b.meanShareOfK <= r * smallest.meanShareOfK && b.p90ShareOfK <= r * smallest.p90ShareOfK;
+  const absolute = (b: SizeBucket) =>
+    b.meanShareOfK <= ORACLE_GAP_MAX_MEAN_SHARE_OF_K && b.p90ShareOfK <= ORACLE_GAP_MAX_P90_SHARE_OF_K;
+  return buckets.filter((b) => !(relative(b) || absolute(b)) || b.playerFalls > 0);
 }
 
 const tableOf = (buckets: readonly SizeBucket[]): string =>

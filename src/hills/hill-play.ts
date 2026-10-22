@@ -80,7 +80,7 @@ export const PLAY_RULES = {
   /**
    * Wind may move a jump, but by less than skill does: deviation of the good player's distance at a fixed aim, as
    * a share of the K point, because the same wind carries a jumper further in a longer flight. Measured with the
-   * exact rival: 5.5% on the training hill, up to 10.9% on the original's hills (K205).
+   * exact rival: 5.5% on the training hill, up to 10.7% on the original's hills (K205).
    */
   windSpreadMaxShareOfK: 0.11,
   /** The scenery ends here; every designed and random jump must stop before it. */
@@ -401,8 +401,8 @@ export function playProblems(spec: HillSpec, m: PlayMeasures): readonly HillProb
     return [
       problem(
         "bot-unreliable",
-        `K ${k} m is above ${r.botReliableMaxKPointM} m, where the bots' steering decides more than the hill; ` +
-          "this hill cannot pass until a stronger bot exists",
+        `K ${k} m is above ${r.botReliableMaxKPointM} m, the largest size the length bounds of the rules are set ` +
+          "for; this hill cannot pass until they grow with the hill",
       ),
     ];
   }

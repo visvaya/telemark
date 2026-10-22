@@ -21,6 +21,8 @@ if (training === undefined) throw new Error("no own hill");
 /** Trying all 41 aims for 8 seeds takes about 3 s alone, longer under coverage. */
 const SWEEP_TIMEOUT_MS = 60_000;
 
+const meanDistance = (v: readonly { distanceM: number }[]): number => v.reduce((a, o) => a + o.distanceM, 0) / v.length;
+
 describe("hill players", () => {
   it.each(OWN_HILLS.map((h) => [h.id, h] as const))("plays %s the same way twice", (_, hill) => {
     const once = playJump(hill, 5, PLAYER_LEVELS.average, 9);
@@ -41,8 +43,7 @@ describe("hill players", () => {
     const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
     const good = seeds.map((s) => rivalJump(training, s, RIVAL_PLAYER_LEVELS.good, s + 100));
     const weak = seeds.map((s) => rivalJump(training, s, RIVAL_PLAYER_LEVELS.weak, s + 100));
-    const mean = (v: readonly { distanceM: number }[]) => v.reduce((a, o) => a + o.distanceM, 0) / v.length;
-    expect(mean(good)).toBeGreaterThan(mean(weak));
+    expect(meanDistance(good)).toBeGreaterThan(meanDistance(weak));
     expect(good.filter((o) => o.fell || o.disqualified)).toEqual([]);
   });
 

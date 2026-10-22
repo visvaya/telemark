@@ -396,22 +396,52 @@ function rivalSetup(hill: HillChoice, record: CpuJumperRecord, rng: BorlandRando
   return pilot;
 }
 
-/** The exact rival: the best level with no talent or form either way, and always the same setup of its pilot. */
-const EXACT_RIVAL_RECORD: CpuJumperRecord = {
-  form1: 0,
-  form2: 0,
-  talent1: 0,
-  talent2: 0,
-  level: RIVAL_PLAYER_LEVELS.good,
-};
-const EXACT_RIVAL_SETUP_SEED = 1;
+/**
+ * The setup of the exact rival: the original's setup (0baf:8aeb) for the best level with no talent or form either
+ * way, at the mean of every draw, so that only the wind changes from jump to jump.
+ */
+const EXACT_RIVAL_SETUP = {
+  /** `0.18 + (250 - K) / 10000`, before the original's limits, which no size of hill reaches. */
+  takeoffLeadBaseS: 0.18,
+  takeoffLeadKPointM: 250,
+  takeoffLeadPerKPointSPerM: 0.0001,
+  /** `Random(10) / 100 + 0.05` at the mean draw. */
+  flightHoldS: 0.095,
+  /** `Random(30) / 100 + 0.5` at the mean draw. */
+  reactionS: 0.645,
+  /** `(talent / 12 * 1.3 + form / 10) / 1.7 - 0.38` with both 0. */
+  targetBodyRad: -0.38,
+  /** `0.6 + (5 - level) * 0.7 * 0.15` at level 4. */
+  landingLeadS: 0.705,
+  telemarkDelayS: 0.35,
+} as const;
+
+/** The pilot of the exact rival on `hill`. */
+function exactRivalSetup(hill: HillChoice): CpuPilotState {
+  const C = EXACT_RIVAL_SETUP;
+  const takeoffLeadS = C.takeoffLeadBaseS + (C.takeoffLeadKPointM - hill.kPointM) * C.takeoffLeadPerKPointSPerM;
+  const record = { form1: 0, form2: 0, talent1: 0, talent2: 0, level: RIVAL_PLAYER_LEVELS.good };
+  return {
+    ...setupCpuPilot(record, hill.kPointM, hill.profile, new BorlandRandom(0)),
+    blunder: false,
+    impactPending: true,
+    takeoffLeadS,
+    secondLeadS: takeoffLeadS,
+    flightHoldS: C.flightHoldS,
+    reactionS: C.reactionS,
+    reactionLeftS: C.reactionS,
+    targetBodyRad: C.targetBodyRad,
+    landingLeadS: C.landingLeadS,
+    telemarkDelayS: C.telemarkDelayS,
+  };
+}
 
 /**
  * One jump of the exact rival, which measures the hill and the wind alone: its takeoff is pressed `aimFrames`
  * frames before the edge when given (both buttons at once), at the pilot's own lead otherwise.
  */
 export function exactRivalJump(hill: HillChoice, seed: number, aimFrames?: number): JumpOutcome {
-  const pilot = rivalSetup(hill, EXACT_RIVAL_RECORD, new BorlandRandom(EXACT_RIVAL_SETUP_SEED));
+  const pilot = exactRivalSetup(hill);
   const leadS = aimFrames === undefined ? null : aimFrames * FRAME_S;
   return pilotJump(hill, seed, leadS === null ? pilot : { ...pilot, takeoffLeadS: leadS, secondLeadS: leadS });
 }

@@ -290,17 +290,18 @@ and about 1.3 s.
 A local test (with `DSJ2_GAME_DIR`, see below) plays each of the 37 hills of the original with the exact rival
 and with the oracle on the strongest seed of each wind class. The distance the oracle adds, as a share of K (mean
 and 90th percentile in the size band), measurement of 2026-10-22 for the pilot of the original with the improved
-landing (talents and form 0, level 4):
+landing (the exact rival):
 
 | K | hills | mean | 90th percentile | points mean | falls |
 |---|---|---|---|---|---|
-| up to 90 | 10 | 0.024 | 0.055 | 1.9 | 0 |
-| 90-120 | 7 | 0.012 | 0.026 | 1.0 | 0 |
-| 120-160 | 8 | 0.015 | 0.033 | 1.9 | 0 |
-| above 160 | 12 | 0.016 | 0.047 | 3.0 | 0 |
+| up to 90 | 10 | 0.016 | 0.032 | 0.1 | 0 |
+| 90-120 | 7 | 0.011 | 0.025 | 0.0 | 0 |
+| 120-160 | 8 | 0.014 | 0.026 | 1.3 | 0 |
+| above 160 | 12 | 0.017 | 0.050 | 3.0 | 0 |
 
-Every band is within the margin below, so the rival is as credible on the largest hills as on the smallest. With
-the original's landing the same pilot fell on 23 of these 148 jumps. The trained player, measured on 2026-10-17:
+Every band is within the absolute margin below (a mean of 0.06 K and a 90th percentile of 0.12 K), so the rival is
+credible on the largest hills too. With the original's landing a pilot of the same level fell on 23 of 148 jumps
+on these hills and winds. The trained player, measured on 2026-10-17:
 
 | K | hills | mean | 90th percentile | points mean | player falls |
 |---|---|---|---|---|---|
@@ -309,13 +310,15 @@ the original's landing the same pilot fell on 23 of these 148 jumps. The trained
 | 120-160 | 8 | 0.091 | 0.163 | 20.3 | 0 |
 | above 160 | 12 | 0.071 | 0.162 | 17.2 | 0 |
 
-The margin is relative, within the same measurement of the same policy: a band is reliable when the mean and the
-90th percentile are at most 1.25 times those of the smallest band (up to K90) and the player does not fall. A
-policy robust to its own errors deliberately leaves distance to the oracle at every size, so what counts is whether
-the bot is as reliable at a given size as at the sizes already accepted. The number 1.25 gives for the earlier
-policy the same verdict as the former absolute margin (mean 0.06 K, 90th percentile 0.12 K): 90-120 had 1.12 and
-0.97 times (passes), 120-160 1.47 and 1.41 (does not pass). For the current policy 90-120 has 1.20 and 1.05 times,
-120-160 1.49 and 1.68, above 160 1.16 and 1.67; so the trained player was trusted only up to K120. The local test
+A band is reliable when the bot does not fall there and the mean and the 90th percentile are within the absolute
+margin (0.06 K and 0.12 K) or at most 1.25 times those of the smallest band (up to K90) of the same measurement.
+The relative margin was made for the trained player: a policy robust to its own errors deliberately leaves
+distance to the oracle at every size, so what counted was whether the bot is as reliable at a given size as at the
+sizes already accepted. The number 1.25 gave for the earlier policy the same verdict as the absolute margin:
+90-120 had 1.12 and 0.97 times (passes), 120-160 1.47 and 1.41 (does not pass). For the trained policy 90-120 has
+1.20 and 1.05 times, 120-160 1.49 and 1.68, above 160 1.16 and 1.67; so the trained player was trusted only up to
+K120. The exact rival comes so close on every band that a ratio of its gaps says little (0.050 against 0.032 K is
+1.56 times), so the absolute margin counts as well. The local test
 now guards the margin of the exact rival on every band. The K120 limit (`botReliableMaxKPointM`) stays for now:
 the bounds that are lengths (`good-median`, `flight-height`, the 3 m of the takeoff window) are set on hills up to
 K120 and do not yet grow with a larger hill.
@@ -411,7 +414,7 @@ Rules:
   jumper flies close to the slope;
 - `takeoff-speed`: the speed at the takeoff from 50 to 120 km/h, within the range of ski jumping hills;
 - `wind-spread`: the standard deviation of the distance of the exact rival (wind alone) at most 11% of K, because
-  the same wind carries farther in a longer flight (5.5% of K on the Ćwiczebna hill, up to 10.9% on the original's
+  the same wind carries farther in a longer flight (5.5% of K on the Ćwiczebna hill, up to 10.7% on the original's
   hills, at K205; with the trained player 8% was the bound);
 - `stress-ends`, `stress-finite`: the designed and the random jumps end before the frame limit and give finite
   numbers;
