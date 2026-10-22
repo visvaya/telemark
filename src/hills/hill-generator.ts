@@ -9,6 +9,7 @@ import { hillDistance, LIKENESS } from "./hill-likeness";
 import { oracleJump } from "./hill-oracle";
 import { playMeasures, playProblems, windClassSeeds } from "./hill-play";
 import { HILL_SPEC_SCHEMA_VERSION, type HillProblem, type HillSpec } from "./hill-spec";
+import { HILL_SPEC_LIMITS } from "./hill-spec-limits";
 import { OWN_HILL_SPECS } from "./own-hills";
 import { parseHillSpec } from "./parse-hill-spec";
 import { REFERENCE_PLAYER_POLICY } from "./player-policy";
@@ -57,8 +58,18 @@ export interface HillCharacter {
   tableHeightM?: number;
 }
 
-/** Ranges of the optional values of a character. */
+/**
+ * Ranges of the values of a character. The required ones bound what the construction is made for: sizes from a
+ * little below the original's smallest hill to the format's largest, landing hills from the gentlest the rules
+ * allow at K to a little past the original's steepest (52.5 degrees), the style rule's range of landing areas with
+ * a margin, inruns and takeoffs a little past the original's (42 to 57 and 2 to 13 degrees).
+ */
 const CHARACTER_LIMITS = {
+  kPointM: { min: 45, max: 300 },
+  landingSteepnessDeg: { min: 34, max: 53 },
+  landingAreaPastKShare: { min: 0.11, max: 0.39 },
+  inrunSteepnessDeg: { min: 30, max: 65 },
+  takeoffAngleDeg: { min: 2, max: 14 },
   gateXM: { min: 6, max: 34 },
   flatBehindGateM: { min: 0.5, max: 7 },
   tableHeightM: { min: 1.2, max: 2.6 },
@@ -166,6 +177,8 @@ const tableOf = (c: HillCharacter): number => c.tableHeightM ?? GENERATOR.tableH
 const bestOf = (c: HillCharacter): { minM: number; maxM: number } =>
   c.bestPastKM ?? { minM: GENERATOR_TARGETS.best.fromKMinM, maxM: GENERATOR_TARGETS.best.fromKMaxM };
 
+const KNOLLS: ReadonlySet<string> = new Set(["short", "medium", "long"]);
+
 const outsideRange = (v: number, r: { min: number; max: number }): boolean => !(v >= r.min && v <= r.max);
 
 /** Problems of a character's optional values against `CHARACTER_LIMITS`; empty when it has none. */
@@ -174,8 +187,27 @@ export function characterProblems(c: HillCharacter): HillProblem[] {
   const best = bestOf(c);
   const areaEndPastKM = c.landingAreaPastKShare * c.kPointM;
   const found: [boolean, string, string][] = [
+    [outsideRange(c.kPointM, L.kPointM), "kPointM", `K ${c.kPointM} m`],
+    [
+      outsideRange(c.landingSteepnessDeg, L.landingSteepnessDeg),
+      "landingSteepnessDeg",
+      `landing hill ${c.landingSteepnessDeg} degrees`,
+    ],
+    [
+      outsideRange(c.landingAreaPastKShare, L.landingAreaPastKShare),
+      "landingAreaPastKShare",
+      `landing area ${c.landingAreaPastKShare} of K past K`,
+    ],
+    [
+      outsideRange(c.inrunSteepnessDeg, L.inrunSteepnessDeg),
+      "inrunSteepnessDeg",
+      `inrun ${c.inrunSteepnessDeg} degrees`,
+    ],
+    [outsideRange(c.takeoffAngleDeg, L.takeoffAngleDeg), "takeoffAngleDeg", `takeoff ${c.takeoffAngleDeg} degrees`],
+    [!KNOLLS.has(c.knoll), "knoll", `knoll ${c.knoll}`],
     [outsideRange(gateOf(c), L.gateXM), "gateXM", `gate at ${gateOf(c)} m`],
     [outsideRange(flatOf(c), L.flatBehindGateM), "flatBehindGateM", `flat part ${flatOf(c)} m`],
+    [flatOf(c) > gateOf(c), "flatBehindGateM", `flat part ${flatOf(c)} m behind a gate at ${gateOf(c)} m`],
     [outsideRange(tableOf(c), L.tableHeightM), "tableHeightM", `table ${tableOf(c)} m high`],
     [
       best.minM < L.bestPastKM.min || best.maxM > L.bestPastKM.max || best.maxM - best.minM < L.bestPastKM.minWidthM,
@@ -650,7 +682,40 @@ function specOf(c: HillCharacter, shape: LandingShape, lineM: number, seed: numb
 function longestLineM(c: HillCharacter, shape: LandingShape): number {
   const probe = profileOf(c, shape, 0);
   const lowestPastLineEndM = probe.landing.centerXM + shape.lowestFromCenterM - probe.inrun.lineEndXM;
-  return Math.min(G.inrunLineEndMaxXM, G.sceneEndXM - G.outrunStopMarginM - lowestPastLineEndM) - gateOf(c);
+  const bendM = probe.inrun.takeoffXM - probe.inrun.lineEndXM;
+  const lineEndMaxXM = Math.min(
+    G.inrunLineEndMaxXM,
+    HILL_SPEC_LIMITS.inrun.takeoffXM.max - bendM,
+    G.sceneEndXM - G.outrunStopMarginM - lowestPastLineEndM,
+  );
+  return lineEndMaxXM - gateOf(c);
+}
+
+/**
+ * What stops a character from making any hill, found before a single jump: the landing hill and the outrun take
+ * so much of the scene that no inrun is left, or the hill at the shortest or the longest inrun misses the format,
+ * an admission rule of the geometry or of the look. Every inrun between the two lies between them in every number
+ * those rules judge, so a character that passes both makes a valid hill at whatever length the search sets.
+ */
+function constructionProblems(c: HillCharacter, shape: LandingShape, seed: number): readonly HillProblem[] {
+  const longest = longestLineM(c, shape);
+  if (!(longest >= G.inrunLineMinM)) {
+    return [
+      {
+        rule: "generator.no-room",
+        path: "",
+        message: `the landing hill and the outrun leave ${longest.toFixed(1)} m of the scene to the inrun's straight part`,
+      },
+    ];
+  }
+  for (const lineM of [G.inrunLineMinM, longest]) {
+    const spec = specOf(c, shape, lineM, seed);
+    const parsed = parseHillSpec(spec);
+    if (!parsed.ok) return parsed.problems;
+    const admission = [...geometryProblems(spec), ...lookProblems(spec)].filter((p) => p.level === "admission");
+    if (admission.length > 0) return admission;
+  }
+  return [];
 }
 
 interface SearchPoint {
@@ -757,15 +822,23 @@ export function checkGeneratedHill(spec: HillSpec, options: GeneratorOptions = {
 
 /**
  * A hill of the given character. `seed` sets the scenery (terrain and trees) and the id; the profile depends on
- * the character alone. Throws `HillGenerationError` when the result misses a format, admission or play rule, or is
- * too alike to a hill of the catalog or one of `options.others` (`checkGeneratedHill`); the style rules and the best jump's
- * range are targets, and the report says whether they were reached.
+ * the character alone. Throws `HillGenerationError` at the first of: a character outside its ranges, one that makes
+ * no valid hill at any inrun (found before a jump), a best jump that no inrun brings into its target (after the
+ * search, before the play rules), and a result that misses a play rule or is too alike to a hill of the catalog or
+ * one of `options.others` (`checkGeneratedHill`). The style rules are targets, and the report lists those missed.
  */
 export function generateHill(character: HillCharacter, seed = 1, options: GeneratorOptions = {}): GeneratedHill {
   const asked = characterProblems(character);
   if (asked.length > 0) throw new HillGenerationError("the character is outside its ranges", asked);
   const shape = landingShape(character);
+  const built = constructionProblems(character, shape, seed);
+  if (built.length > 0) throw new HillGenerationError("the character makes no valid hill", built);
   const { point, steps } = searchInrun(character, shape, seed);
+  if (!onTarget(character, point)) {
+    throw new HillGenerationError("the best jump cannot reach its target", [
+      { rule: "generator.target-unreachable", path: "bestPastKM", message: missMessage(character, shape, point) },
+    ]);
+  }
   const spec = specOf(character, shape, point.lineM, seed);
   return {
     spec,
@@ -779,6 +852,17 @@ export function generateHill(character: HillCharacter, seed = 1, options: Genera
       ...checkGeneratedHill(spec, options),
     },
   };
+}
+
+/** Why the search missed the target: the inrun the scene allows is too short, the shortest too long, or neither. */
+function missMessage(c: HillCharacter, shape: LandingShape, point: SearchPoint): string {
+  const fromK = (point.bestM - c.kPointM).toFixed(1);
+  const target = `K+${bestOf(c).minM}..K+${bestOf(c).maxM}`;
+  if (point.lineM >= longestLineM(c, shape)) {
+    return `the longest inrun the scene leaves lands the best jump at K+${fromK}, short of ${target}`;
+  }
+  if (point.lineM <= G.inrunLineMinM) return `the shortest inrun lands the best jump at K+${fromK}, past ${target}`;
+  return `no inrun between the shortest and the longest lands the best jump in ${target}; the closest K+${fromK}`;
 }
 
 /** Measures of a hill's built profile. */

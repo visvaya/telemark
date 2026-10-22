@@ -567,23 +567,24 @@ acceptance on a device).
 
 `HillCharacter`:
 
-- `kPointM`: the size of the hill, the K point;
-- `landingSteepnessDeg`: the greatest slope of the landing hill;
-- `landingAreaPastKShare`: how far beyond K the landing area reaches, as a share of K (a wider landing hill with a
-  larger one);
+- `kPointM`: the size of the hill, the K point (45..300 m);
+- `landingSteepnessDeg`: the greatest slope of the landing hill (34..53 degrees);
+- `landingAreaPastKShare`: how far beyond K the landing area reaches, as a share of K (0.11..0.39; a wider landing
+  hill with a larger one);
 - `knoll`: `short`, `medium` or `long`: how long the landing hill rounds off behind the takeoff before it becomes
   steep;
-- `inrunSteepnessDeg`: the slope of the straight part of the inrun;
-- `takeoffAngleDeg`: the takeoff angle;
+- `inrunSteepnessDeg`: the slope of the straight part of the inrun (30..65 degrees);
+- `takeoffAngleDeg`: the takeoff angle (2..14 degrees);
 - `look`: the sky theme (`day`, `dusk`, `winter`); the look does not change the jumping, and the positions of the
   supports, trees and distance marks follow from the profile;
 - optionally (`CHARACTER_LIMITS`): `gateXM`, where the start gate stands (the start of the inrun, 6..34 m, 10 by
-  default); `flatBehindGateM`, the length of the flat part behind the gate (0.5..7 m, 1.4 by default);
+  default); `flatBehindGateM`, the length of the flat part behind the gate (0.5..7 m and no longer than the gate's
+  distance from the scene's start, 1.4 by default);
   `bestPastKM`, the target of the oracle's best jump in calm (from K+3 to at most K+25, a width of at least 3 m,
   the end at least 2 m before the end of the landing area from the character, so that the rule "best jump past
   the landing area" does not fail; K+3..K+8 by default); `tableHeightM`, the height of the takeoff above the
-  landing hill (1.2..2.6 m within the rule's 1..3 m, 2 by default). A character outside these ranges is an error
-  (`characterProblems`, rule `generator.character`). A character with any of these values has an identifier with
+  landing hill (1.2..2.6 m within the rule's 1..3 m, 2 by default). A character outside these ranges, required
+  values included (in brackets above), is an error (`characterProblems`, rule `generator.character`). A character with any of these values has an identifier with
   an FNV-1a hash of all the character's numbers (`gen-k<K>-<skrót>-<motyw><ziarno>`), because the full notation
   would exceed the format's 40 characters; characters without them keep the existing notation.
 
@@ -649,11 +650,25 @@ every hill of the catalogue (`catalog`, the own hills by default) and from the h
 
 `generateHill` returns the hill data and a report: the best jump in calm and its distance from K, the length of
 the inrun straight, the number of oracle runs, the share of K of the landing area, the problems of the style
-rules, whether the jump target was reached, whether the simulation rules judged it and the nearest hill. The
-checks (`checkGeneratedHill`) go from the cheapest: format, admission rules, similarity, simulation rules. A hill
-that does not pass the format, an admission rule, a simulation rule or is too similar to another is an error
-(`HillGenerationError` with the list of problems), never a silent result. The style rules and the range of the
-best jump are targets: the report says whether they were reached.
+rules, whether the jump target was reached, whether the simulation rules judged it and the nearest hill. Every
+refusal is a `HillGenerationError` with the list of problems, never a silent or broken result, and comes as early
+as it can be known:
+
+1. a character outside its ranges (`generator.character`), at once;
+2. a character that makes no valid hill at any inrun, before a jump: the landing hill and the outrun leave the
+   inrun no room in the scene (`generator.no-room`), or the hill at the shortest or the longest inrun the format
+   and the scene allow misses the format or an admission rule of the geometry or the look (every inrun between
+   them lies between the two in every number those rules judge);
+3. a best jump that no inrun brings into the target (`generator.target-unreachable`), after the search and before
+   the play rules; the message says whether the longest inrun the scene leaves is too short, the shortest too long,
+   or the search found no inrun in between (a jump that changes abruptly with the inrun);
+4. the checks of the hill (`checkGeneratedHill`), from the cheapest: format, admission rules, similarity,
+   simulation rules.
+
+The style rules are targets: the report lists those missed. On 200 random characters within the ranges
+(2026-10-22) about half made a hill; every other one was refused by one of the first three steps, in at most 30
+ms for the first two, and in a median 1.4 s for the third (one to fourteen oracle runs), never by the format or
+an admission rule after the search.
 
 ### Generated set
 
