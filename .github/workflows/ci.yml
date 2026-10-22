@@ -208,10 +208,19 @@ jobs:
         run: sha256sum --check --strict --quiet dist.sha256
       # Not cached: the system packages are installed either way, and with a cached browser this took as long as
       # downloading it (one run of each, 2026-10-14), as Playwright's guidance on CI expects.
+      # The system packages come from the Ubuntu archive, which now and then stalls: on 2026-10-22 six jobs hung
+      # there until the job's limit, where it takes 0.5 to 2 minutes (once 11.5). An attempt that takes longer than
+      # its limit is stopped and tried again; apt resumes what it downloaded and dpkg finishes what it unpacked.
       - name: Install the browser and its system packages
         env:
           ENGINE: ${{ matrix.engine }}
-        run: pnpm exec playwright install --with-deps "$ENGINE"
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 4m pnpm exec playwright install --with-deps "$ENGINE"; then exit 0; fi
+            echo "::warning::installing $ENGINE and its system packages failed or took over 4 minutes (attempt $attempt)"
+            sudo dpkg --configure -a || true
+          done
+          exit 1
       - name: The game works in real browsers
         if: matrix.suite == 'browser'
         env:
