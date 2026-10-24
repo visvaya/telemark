@@ -7,7 +7,7 @@ import { PHASE, notesShownBy } from "../sim/jump-logic";
 import { makeBot } from "../sim/test-support/synthetic";
 import { FrameBuffer } from "./frame-buffer";
 import { VIEW_HEIGHT_PX, drawJumpView, pictureScale, viewWidthFor, type Scenery } from "./jump-view";
-import { prompt } from "./jump-view-hud";
+import { HUD_RIGHT_COLUMN_PX, prompt } from "./jump-view-hud";
 import type { ControlScheme } from "./jump-view-model";
 import { hudColour } from "./scene-palette";
 import { textWidth } from "./pixel-font";
@@ -204,6 +204,35 @@ describe("jump view", { timeout: WHOLE_JUMP_TIMEOUT_MS }, () => {
     expect(new Set([bare, withOld, withSave]).size).toBe(3);
     expect(rows({ previousRecordM: 88.5, recordSave: "failed" })).not.toBe(withSave);
   });
+
+  it.each(["saving", "saved", "visit", "failed"] as const)(
+    "keeps the record lines clear of the wind box and the notes on the narrowest phone (%s)",
+    (recordSave) => {
+      const hill = OWN_HILLS[0];
+      if (!hill) throw new Error("no hill");
+      const start = startTrainingJump(hill, 7).state;
+      const landedFrame = 300;
+      const logic = { ...start.logic, phase: PHASE.outrun, frame: landedFrame, finished: true, landedFrame };
+      const judges = logic.judges.map((judge) => ({ ...judge, showFrame: 0, note: 20 }));
+      // The widest distances: three digits before the decimal point.
+      const state = { ...start, logic: { ...logic, distanceM: 299.99, distanceHalfM: 300, judges } };
+      const model = { profile: hill.profile, kPointM: hill.kPointM, hillName: hill.name, playerName: "GRACZ 1" };
+      const draw = (newRecord: boolean) => {
+        const fb = new FrameBuffer(NARROWEST_PHONE_PX, VIEW_HEIGHT_PX);
+        const frame = { state, controls: "mouse", frame: landedFrame, over: false } as const;
+        drawJumpView(fb, { ...model, ...frame, newRecord, previousRecordM: 299.98, recordSave });
+        return fb.pixels;
+      };
+      const plain = draw(false);
+      const columns = new Set<number>();
+      draw(true).forEach((p, i) => {
+        if (p !== plain[i]) columns.add(i % NARROWEST_PHONE_PX);
+      });
+      expect(columns.size).toBeGreaterThan(0);
+      const clearOfColumn = NARROWEST_PHONE_PX - HUD_RIGHT_COLUMN_PX - PROMPT_MARGIN_PX;
+      expect(Math.max(...columns)).toBeLessThan(clearOfColumn);
+    },
+  );
 });
 
 describe("the own hills' jump view tests", () => {
