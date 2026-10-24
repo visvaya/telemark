@@ -66,6 +66,8 @@ export const UI_TEXT = {
     forgetFiles: "Zapomnij pliki",
     notPersistent: "Przeglądarka nie pozwala zapisywać danych: rekordy znikną po zamknięciu strony.",
     replaysNotStored: "Nie udało się zapisać powtórek: nowe mogą zniknąć po zamknięciu strony.",
+    /** At the foot of the menu: the link to the source code, which opens in a new tab. */
+    sourceCode: "Kod źródłowy na GitHubie",
   },
 
   /** Competitions: the setup, the board between jumps, the results, and a world cup of several. */
@@ -116,7 +118,7 @@ export const UI_TEXT = {
       fis: "odpada z konkursu",
     },
     /** How the computer jumpers land, chosen in the setup; the original's pilot first, as the default. */
-    rivalLanding: "Mechanika lądowania rywali komputerowych",
+    rivalLanding: "Mechanika skoków rywali komputerowych",
     rivalLandings: {
       original: "zgodna z DSJ2",
       improved: "ulepszona",
@@ -467,6 +469,31 @@ export const UI_TEXT = {
         text: "Gra uruchamia się z własnej ikony, bez paska adresu, i działa bez internetu. Pierwszy raz otwórz ją z siecią, żeby pobrała się w całości.",
       },
     ],
+    storageTitle: "Miejsce na urządzeniu",
+    storageUsed: (size: string) =>
+      `Gra razem z rekordami, powtórkami i wczytanymi plikami zajmuje teraz około ${size} (według przeglądarki).`,
+    storageUnknown: "Ta przeglądarka nie podaje, ile miejsca zajmuje gra.",
+    /** Read while the browser counts; usually gone before it is seen. */
+    storageChecking: "Sprawdzam...",
+    removalTitle: "Usunięcie gry",
+    removal: [
+      {
+        title: "iPhone i iPad",
+        text: "Przytrzymaj ikonę gry na ekranie początkowym i wybierz jej usunięcie.",
+      },
+      {
+        title: "Android",
+        text: "Przytrzymaj ikonę gry i wybierz odinstalowanie.",
+      },
+      {
+        title: "Komputer",
+        text: "W oknie gry otwórz menu (trzy kropki u góry okna) i wybierz odinstalowanie Telemarka.",
+      },
+      {
+        title: "Rekordy i powtórki",
+        text: "Usunięcie aplikacji nie zawsze kasuje rekordy, powtórki i wczytane pliki gry. Kasuje je usunięcie danych tej strony w ustawieniach przeglądarki.",
+      },
+    ],
   },
 
   howTo: {
@@ -521,7 +548,7 @@ export const UI_TEXT = {
         text: "Wyżej jest zawodnik z większą liczbą zwycięstw, potem drugich miejsc i kolejnych; przy pełnej równości decyduje losowanie, jak w zasadach FIS. W trakcie Pucharu tacy zawodnicy dzielą miejsce, w klasyfikacji końcowej każdy ma własne.",
       },
       {
-        title: "Lądowanie rywali",
+        title: "Mechanika skoków rywali",
         text: "W ustawieniach zawodów: „zgodna z DSJ2” to rywale jak w oryginale, którzy szykują się do lądowania wcześnie i przez to częściej upadają. „Ulepszona” to ci sami rywale lądujący później, jak dobry gracz: rzadziej upadają i skaczą trochę dalej.",
       },
     ],

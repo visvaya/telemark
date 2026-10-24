@@ -517,7 +517,8 @@ h2 {
 
 /*
  * The colours and the preview of the jumper side by side when the screen has room for both, which a phone held
- * sideways has with the preview at a smaller scale; otherwise the preview goes under the colours.
+ * sideways has with the preview at a smaller scale; otherwise the preview goes above the colours, in sight while
+ * they change (the screen marks that with `stacked`: src/ui/outfit-screen.tsx).
  */
 .outfit-editor {
   /* Whole screen pixels per pixel of the preview (84 x 48), so its pixels stay even. */
@@ -616,6 +617,13 @@ h2 {
   top: calc(var(--safe-top) + 12px);
 }
 
+/* On a line of its own the preview comes first, right under the rule, and scrolls with the colours. */
+.outfit-editor.stacked .outfit-preview {
+  order: -1;
+  margin-top: 0;
+  position: static;
+}
+
 .flag-icon {
   display: inline-block;
   flex: none;
@@ -634,6 +642,20 @@ h2 {
 
 .error {
   color: var(--danger);
+}
+
+/* The foot of the main menu: the link to the source code, below everything else. */
+.menu-footer {
+  margin-top: auto;
+}
+
+.menu-footer a {
+  color: var(--accent);
+}
+
+.menu-footer a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
 }
 
 .offline-notice {
@@ -1055,6 +1077,13 @@ h2 {
   font-size: 15px;
   line-height: 1.7;
   color: var(--text);
+}
+
+/* A part of the instructions under a heading of its own (the room the game takes, removing it). */
+.how-to-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .how-to-title {

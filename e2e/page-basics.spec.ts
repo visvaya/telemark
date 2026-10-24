@@ -84,3 +84,24 @@ test("a screen opens at its top, whatever the scroll position of the one before"
     LAYOUT_SLACK_PX,
   );
 });
+
+test("the foot of the main menu links to the source code in a new tab", async ({ page }) => {
+  await openMenu(page);
+  const link = page.getByRole("link", { name: "Kod źródłowy na GitHubie" });
+  await expect(link).toHaveAttribute("href", "https://github.com/visvaya/telemark");
+  // A new tab, which gets neither this page's window nor its address.
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+});
+
+test("the screen about the application tells the room the game takes and how to remove it", async ({
+  page,
+  traits,
+}) => {
+  await openMenu(page);
+  await press(button(page, TEXT.install), traits);
+  await expect(page.getByRole("heading", { name: "Miejsce na urządzeniu" })).toBeVisible();
+  // Every engine of the matrix either counts the bytes or says it does not; the count never stays pending.
+  await expect(page.getByText(/zajmuje teraz około \d+,\d (KB|MB)|nie podaje, ile miejsca/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Usunięcie gry" })).toBeVisible();
+});
