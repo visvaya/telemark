@@ -82,7 +82,7 @@ test("the setup of a competition is remembered after the page is loaded again", 
   await expect(rule).toHaveValue("original");
   await rule.selectOption({ label: "odpada z konkursu" });
   // The landing of the computer jumpers: the original's pilot by default, a later landing to choose.
-  const landing = page.getByRole("combobox", { name: "Mechanika lądowania rywali komputerowych" });
+  const landing = page.getByRole("combobox", { name: "Mechanika skoków rywali komputerowych" });
   await expect(landing).toHaveValue("original");
   await landing.selectOption({ label: "ulepszona" });
 
@@ -93,9 +93,7 @@ test("the setup of a competition is remembered after the page is loaded again", 
   await expect(box(page, "Oglądaj skoki rywali")).toBeChecked();
   await expect(page.getByRole("combobox", { name: "Poziom: Lars Hovden" })).toHaveValue("5");
   await expect(page.getByRole("combobox", { name: "Dyskwalifikacja" })).toHaveValue("fis");
-  await expect(page.getByRole("combobox", { name: "Mechanika lądowania rywali komputerowych" })).toHaveValue(
-    "improved",
-  );
+  await expect(page.getByRole("combobox", { name: "Mechanika skoków rywali komputerowych" })).toHaveValue("improved");
   expect(JSON.stringify(await storedSave(page))).toContain('"watchCpu":true');
 
   // Nobody taking part: the competition cannot start, and says why.

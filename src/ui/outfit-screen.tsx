@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { OWN_HILLS } from "../game/hill-choice";
 import { OUTFIT_PARTS, type Outfit } from "../game/outfit";
 import { previewFlightState } from "../game/outfit-preview";
@@ -6,6 +6,7 @@ import { FrameBuffer } from "../render/frame-buffer";
 import { drawJumperPreview } from "../render/jump-view";
 import { OUTFIT_SWATCHES } from "../render/palette";
 import { UI_TEXT } from "../text/ui-text";
+import { previewStacked } from "./outfit-layout";
 import { useEntryFocus } from "./use-entry-focus";
 
 interface Props {
@@ -31,9 +32,37 @@ function css([r, g, b]: readonly [number, number, number]): string {
   return `rgb(${r} ${g} ${b})`;
 }
 
+/**
+ * Whether the preview has a line of its own because it does not fit beside the colours. The flex layout decides
+ * that from the sizes of both, so it is read from the page after each change of the editor's size, before the
+ * browser paints, and the preview never shows in the wrong place.
+ */
+function usePreviewStacked(
+  editorRef: RefObject<HTMLDivElement | null>,
+  rowsRef: RefObject<HTMLDivElement | null>,
+  previewRef: RefObject<HTMLCanvasElement | null>,
+): boolean {
+  const [stacked, setStacked] = useState(false);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const rows = rowsRef.current?.getBoundingClientRect();
+      const preview = previewRef.current?.getBoundingClientRect();
+      if (rows && preview) setStacked(previewStacked(rows, preview));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (editorRef.current) observer.observe(editorRef.current);
+    return () => observer.disconnect();
+  }, [editorRef, rowsRef, previewRef]);
+  return stacked;
+}
+
 export function OutfitScreen({ outfit, onChange, onBack, focusOnEntry }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const stacked = usePreviewStacked(editorRef, rowsRef, canvasRef);
   useEntryFocus(headingRef, focusOnEntry);
   const hill = OWN_HILLS[0];
   const flight = useMemo(() => (hill ? previewFlightState(hill) : null), [hill]);
@@ -52,8 +81,8 @@ export function OutfitScreen({ outfit, onChange, onBack, focusOnEntry }: Props) 
         {UI_TEXT.outfit.title}
       </h1>
       <hr className="rule" />
-      <div className="outfit-editor">
-        <div className="outfit-rows">
+      <div className={stacked ? "outfit-editor stacked" : "outfit-editor"} ref={editorRef}>
+        <div className="outfit-rows" ref={rowsRef}>
           {OUTFIT_PARTS.map((part) => (
             <fieldset key={part} className="outfit-row">
               <legend>{UI_TEXT.outfit.part[part]}</legend>

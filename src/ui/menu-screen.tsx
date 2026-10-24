@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { originalHillChoices, type HillChoice } from "../game/hill-choice";
-import { versionLabel } from "../game/version";
+import { SOURCE_CODE_URL, versionLabel } from "../game/version";
 import { readOriginalHills } from "../original/original-hills";
 import type { GameFiles } from "../storage/game-files-store";
 import { UI_TEXT } from "../text/ui-text";
@@ -8,7 +8,7 @@ import { gameFilesOutcome } from "./game-files-choice";
 import { OfflineNotice, Subtitle, UpdateCheck, UpdateNotice, useLastingWait } from "./offline-notice";
 import { typeset } from "./typeset";
 import { useEntryFocus } from "./use-entry-focus";
-import { INSTALLED_QUERY, TOUCH_QUERY, useMediaQuery } from "./use-media-query";
+import { TOUCH_QUERY, useMediaQuery } from "./use-media-query";
 import type { OfflineSupportView } from "./use-offline-state";
 
 /** Said when the browser does not let the page close its own window: a framed note. */
@@ -88,6 +88,17 @@ function MenuHeader({
   );
 }
 
+/** The foot of the menu: the link to the source code, in a new tab. */
+function SourceLink() {
+  return (
+    <footer className="menu-footer">
+      <a className="note" href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer">
+        {UI_TEXT.menu.sourceCode}
+      </a>
+    </footer>
+  );
+}
+
 /** The button that resumes the kept competition, with the line that tells it under it; a refusal goes to `onRefused`. */
 function ResumeChoice({
   kept,
@@ -136,8 +147,6 @@ export function MenuScreen({
 }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEntryFocus(headingRef, focusOnEntry);
-  // Started from its own icon the game is installed already, and the instructions for that are left out.
-  const installed = useMediaQuery(INSTALLED_QUERY);
   const touch = useMediaQuery(TOUCH_QUERY);
   const [quitRefused, setQuitRefused] = useState(false);
   const quitNoteRef = useRef<HTMLParagraphElement>(null);
@@ -183,11 +192,10 @@ export function MenuScreen({
             {label}
           </button>
         ))}
-        {!installed && (
-          <button type="button" className="pixel-button" onClick={() => onOpen("install")}>
-            {UI_TEXT.menu.install}
-          </button>
-        )}
+        {/* Also in the installed game: the screen tells the room the game takes and how to remove it. */}
+        <button type="button" className="pixel-button" onClick={() => onOpen("install")}>
+          {UI_TEXT.menu.install}
+        </button>
         <button type="button" className="pixel-button" onClick={() => onOpen("about")}>
           {UI_TEXT.menu.about}
         </button>
@@ -243,6 +251,7 @@ export function MenuScreen({
         onReinstall={offline.updates?.reinstall}
         diagnostics={diagnostics}
       />
+      <SourceLink />
     </main>
   );
 }
