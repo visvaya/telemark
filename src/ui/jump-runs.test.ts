@@ -4,6 +4,7 @@ import { OWN_HILLS } from "../game/hill-choice";
 import type { PlayerInput } from "../game/player-input";
 import type { Scenery } from "../render/jump-view";
 import type { FrameInput } from "../sim/jump-logic";
+import { makeBot } from "../sim/test-support/synthetic";
 import { DEFAULT_SETTINGS, type HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { recordingSource, type ReplaySource, type ReplayView } from "./jump-replay";
@@ -15,6 +16,13 @@ const felt = vi.hoisted(() => [] as string[]);
 vi.mock("../game/haptics", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, vibrate: (event: string) => felt.push(event) };
+});
+
+/** A seed for the next jumps in place of a random one; null leaves them random. */
+const seeds = vi.hoisted(() => ({ fixed: null as number | null }));
+vi.mock("../game/training-session", async (importOriginal) => {
+  const actual = await importOriginal<{ newSeed: () => number }>();
+  return { ...actual, newSeed: () => seeds.fixed ?? actual.newSeed() };
 });
 
 const hill = OWN_HILLS[0];
@@ -30,7 +38,7 @@ const handsAt = (frame: number): FrameInput => ({
 const noop = () => undefined;
 
 /** The player's input as the runs read it, following the script frame by frame. */
-function scriptedInput(): PlayerInput {
+function scriptedInput(hands: (frame: number) => FrameInput = handsAt): PlayerInput {
   let frame = 0;
   return {
     get left() {
@@ -46,7 +54,7 @@ function scriptedInput(): PlayerInput {
     release: noop,
     addMotion: noop,
     setLeanKeys: noop,
-    takeFrame: () => handsAt(++frame),
+    takeFrame: () => hands(++frame),
     reset: () => {
       frame = 0;
     },
@@ -60,7 +68,14 @@ const silentSounds: JumpSounds = {
   skipTo: () => undefined,
 };
 
-function setUp() {
+/** The bot of the pixel tests' telemark landing. */
+const BOT = { startFrame: 70, takeoffLeadM: 3, landingHeightM: 2, leanPattern: () => 0 };
+
+/**
+ * The runs on the hill with their context. With `bot` the hands follow the jump as a player's do: they take off and
+ * land (src/sim/test-support/synthetic.ts); otherwise they keep to `handsAt`.
+ */
+function setUp({ bot = false }: { bot?: boolean } = {}) {
   /** Set by `freeze`: the screen renders no more, so the live view stays as it was (React applies later). */
   let stale = false;
   if (!hill) throw new Error("no hill");
@@ -98,7 +113,9 @@ function setUp() {
       contestHud: null,
       contestLeader: false,
     },
-    inputRef: { current: scriptedInput() },
+    inputRef: {
+      current: bot ? scriptedInput(makeBot(hill.profile, BOT, () => runs.current().now().jump.state)) : scriptedInput(),
+    },
     resetHands: () => context.inputRef.current.reset(),
     soundRef: { current: engine },
     announce: (text) => heard.push(text),
@@ -120,10 +137,11 @@ function setUp() {
     silentSounds,
     () => undefined,
   );
-  const playOut = () => {
-    for (let f = 0; f < MAX_FRAMES; f++) {
+  /** Plays the run to its end, `steps` frames at a time (one for the bot, which reads the state frame by frame). */
+  const playOut = (steps = 2) => {
+    for (let f = 0; f < (MAX_FRAMES * 2) / steps; f++) {
       const run = runs.current();
-      run.step(2);
+      run.step(steps);
       if (run.settle().over) return run.now().jump;
     }
     throw new Error("the jump never ended");
@@ -184,17 +202,31 @@ describe("training and its replay", () => {
   });
 
   it("keeps the record a jump beat, for the picture to write under the new one, and none in its replay", () => {
-    const t = setUp();
-    t.setRecord({ distanceM: 0.5, points: 0, dateIso: "2026-10-24T00:00:00.000Z" });
-    t.playOut();
-    const [result] = t.finished;
-    if (!result) throw new Error("no result");
-    // The wind is drawn at random, so the scripted jump may fall; a fall beats no record.
-    const beat = !result.fell && result.distanceM > 0.5;
-    expect(t.runs.current().now()).toMatchObject({ newRecord: beat, previousRecordM: beat ? 0.5 : null });
-    t.runs.controls.watchReplay();
-    t.playOut();
-    expect(t.runs.current().now().previousRecordM).toBeNull();
+    // The pixel tests' telemark landing: this seed and bot stand the jump on this hill.
+    seeds.fixed = 7;
+    try {
+      const t = setUp({ bot: true });
+      t.setRecord({ distanceM: 0.5, points: 0, dateIso: "2026-10-24T00:00:00.000Z" });
+      t.playOut(1);
+      expect(t.finished.at(-1)).toMatchObject({ fell: false });
+      expect(t.runs.current().now()).toMatchObject({ newRecord: true, previousRecordM: 0.5 });
+      t.runs.controls.watchReplay();
+      t.playOut(1);
+      expect(t.runs.current().now()).toMatchObject({ newRecord: true, previousRecordM: null });
+    } finally {
+      seeds.fixed = null;
+    }
+  });
+
+  it("keeps no beaten record without a record to beat", () => {
+    seeds.fixed = 7;
+    try {
+      const t = setUp({ bot: true });
+      t.playOut(1);
+      expect(t.runs.current().now()).toMatchObject({ newRecord: true, previousRecordM: null });
+    } finally {
+      seeds.fixed = null;
+    }
   });
 
   it("plays the last jump again to the same end, heard but not felt and not scored again", () => {
