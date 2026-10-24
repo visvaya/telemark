@@ -38,6 +38,7 @@ interface JumpLoopOptions extends RunContext {
 interface FrameView {
   jump: TrainingJump;
   newRecord: boolean;
+  previousRecordM: number | null;
   ghost: JumpSimState | null;
   over: boolean;
   clock: number;
@@ -70,6 +71,9 @@ function drawFrame(picture: JumpPicture, hill: HillChoice, live: LiveProps, v: F
     frame: v.clock,
     over: v.over,
     newRecord: v.newRecord,
+    ...(v.previousRecordM === null ? {} : { previousRecordM: v.previousRecordM }),
+    // A replay stores nothing, so only the jump being made says how its record was stored.
+    ...(v.newRecord && v.replay === null ? { recordSave: live.recordSave } : {}),
     scenery: v.scenery,
     outfit: live.settings.outfit,
     ...(live.contestLeader ? { leader: true } : {}),
@@ -208,10 +212,10 @@ export function useJumpLoop(options: JumpLoopOptions) {
       current.step(plan.steps);
       meter?.stepsEnd();
       const { over, clock } = current.settle();
-      const { jump, newRecord, ghost } = current.now();
+      const { jump, newRecord, previousRecordM, ghost } = current.now();
       sounds.play(jump.state, clock, newRecord, paused || document.hidden);
       meter?.drawBegin();
-      const v = { jump, newRecord, ghost, over, clock, title, replay: view, ...lookOf(runs, live) };
+      const v = { jump, newRecord, previousRecordM, ghost, over, clock, title, replay: view, ...lookOf(runs, live) };
       drawFrame(picture, hill, live, v);
       ctx.putImageData(picture.image, 0, 0);
       meter?.frameEnd(now, plan, paused);

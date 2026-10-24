@@ -12,7 +12,7 @@ import {
   startTrainingJump,
   type TrainingJump,
 } from "../game/training-session";
-import type { ControlScheme, Scenery } from "../render/jump-view";
+import type { ControlScheme, RecordSave, Scenery } from "../render/jump-view";
 import { PHASE, type FrameInput, type JumpLogicState } from "../sim/jump-logic";
 import type { JumpSimState } from "../sim/jump-sim";
 import { beatsRecord, type HillRecord, type Settings } from "../storage/save-data";
@@ -33,6 +33,8 @@ export interface LiveProps {
   /** A jump is over: its result, and the recording that plays it again. */
   onFinished: (result: JumpResult, recording: JumpRecording) => void;
   record: HillRecord | undefined;
+  /** How storing the latest record went: what the picture says under a new one. */
+  recordSave: RecordSave;
   settings: Settings;
   controls: ControlScheme;
   scenery: Scenery;
@@ -87,10 +89,11 @@ interface JumpRun {
   settle: () => { over: boolean; clock: number };
   restart: () => void;
   /**
-   * The jump, whether it beats the record (known from the touchdown on), and the record's jump at the same moment
-   * while it is shown as a ghost.
+   * The jump, whether it beats the record (known from the touchdown on) and the record it beat (null when the hill
+   * had none, or in a replay, which does not keep it), and the record's jump at the same moment while it is shown
+   * as a ghost.
    */
-  now: () => { jump: TrainingJump; newRecord: boolean; ghost: JumpSimState | null };
+  now: () => { jump: TrainingJump; newRecord: boolean; previousRecordM: number | null; ghost: JumpSimState | null };
 }
 
 /** Feels and plays the moments of the jump, and tells a screen reader when the jumper leaves the gate. */
@@ -170,6 +173,7 @@ function createTrainingRun(
   let last: FinishedJump | null = null;
   let finished = false;
   let newRecord = false;
+  let previousRecordM: number | null = null;
   let leftDown = false;
   let leftWasDown = false;
   const ghosts = createGhostTrack(hill, () => c().live.ghost);
@@ -181,6 +185,7 @@ function createTrainingRun(
     c().resetHands();
     finished = false;
     newRecord = false;
+    previousRecordM = null;
     sounds.reset();
     c().announce("");
   };
@@ -191,6 +196,7 @@ function createTrainingRun(
     // The record is the one from before this jump until onFinished stores the jump, so this repeats the verdict
     // given at touchdown.
     newRecord = beatsRecord(result, c().live.record);
+    previousRecordM = newRecord ? (c().live.record?.distanceM ?? null) : null;
     // A jump left while the jumper still slides out is kept as far as it went; the replay plays the rest with
     // no hands, after the result was settled.
     recording = { seed: jump.seed, inputs, newRecord, scenery: c().live.scenery };
@@ -220,6 +226,7 @@ function createTrainingRun(
       playCues(stepped.cues, c(), true);
       if (stepped.touchdown) {
         newRecord = stepped.touchdown.newRecord;
+        previousRecordM = newRecord ? (c().live.record?.distanceM ?? null) : null;
         c().announce(touchdownAnnouncement(jump.state.logic, newRecord));
       }
     },
@@ -239,7 +246,7 @@ function createTrainingRun(
       return { over, clock };
     },
     restart,
-    now: () => ({ jump, newRecord, ghost: ghosts.shown(jump) }),
+    now: () => ({ jump, newRecord, previousRecordM, ghost: ghosts.shown(jump) }),
     lastRecording: () => recording,
     lastJump: () => last,
   };
@@ -316,7 +323,7 @@ function createReplayRun(hill: HillChoice, source: ReplaySource, c: () => RunCon
       return { over: isJumpOver(jump), clock: presentationFrame(jump) };
     },
     restart,
-    now: () => ({ jump, newRecord, ghost: null }),
+    now: () => ({ jump, newRecord, previousRecordM: null, ghost: null }),
     ended,
     position: () => ({ frame: Math.min(presentationFrame(jump), lengthOf()), length: lengthOf() }),
     seek(frame) {

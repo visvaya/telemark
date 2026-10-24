@@ -20,7 +20,7 @@ describe("jump announcements", () => {
   });
 
   it("announces a new hill record together with the distance", () => {
-    expect(touchdownAnnouncement(clean, true)).toBe("Lądowanie: 67,38 metra. Nowy rekord skoczni.");
+    expect(touchdownAnnouncement(clean, true)).toBe("Lądowanie: 67,38 metra. Nowy rekord na tym urządzeniu.");
     expect(touchdownAnnouncement(clean, false)).toBe("Lądowanie: 67,38 metra.");
   });
 
@@ -41,7 +41,7 @@ describe("jump announcements", () => {
 
   it("mentions a new record and names the touch zone on touch screens", () => {
     expect(resultAnnouncement(clean, { newRecord: true, controls: "touch" })).toBe(
-      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Nowy rekord skoczni. Skok obejrzysz i zachowasz w menu. Pole L: jeszcze raz.",
+      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Nowy rekord na tym urządzeniu. Skok obejrzysz i zachowasz w menu. Pole L: jeszcze raz.",
     );
     // With tilt steering there are no zones to name.
     expect(resultAnnouncement(clean, { newRecord: false, controls: "tilt" })).toBe(
@@ -58,7 +58,7 @@ describe("jump announcements", () => {
 
   it("reads a replay that is over with the result it had and what a press of the picture does now", () => {
     expect(replayOverAnnouncement(clean, true, "own")).toBe(
-      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Nowy rekord skoczni. Koniec powtórki. Kliknięcie lub dotknięcie obrazu: nowy skok.",
+      "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Nowy rekord na tym urządzeniu. Koniec powtórki. Kliknięcie lub dotknięcie obrazu: nowy skok.",
     );
     expect(replayOverAnnouncement(clean, false, "original")).toBe(
       "Lądowanie: 67,38 metra. Noty: 16,0; 16,5; 16,0; 15,5; 16,0. Wynik: 62,0 punktu. Koniec powtórki. Kliknięcie lub dotknięcie obrazu: menu.",

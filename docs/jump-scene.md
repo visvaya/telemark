@@ -167,9 +167,11 @@ capital lies in row 3, at the height of the top frame of the wind box), where th
 replay file, in the colour in which it writes it (0xCB), and like it without a shadow (readable over the sky and
 the inrun); when the pause button lies in that corner (control by horizontal tilt), the name stands to the right
 of it, vertically centred on the button. On the bar the phase label (ramp 0x58) and the speed, white with a darker
-shadow: in the grey ramp 0x3C a shadow five steps lower barely stood out from the letters. The new record line is
-also without a shadow, as in the original; it blinks every half second, counted from the landing frame, so it
-always begins with a full half second of visibility.
+shadow: in the grey ramp 0x3C a shadow five steps lower barely stood out from the letters. The lines about a new record
+are also without a shadow, as in the original: "NOWY REKORD NA TYM URZĄDZENIU!", the new distance, the record it
+beat (when the hill had one; a replay does not keep it) and whether the record is stored on the device (not in a
+replay). They blink as the original's do, on for 24 frames of every 50, for 400 frames, counted from the landing
+frame, so they always begin with a whole showing.
 
 ## Places of world objects in the picture
 

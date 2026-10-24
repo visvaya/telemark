@@ -36,10 +36,12 @@ test("a whole jump ends in a record that the hill list shows and a reload keeps"
   const landed = outcomes.at(-1);
   expect(landed?.kind).toBe("landed");
   // The announcement reads the notes and the points with a decimal comma, like the distance.
-  expect(landed?.announcement).toMatch(/Noty: (\d+,\d; ){4}\d+,\d\. Wynik: -?\d+,\d punktu\. Nowy rekord skoczni\./);
+  expect(landed?.announcement).toMatch(
+    /Noty: (\d+,\d; ){4}\d+,\d\. Wynik: -?\d+,\d punktu\. Nowy rekord na tym urządzeniu\./,
+  );
   // The record is told together with the distance, while the jumper still slides out, before the notes.
   const heard = await page.evaluate(() => window.heardAnnouncements ?? []);
-  expect(heard).toContain(`Lądowanie: ${landed?.distance ?? ""} metra. Nowy rekord skoczni.`);
+  expect(heard).toContain(`Lądowanie: ${landed?.distance ?? ""} metra. Nowy rekord na tym urządzeniu.`);
 
   // The list writes the same distance with a decimal point, as the picture does.
   const record = `rekord ${landed?.distance ?? ""} m`;

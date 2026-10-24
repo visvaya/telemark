@@ -36,6 +36,8 @@ import { useOfflineState } from "./use-offline-state";
 import { saveSync } from "./save-sync";
 import { useRecordGhost, useReplayShelf } from "./use-replay-shelf";
 import { useCompetition } from "./use-competition";
+import { recordSaveOf, type RecordWrite } from "./record-save";
+import type { RecordSave } from "../render/jump-view";
 import { CompetitionSetupScreen } from "./competition-setup-screen";
 import { CompetitionScreen } from "./competition-screen";
 import { CupEndScreen, CupStandingsScreen } from "./cup-screens";
@@ -179,30 +181,37 @@ function useStoredSave() {
     };
   }, [backend, sync]);
 
-  const update = (next: (current: SaveData) => SaveData) =>
+  /** Stores the change; `onStored` hears how the write went, or that the change left the save as it was. */
+  const update = (next: (current: SaveData) => SaveData, onStored?: (write: RecordWrite) => void) =>
     setSave((prev) => {
       const changed = next(prev);
-      if (changed !== prev) {
-        const done = sync.saving();
-        saveSave(backend, changed).then(
-          (stored) => {
-            done(true);
-            setSave((current) => mergedSave(stored, current));
-          },
-          () => {
-            done(false);
-            setSaveFailed(true);
-          },
-        );
+      if (changed === prev) {
+        // Told after this update, never inside it.
+        if (onStored) void Promise.resolve().then(() => onStored("unchanged"));
+        return prev;
       }
+      const done = sync.saving();
+      saveSave(backend, changed).then(
+        (stored) => {
+          done(true);
+          setSave((current) => mergedSave(stored, current));
+          onStored?.("stored");
+        },
+        () => {
+          done(false);
+          setSaveFailed(true);
+          onStored?.("failed");
+        },
+      );
       return changed;
     });
-  return { save, persistent: backend.name !== "memory" && !saveFailed, update };
+  return { save, persistent: backend.name !== "memory" && !saveFailed, kept: backend.name !== "memory", update };
 }
 
 interface ContestContext {
   contest: ReturnType<typeof useCompetition>;
   save: SaveData;
+  recordSave: RecordSave;
   onSettings: (change: Partial<Settings>) => void;
   onFinished: (hill: HillChoice, result: JumpResult, recording: JumpRecording, holder?: string) => void;
   keepJump: (hill: HillChoice, jump: FinishedJump) => KeepOutcome;
@@ -225,6 +234,7 @@ function contestScreen(screen: Screen, c: ContestContext): ReactElement | null {
         key={c.contest.jump.key}
         hill={hill}
         record={c.save.records[hill.id]}
+        recordSave={c.recordSave}
         settings={c.save.settings}
         onSettings={c.onSettings}
         onFinished={(result, recording) => {
@@ -332,6 +342,25 @@ function useKeptContest(
   return { contest, kept, resumeKept, readContest };
 }
 
+/**
+ * What becomes of a finished jump: its replay kept, and the hill record taken when it beats it, by `holder`
+ * (training: player 1); and how the write of the latest new record went.
+ */
+function useFinishedJumps(
+  { save, kept, update }: ReturnType<typeof useStoredSave>,
+  keepReplay: ReturnType<typeof useReplayShelf>["onJumpFinished"],
+) {
+  const [recordWrite, setRecordWrite] = useState<RecordWrite>("stored");
+  const onFinished = (hill: HillChoice, result: JumpResult, recording: JumpRecording, holder?: string) => {
+    const beats = beatsRecord(result, save.records[hill.id]);
+    keepReplay(hill, { recording, result }, beats);
+    const by = holder ?? UI_TEXT.competition.playerName(1);
+    if (beats) setRecordWrite("saving");
+    update((prev) => withJump(prev, hill.id, result, new Date(), by), beats ? setRecordWrite : undefined);
+  };
+  return { onFinished, recordSave: recordSaveOf(recordWrite, kept) };
+}
+
 interface AppProps {
   /** Whether the address of the page asked for the diagnostics of the jump loop. */
   diagnostics: boolean;
@@ -342,15 +371,11 @@ export function App({ diagnostics }: AppProps) {
   useFirstScreenMark();
   const offline = useOfflineState();
   const { originalHills, setOriginalHills, gameFiles, filesStoreName, onGameFiles, onForgetFiles } = useGameFiles();
-  const { save, persistent, update } = useStoredSave();
+  const stored = useStoredSave();
+  const { save, persistent, update } = stored;
   const replays = useReplayShelf(save.settings.replays);
   const ghost = useRecordGhost(replays.shelf, screen.kind === "jump" ? screen.hill : null, save.settings.recordGhost);
-  /** A jump is over: its replay kept, and the hill record taken when it beats it, by `holder` (training: player 1). */
-  const onFinished = (hill: HillChoice, result: JumpResult, recording: JumpRecording, holder?: string) => {
-    replays.onJumpFinished(hill, { recording, result }, beatsRecord(result, save.records[hill.id]));
-    const by = holder ?? UI_TEXT.competition.playerName(1);
-    update((prev) => withJump(prev, hill.id, result, new Date(), by));
-  };
+  const { onFinished, recordSave } = useFinishedJumps(stored, replays.onJumpFinished);
 
   const onSettings = (change: Partial<Settings>) => {
     update((prev) => withSettings(prev, change));
@@ -361,6 +386,7 @@ export function App({ diagnostics }: AppProps) {
   const contestShown = contestScreen(screen, {
     ...keptContest,
     save,
+    recordSave,
     onSettings,
     onFinished,
     keepJump: replays.keepJump,
@@ -379,6 +405,7 @@ export function App({ diagnostics }: AppProps) {
         key={screen.replay ? `${hill.id}-replay` : hill.id}
         hill={hill}
         record={save.records[hill.id]}
+        recordSave={recordSave}
         settings={save.settings}
         onSettings={onSettings}
         onFinished={(result, recording) => onFinished(hill, result, recording)}

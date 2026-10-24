@@ -96,6 +96,12 @@ interface Scenario {
 }
 
 const blinkOn = (frame: number) => Math.floor(frame / BLINK_FRAMES) % 2 === 0;
+/** The lines about a new record: on for 24 frames of every 50, for 400 frames from the landing (src/render/jump-view.ts). */
+const sinceLanding = (jump: TrainingJump, frame: number) => frame - jump.state.logic.landedFrame;
+const recordOn = (jump: TrainingJump, frame: number) => {
+  const since = sinceLanding(jump, frame);
+  return since >= 0 && since < 400 && since % 50 < 24;
+};
 const phaseOf = (jump: TrainingJump) => jump.state.logic.phase;
 const allNotesShown = (jump: TrainingJump, frame: number) => notesShownBy(jump.state.logic, frame);
 
@@ -137,13 +143,18 @@ const SCENARIOS: readonly Scenario[] = [
         name: "distance shown, notes appearing",
         when: (j, f) => j.state.logic.finished && !allNotesShown(j, f) && f >= notesAppearingFrame(j),
       },
+      // The second showing of the record's lines, and the pause before it.
       {
-        name: "after the jump, notes and record shown",
-        when: (j, f) => isJumpOver(j) && allNotesShown(j, f) && blinkOn(f),
+        name: "record lines shown",
+        when: (j, f) => j.state.logic.finished && sinceLanding(j, f) >= 50 && recordOn(j, f),
       },
       {
-        name: "after the jump, record line blinked off",
-        when: (j, f) => isJumpOver(j) && allNotesShown(j, f) && !blinkOn(f),
+        name: "record lines blinked off",
+        when: (j, f) => j.state.logic.finished && sinceLanding(j, f) >= 24 && !recordOn(j, f),
+      },
+      {
+        name: "after the jump, notes shown",
+        when: (j, f) => isJumpOver(j) && allNotesShown(j, f) && blinkOn(f),
       },
     ],
   },

@@ -56,6 +56,8 @@ const WIND_BOX = { right: 4, top: 3, width: 29, height: 26 } as const;
 const START_LIGHT = { gap: 4, width: 16 } as const;
 /** Columns the wind box and the start light take at the right of the picture's top, with the gap left of them. */
 export const HUD_TOP_RIGHT_RESERVED_PX = WIND_BOX.right + WIND_BOX.width + 2 * START_LIGHT.gap + START_LIGHT.width;
+/** Columns the wind box and the notes under it take at the right of the picture once the jumper has landed. */
+export const HUD_RIGHT_COLUMN_PX = WIND_BOX.right + Math.max(WIND_BOX.width, NOTE_BOX.width);
 /** Bevelled frame of both boxes: palette indices of the inside, the top, left, right and bottom edges. */
 const FRAME = { inside: 0x08, top: 0x18, topCorner: 0xe6, left: 0x14, right: 0x0c, bottom: 0xe4, bottomLeft: 0xe5 };
 

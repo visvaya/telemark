@@ -6,6 +6,7 @@ import { newSeed } from "../game/training-session";
 import type { OfflineState } from "../pwa/offline-state";
 import type { Outfit } from "../game/outfit";
 import type { HillRecord, Settings } from "../storage/save-data";
+import type { RecordSave } from "../render/jump-view";
 import { UI_TEXT } from "../text/ui-text";
 import { typeset } from "./typeset";
 import { AbandonChoice } from "./abandon-question";
@@ -28,6 +29,8 @@ import { useSteering } from "./use-steering";
 interface Props {
   hill: HillChoice;
   record: HillRecord | undefined;
+  /** How storing the latest new record went, said under it in the picture. */
+  recordSave: RecordSave;
   settings: Settings;
   onSettings: (change: Partial<Settings>) => void;
   onFinished: (result: JumpResult, recording: JumpRecording) => void;
@@ -314,6 +317,7 @@ export function JumpScreen(props: Props) {
     live: {
       onFinished: props.onFinished,
       record: props.record,
+      recordSave: props.recordSave,
       settings,
       controls,
       ...look,

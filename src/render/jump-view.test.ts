@@ -7,7 +7,7 @@ import { PHASE, notesShownBy } from "../sim/jump-logic";
 import { makeBot } from "../sim/test-support/synthetic";
 import { FrameBuffer } from "./frame-buffer";
 import { VIEW_HEIGHT_PX, drawJumpView, pictureScale, viewWidthFor, type Scenery } from "./jump-view";
-import { prompt } from "./jump-view-hud";
+import { HUD_RIGHT_COLUMN_PX, prompt } from "./jump-view-hud";
 import type { ControlScheme } from "./jump-view-model";
 import { hudColour } from "./scene-palette";
 import { textWidth } from "./pixel-font";
@@ -154,12 +154,12 @@ describe("jump view", { timeout: WHOLE_JUMP_TIMEOUT_MS }, () => {
     expect(barRows(night)).toEqual(barRows(day));
   });
 
-  it("shows a new record from the frame of the landing, whatever the clock says", () => {
+  it("shows a new record from the frame of the landing, blinking as the original's, for 400 frames", () => {
     const hill = OWN_HILLS[0];
     if (!hill) throw new Error("no hill");
     const start = startTrainingJump(hill, 7).state;
     // Landed in the second half of a blink period of the clock: counted from the clock, the line would first be off.
-    const landedFrame = 35 * 7 + 20;
+    const landedFrame = 50 * 7 + 30;
     const state = {
       ...start,
       logic: { ...start.logic, finished: true, distanceM: 90, distanceHalfM: 90, landedFrame },
@@ -170,11 +170,69 @@ describe("jump view", { timeout: WHOLE_JUMP_TIMEOUT_MS }, () => {
       drawJumpView(fb, { ...model, state, controls: "mouse", frame, over: false, newRecord });
       return fnv(fb.bytes);
     };
-    expect(draw(landedFrame, true)).not.toBe(draw(landedFrame, false));
-    expect(draw(landedFrame + 34, true)).not.toBe(draw(landedFrame + 34, false));
-    expect(draw(landedFrame + 35, true)).toBe(draw(landedFrame + 35, false));
-    expect(draw(landedFrame + 70, true)).not.toBe(draw(landedFrame + 70, false));
+    const shown = (since: number) => draw(landedFrame + since, true) !== draw(landedFrame + since, false);
+    expect([0, 23, 24, 49, 50, 73, 74].map(shown)).toEqual([true, true, false, false, true, true, false]);
+    expect([350, 373, 399, 400, 450].map(shown)).toEqual([true, true, false, false, false]);
   });
+
+  it("writes the new distance, the one it beat and how storing it went, each on a line of its own", () => {
+    const hill = OWN_HILLS[0];
+    if (!hill) throw new Error("no hill");
+    const start = startTrainingJump(hill, 7).state;
+    const landedFrame = 300;
+    const state = {
+      ...start,
+      logic: { ...start.logic, finished: true, distanceM: 91.37, distanceHalfM: 91, landedFrame },
+    };
+    const model = { profile: hill.profile, kPointM: hill.kPointM, hillName: hill.name, playerName: "GRACZ 1" };
+    const rows = (extra: object) => {
+      const fb = new FrameBuffer(356, VIEW_HEIGHT_PX);
+      drawJumpView(fb, {
+        ...model,
+        state,
+        controls: "mouse",
+        frame: landedFrame,
+        over: false,
+        newRecord: true,
+        ...extra,
+      });
+      return fnv(fb.bytes);
+    };
+    const bare = rows({});
+    const withOld = rows({ previousRecordM: 88.5 });
+    const withSave = rows({ previousRecordM: 88.5, recordSave: "saved" });
+    expect(new Set([bare, withOld, withSave]).size).toBe(3);
+    expect(rows({ previousRecordM: 88.5, recordSave: "failed" })).not.toBe(withSave);
+  });
+
+  it.each(["saving", "saved", "visit", "failed"] as const)(
+    "keeps the record lines clear of the wind box and the notes on the narrowest phone (%s)",
+    (recordSave) => {
+      const hill = OWN_HILLS[0];
+      if (!hill) throw new Error("no hill");
+      const start = startTrainingJump(hill, 7).state;
+      const landedFrame = 300;
+      const logic = { ...start.logic, phase: PHASE.outrun, frame: landedFrame, finished: true, landedFrame };
+      const judges = logic.judges.map((judge) => ({ ...judge, showFrame: 0, note: 20 }));
+      // The widest distances: three digits before the decimal point.
+      const state = { ...start, logic: { ...logic, distanceM: 299.99, distanceHalfM: 300, judges } };
+      const model = { profile: hill.profile, kPointM: hill.kPointM, hillName: hill.name, playerName: "GRACZ 1" };
+      const draw = (newRecord: boolean) => {
+        const fb = new FrameBuffer(NARROWEST_PHONE_PX, VIEW_HEIGHT_PX);
+        const frame = { state, controls: "mouse", frame: landedFrame, over: false } as const;
+        drawJumpView(fb, { ...model, ...frame, newRecord, previousRecordM: 299.98, recordSave });
+        return fb.pixels;
+      };
+      const plain = draw(false);
+      const columns = new Set<number>();
+      draw(true).forEach((p, i) => {
+        if (p !== plain[i]) columns.add(i % NARROWEST_PHONE_PX);
+      });
+      expect(columns.size).toBeGreaterThan(0);
+      const clearOfColumn = NARROWEST_PHONE_PX - HUD_RIGHT_COLUMN_PX - PROMPT_MARGIN_PX;
+      expect(Math.max(...columns)).toBeLessThan(clearOfColumn);
+    },
+  );
 });
 
 describe("the own hills' jump view tests", () => {
