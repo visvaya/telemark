@@ -17,6 +17,12 @@ export const DAY_SCENERY: Scenery = { lighting: "day", snowfall: false, fog: fal
 /** How the player steers: the prompts name the matching controls. */
 export type ControlScheme = "mouse" | "touch" | "tilt";
 
+/**
+ * How storing a new record went: still being written, stored on the device, kept only until the page closes
+ * (the browser lets the game store nothing), or the write failed.
+ */
+export type RecordSave = "saving" | "saved" | "visit" | "failed";
+
 export interface JumpViewModel {
   profile: HillProfile;
   kPointM: number;
@@ -45,6 +51,10 @@ export interface JumpViewModel {
   ghost?: JumpSimState;
   /** This jump set a new hill record. */
   newRecord?: boolean;
+  /** The record this jump beat, in metres; absent when the hill had none or a replay does not know it. */
+  previousRecordM?: number;
+  /** How storing the new record went; absent in a replay, which stores nothing. */
+  recordSave?: RecordSave;
   /** Time of day and weather; a clear day when absent. */
   scenery?: Scenery;
   /** The jumper's colours; the original's player 1 when absent. */

@@ -667,7 +667,7 @@ export const UI_TEXT = {
     },
     /** Once a competition jump shown again, or a computer jumper's watched jump, is over. */
     contestOver: "Kliknięcie lub dotknięcie obrazu: dalej.",
-    record: "Nowy rekord skoczni.",
+    record: "Nowy rekord na tym urządzeniu.",
     disqualified: "Dyskwalifikacja",
     distance: (distance: string) => `${distance} metra`,
     landing: (distance: string) => `Lądowanie: ${distance}`,
@@ -679,7 +679,17 @@ export const UI_TEXT = {
   /** Drawn in the picture of the jump with the pixel font. */
   hud: {
     playerName: "GRACZ 1",
-    newRecord: "NOWY REKORD SKOCZNI!",
+    newRecord: "NOWY REKORD NA TYM URZĄDZENIU!",
+    /** Under the line about a new record, as the original writes them: the new distance and the one it beat. */
+    recordNew: (distance: string) => `NOWY: ${distance} ｍ`,
+    recordOld: (distance: string) => `STARY: ${distance} ｍ`,
+    /** Under the distances: whether the record is stored on the device. */
+    recordSave: {
+      saving: "ZAPISUJĘ...",
+      saved: "ZAPISANY",
+      visit: "ZNIKNIE PO ZAMKNIĘCIU STRONY",
+      failed: "NIE UDAŁO SIĘ GO ZAPISAĆ",
+    },
     /** In a competition, on the gate: the points that would equal the leader, and the distance they take. */
     neededToLead: (points: string, distance: string) => `POTRZEBNE BY PROWADZIĆ ${points} ｐｋｔ (= ${distance} ｍ)`,
     /** In a competition, after the jump: the total so far and the place after this jump. */

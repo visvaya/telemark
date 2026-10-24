@@ -26,7 +26,7 @@ export {
   figurePoints,
 } from "./jump-view-jumper";
 export { windSockDirection } from "./scene-extras";
-export { type ControlScheme, type JumpViewModel, type Scenery } from "./jump-view-model";
+export { type ControlScheme, type JumpViewModel, type RecordSave, type Scenery } from "./jump-view-model";
 
 /** Logical height of the original; the width follows the screen's proportions (variant B). */
 export { VIEW_HEIGHT_PX, VIEW_MAX_WIDTH_PX, VIEW_MIN_WIDTH_PX } from "./view-size";
@@ -57,11 +57,41 @@ const TITLE_INK = 0xcb;
  */
 export const TITLE_AT_PX = { x: 5, y: 5 } as const;
 const RECORD_INK = 0xcd;
-/** Frames per blink phase of the line about a new record (half a second). */
-const BLINK_FRAMES = 35;
+/**
+ * The lines about a new record blink as the original's do: on for 24 frames of every 50, for 400 frames from the
+ * moment the distance appears in the bar (the original's are off first; here the first showing comes at once).
+ */
+const RECORD_BLINK_PERIOD_FRAMES = 50;
+const RECORD_BLINK_ON_FRAMES = 24;
+const RECORD_SHOWN_FRAMES = 400;
+/** Where the first line about a new record starts, and the step to each next one. */
+const RECORD_TOP_PX = 22;
+const RECORD_LINE_PX = 10;
 /** Prompts: the height of a line of text with its spacing, and the gap between the last line and the bar. */
 const PROMPT_LINE_PX = 10;
 const PROMPT_BOTTOM_GAP_PX = 3;
+
+/**
+ * The lines about a new record, centred, from the frame the distance appears in the bar: the record's name, the
+ * new distance, the one it beat (when known) and whether the record is stored (absent in a replay).
+ */
+function drawNewRecord(fb: FrameBuffer, m: JumpViewModel, distanceM: number, sinceLanding: number): void {
+  if (sinceLanding < 0 || sinceLanding >= RECORD_SHOWN_FRAMES) return;
+  if (sinceLanding % RECORD_BLINK_PERIOD_FRAMES >= RECORD_BLINK_ON_FRAMES) return;
+  const T = UI_TEXT.hud;
+  const lines = [
+    T.newRecord,
+    // In hundredths, as the hill list writes records and the original its old one.
+    T.recordNew(formatDecimal(distanceM, 2)),
+    ...(m.previousRecordM === undefined ? [] : [T.recordOld(formatDecimal(m.previousRecordM, 2))]),
+    ...(m.recordSave === undefined ? [] : [T.recordSave[m.recordSave]]),
+  ];
+  lines.forEach((line, i) => {
+    drawText(fb, Math.round((fb.width - textWidth(line)) / 2), RECORD_TOP_PX + i * RECORD_LINE_PX, line, {
+      ramp: RECORD_INK,
+    });
+  });
+}
 
 /** Where in the picture the jumper stands, as shares of its width and height. */
 export interface PreviewAnchor {
@@ -210,11 +240,6 @@ function drawScene(fb: FrameBuffer, m: JumpViewModel, scenery: Scenery): void {
   }
   // A disqualified jump (no takeoff) is never scored, so there are no notes to show.
   if (finished && s.logic.distanceM > 0) drawNotes(fb, s, m.frame);
-  // A new record blinks from the frame the distance appears in the bar, so its first showing is always whole.
-  const sinceLanding = m.frame - s.logic.landedFrame;
-  if (m.newRecord === true && finished && sinceLanding >= 0 && Math.floor(sinceLanding / BLINK_FRAMES) % 2 === 0) {
-    const text = UI_TEXT.hud.newRecord;
-    drawText(fb, Math.round((fb.width - textWidth(text)) / 2), 22, text, { ramp: RECORD_INK });
-  }
+  if (m.newRecord === true && finished) drawNewRecord(fb, m, s.logic.distanceM, m.frame - s.logic.landedFrame);
   drawBar(fb, m, groundBottom, notesShown);
 }

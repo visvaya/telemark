@@ -4,7 +4,7 @@ import { OWN_HILLS } from "../game/hill-choice";
 import type { PlayerInput } from "../game/player-input";
 import type { Scenery } from "../render/jump-view";
 import type { FrameInput } from "../sim/jump-logic";
-import { DEFAULT_SETTINGS } from "../storage/save-data";
+import { DEFAULT_SETTINGS, type HillRecord } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
 import { recordingSource, type ReplaySource, type ReplayView } from "./jump-replay";
 import type { JumpResult } from "./jump-round";
@@ -85,6 +85,7 @@ function setUp() {
     live: {
       onFinished: (result) => finished.push(result),
       record: undefined,
+      recordSave: "saved",
       settings: { ...DEFAULT_SETTINGS, vibration: true },
       controls: "mouse",
       scenery: { lighting: "day", snowfall: false, fog: false },
@@ -147,6 +148,10 @@ function setUp() {
     setContestNext: (contestNext: () => void) => {
       context.live = { ...context.live, contestNext };
     },
+    /** The hill's record as the save holds it before the jump. */
+    setRecord: (record: HillRecord) => {
+      context.live = { ...context.live, record };
+    },
     /** The ghost the screen hands the loop: the replay of the hill's record, or none. */
     setGhost: (ghost: ReplaySource | null) => {
       context.live = { ...context.live, ghost };
@@ -176,6 +181,20 @@ describe("a competition jump", () => {
 describe("training and its replay", () => {
   beforeEach(() => {
     felt.length = 0;
+  });
+
+  it("keeps the record a jump beat, for the picture to write under the new one, and none in its replay", () => {
+    const t = setUp();
+    t.setRecord({ distanceM: 0.5, points: 0, dateIso: "2026-10-24T00:00:00.000Z" });
+    t.playOut();
+    const [result] = t.finished;
+    if (!result) throw new Error("no result");
+    // The wind is drawn at random, so the scripted jump may fall; a fall beats no record.
+    const beat = !result.fell && result.distanceM > 0.5;
+    expect(t.runs.current().now()).toMatchObject({ newRecord: beat, previousRecordM: beat ? 0.5 : null });
+    t.runs.controls.watchReplay();
+    t.playOut();
+    expect(t.runs.current().now().previousRecordM).toBeNull();
   });
 
   it("plays the last jump again to the same end, heard but not felt and not scored again", () => {
