@@ -12,8 +12,5 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/** The query for the game started from its own icon rather than in a tab of a browser. */
-export const INSTALLED_QUERY = "(display-mode: standalone)";
-
 /** The query for screens played with fingers rather than a mouse. */
 export const TOUCH_QUERY = "(pointer: coarse)";

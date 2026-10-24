@@ -41,6 +41,30 @@ test("the swatches of a part fill one row or two even ones, never leaving one al
   }
 });
 
+test("upright, a phone shows the preview above the swatches, in sight when the screen opens", async ({
+  page,
+  traits,
+}) => {
+  for (const width of PORTRAIT_WIDTHS_PX) {
+    await page.setViewportSize({ width, height: 740 });
+    await openMenu(page);
+    await openOutfit(page, traits);
+    const { firstSwatchTop, preview } = await page.evaluate(() => {
+      const box = document.querySelector(".outfit-preview")?.getBoundingClientRect();
+      return {
+        firstSwatchTop: Math.min(
+          ...Array.from(document.querySelectorAll(".swatch"), (s) => s.getBoundingClientRect().top),
+        ),
+        preview: box ? { bottom: box.bottom } : null,
+      };
+    });
+    expect(preview, `preview at ${width} px`).not.toBeNull();
+    if (preview === null) continue;
+    expect(preview.bottom, `preview above the swatches at ${width} px`).toBeLessThan(firstSwatchTop);
+    await expect(page.locator(".outfit-preview"), `preview at ${width} px`).toBeInViewport({ ratio: 1 });
+  }
+});
+
 test("held sideways, a phone shows the preview right of the swatches and inside the window", async ({
   page,
   traits,
