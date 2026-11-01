@@ -27,7 +27,7 @@ come as time allows.
 ## Making a change
 
 1. Fork the repository and branch from `master`.
-2. Set up as in the README ("Development"): Node 24 and pnpm 12, `pnpm install --frozen-lockfile`.
+2. Set up as in the README ("Development"): Node 26 and pnpm 12, `pnpm install --frozen-lockfile`.
 3. Write tests with the change: unit tests for logic, browser tests (`e2e/`) for the interface. `docs/testing.md`
    says which check proves what.
 4. Run the checks listed in the README before you open the pull request; CI runs them again, with Chromium,

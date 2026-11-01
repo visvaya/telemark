@@ -47,7 +47,7 @@ As of 2026-10-22: in active development.
 
 ## Development
 
-Requirements: Node 24, pnpm 12.
+Requirements: Node 26, pnpm 12.
 
 ```sh
 pnpm install
