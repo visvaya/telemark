@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`jump view pixels > 'jump with a telemark landing' 1`] = `
+exports[`jump view pixels > jump with a telemark landing 1`] = `
 {
   "after the jump, notes shown": {
     "day, clear, 256 px, mouse": "917f1dd",
@@ -423,7 +423,7 @@ exports[`jump view pixels > 'jump with a telemark landing' 1`] = `
 }
 `;
 
-exports[`jump view pixels > 'jump without a landing' 1`] = `
+exports[`jump view pixels > jump without a landing 1`] = `
 {
   "fall": {
     "day, clear, 256 px, mouse": "74ca4c6e",
@@ -542,7 +542,18 @@ exports[`jump view pixels > 'jump without a landing' 1`] = `
 }
 `;
 
-exports[`jump view pixels > 'start never pressed' 1`] = `
+exports[`jump view pixels > outfit preview 1`] = `
+{
+  "default outfit, 120x90": "e8fbd238",
+  "default outfit, 356x200": "70cbf79b",
+  "other outfit, 120x90": "7e82730",
+  "other outfit, 356x200": "821adf8b",
+}
+`;
+
+exports[`jump view pixels > scenery is drawn without the optional parts of the model 1`] = `"64d8408f"`;
+
+exports[`jump view pixels > start never pressed 1`] = `
 {
   "disqualification": {
     "day, clear, 256 px, mouse": "d3d44428",
@@ -584,17 +595,6 @@ exports[`jump view pixels > 'start never pressed' 1`] = `
   },
 }
 `;
-
-exports[`jump view pixels > outfit preview 1`] = `
-{
-  "default outfit, 120x90": "e8fbd238",
-  "default outfit, 356x200": "70cbf79b",
-  "other outfit, 120x90": "7e82730",
-  "other outfit, 356x200": "821adf8b",
-}
-`;
-
-exports[`jump view pixels > scenery is drawn without the optional parts of the model 1`] = `"64d8408f"`;
 
 exports[`jump view pixels of every own hill > own-14: jump with a telemark landing 1`] = `
 {
