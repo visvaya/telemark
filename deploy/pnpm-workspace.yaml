@@ -11,3 +11,6 @@ minimumReleaseAge: 10080
 allowBuilds:
   esbuild: false
   workerd: false
+
+# Keeps pnpm-lock.yaml in one document for GitHub's dependency graph, as in the game's own pnpm-workspace.yaml.
+pmOnFail: ignore
