@@ -38,6 +38,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          check-latest: true # newest patch of the .nvmrc line, not an older one cached on the runner
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: No known vulnerabilities in production dependencies
@@ -104,6 +105,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          check-latest: true # newest patch of the .nvmrc line, not an older one cached on the runner
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The package that the jobs below test and, on the default branch, publish: built once, never rebuilt.
@@ -200,6 +202,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          check-latest: true # newest patch of the .nvmrc line, not an older one cached on the runner
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -366,6 +369,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           node-version-file: .nvmrc
+          check-latest: true # newest patch of the .nvmrc line, not an older one cached on the runner
       # The checkout of a pull request is its merge into the default branch, so the first parent is the head of
       # that branch and the difference is the pull request. Publishing refuses a changed game under a version
       # that is not above the deployed one; this tells it already here.
@@ -477,6 +481,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          check-latest: true # newest patch of the .nvmrc line, not an older one cached on the runner
       - name: The package is the one that was built and tested, for this commit
         run: |
           sha256sum --check --strict --quiet dist.sha256
