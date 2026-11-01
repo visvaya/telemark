@@ -509,10 +509,12 @@ The HTML report goes to `reports/mutation/`. In CI it is run manually (the workf
 Without the game files the physics is checked only by the regression tests, so the local result with the traces is
 higher.
 
-Result without traces (2026-10-11, 2700 mutants) **[measurement]**: 61.67% overall; the lowest are `replay.ts`
-(0%, only the golden tests test it), `wind.ts` (32%) and `pose.ts` (56%).
+Result without traces (2026-11-01, the workflow on GitHub, 3085 mutants, Stryker 10.1.1, the same with Vitest 4.1
+and 5) **[measurement]**: 64.47% overall (1989 killed or timed out, 773 survived, 323 without coverage), about 10 to
+14 minutes. The lowest are `training-wind.ts` (0%, no test reaches it), `replay.ts` (2%, only the golden tests test
+it), `wind.ts` (32%) and `pose.ts` (56%). On 2026-10-11 (2700 mutants) it was 61.67%.
 
-Limitations of the tools (as of 2026-10):
+Limitations of the tools (as of 2026-11):
 
 - Stryker before 10.1 switched mutants correctly only with Vitest 4; with Vitest 5 the tests passed, but mutants inside
   `describe` ran no tests. Stryker 10.1 fixed this, and the project moved to Vitest 5.
