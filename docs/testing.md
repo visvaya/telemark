@@ -514,8 +514,8 @@ Result without traces (2026-10-11, 2700 mutants) **[measurement]**: 61.67% overa
 
 Limitations of the tools (as of 2026-10):
 
-- Stryker 10 switches mutants correctly only with Vitest 4; with Vitest 5 the tests pass, but no mutant dies. That
-  is why the project uses Vitest 4.1.
+- Stryker before 10.1 switched mutants correctly only with Vitest 4; with Vitest 5 the tests passed, but mutants inside
+  `describe` ran no tests. Stryker 10.1 fixed this, and the project moved to Vitest 5.
 - Stryker rewrites project references in `tsconfig` through TypeScript's JavaScript API, which TypeScript 7 does
   not have. `tsconfigFile` in `stryker.config.json` deliberately points to a non-existent file, which skips this
   step (the project does not use project references).

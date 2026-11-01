@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`jump simulation regression on a synthetic hill > 'clean telemark' 1`] = `
+exports[`jump simulation regression on a synthetic hill > clean telemark 1`] = `
 {
   "distanceM": 67.37999725341797,
   "fallType": 0,
@@ -17,7 +17,7 @@ exports[`jump simulation regression on a synthetic hill > 'clean telemark' 1`] =
 }
 `;
 
-exports[`jump simulation regression on a synthetic hill > 'late takeoff, tail wind' 1`] = `
+exports[`jump simulation regression on a synthetic hill > late takeoff, tail wind 1`] = `
 {
   "distanceM": 28.100000381469727,
   "fallType": 0,
@@ -34,7 +34,7 @@ exports[`jump simulation regression on a synthetic hill > 'late takeoff, tail wi
 }
 `;
 
-exports[`jump simulation regression on a synthetic hill > 'no landing (crash)' 1`] = `
+exports[`jump simulation regression on a synthetic hill > no landing (crash) 1`] = `
 {
   "distanceM": 67.30999755859375,
   "fallType": 4,

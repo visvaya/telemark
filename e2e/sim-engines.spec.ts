@@ -17,7 +17,7 @@ test("the simulation gives the result of the committed snapshot in this engine",
   const snapshot = parseVitestSnapshot(await readFile(REGRESSION_SNAPSHOT, "utf8"));
   const expected = REGRESSION_SCENARIOS.map((scenario) => ({
     name: scenario.name,
-    result: snapshot.get(`${SUITE} > '${scenario.name}' 1`),
+    result: snapshot.get(`${SUITE} > ${scenario.name} 1`),
   }));
   // Every scenario has its entry: a renamed test or snapshot must not turn the comparison into nothing.
   expect(expected.filter((entry) => entry.result === undefined)).toEqual([]);
