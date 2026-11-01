@@ -1,5 +1,6 @@
-# Weekly version updates, grouped per ecosystem, three days after a release, the
-# same age pnpm-workspace.yaml requires. npm is not listed: npm versions are
+# Weekly version updates, grouped per ecosystem, seven days after a release: no
+# shorter than the three days pnpm-workspace.yaml requires, and the minimum the
+# zizmor dependabot-cooldown audit accepts. npm is not listed: npm versions are
 # updated by hand for now.
 version: 2
 updates:
@@ -9,7 +10,7 @@ updates:
       interval: weekly
       day: monday
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
@@ -22,7 +23,7 @@ updates:
       interval: weekly
       day: monday
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       python-tools:
         patterns: ["*"]
