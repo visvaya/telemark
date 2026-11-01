@@ -5,6 +5,9 @@
 trustPolicy: no-downgrade
 minimumReleaseAge: 4320
 
+# Refuses a Node older than engines.node, as in the game's pnpm-workspace.yaml.
+engineStrict: true
+
 # Build scripts of dependencies run only when allowed here. Neither of these is needed: each only prepares a
 # binary that the package of the platform already provides, and publishing static files runs neither a bundler
 # nor the local runtime.
