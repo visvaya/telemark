@@ -1,12 +1,20 @@
 # Supply-chain guards: refuse a version published with weaker provenance than an
 # earlier one of the same package (for example trusted publishing dropped to a
-# plain token), and any version younger than a week (in minutes), so a release
-# pulled after a compromise never reaches the lockfile.
+# plain token), and any version younger than three days (in minutes), so a release
+# pulled after a compromise never reaches the lockfile. A critical security fix that
+# cannot wait goes into minimumReleaseAgeExclude as one exact version, with a comment
+# naming the advisory and the date the entry is removed (three days after publication).
 trustPolicy: no-downgrade
-minimumReleaseAge: 10080
+minimumReleaseAge: 4320
 
 # pnpm 12 records its own resolved version in a leading YAML document of pnpm-lock.yaml when packageManager
 # pins it. GitHub's dependency graph reads only that first document, so it saw none of the project's packages
 # and raised no vulnerability alerts. "ignore" drops the document. The pinned version still applies: CI installs
 # it through pnpm/action-setup and local commands run through corepack.
 pmOnFail: ignore
+
+# typed-rest-client 2.3.1, which Stryker pulls in, pins qs to exactly 6.15.1, affected by
+# GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g and GHSA-6pq8-jhm2-2vcw.
+# 6.16.1 is the first release without any of them. Remove once typed-rest-client allows it.
+overrides:
+  typed-rest-client>qs: 6.16.1
