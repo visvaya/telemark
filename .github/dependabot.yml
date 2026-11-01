@@ -1,6 +1,7 @@
-# Weekly version updates, grouped per ecosystem.
-# npm is not listed: Dependabot cannot parse the multi-document pnpm-lock.yaml
-# written by pnpm 11 and later (dependabot/dependabot-core#14794).
+# Weekly version updates, grouped per ecosystem, seven days after a release: no
+# shorter than the three days pnpm-workspace.yaml requires, and the minimum the
+# zizmor dependabot-cooldown audit accepts. npm is not listed: npm versions are
+# updated by hand for now.
 version: 2
 updates:
   - package-ecosystem: github-actions
