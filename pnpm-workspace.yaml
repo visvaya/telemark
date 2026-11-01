@@ -4,3 +4,9 @@
 # pulled after a compromise never reaches the lockfile.
 trustPolicy: no-downgrade
 minimumReleaseAge: 10080
+
+# pnpm 12 records its own resolved version in a leading YAML document of pnpm-lock.yaml when packageManager
+# pins it. GitHub's dependency graph reads only that first document, so it saw none of the project's packages
+# and raised no vulnerability alerts. "ignore" drops the document. The pinned version still applies: CI installs
+# it through pnpm/action-setup and local commands run through corepack.
+pmOnFail: ignore
