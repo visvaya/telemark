@@ -20,7 +20,8 @@ const GAME_INPUT_FILES = new Set([
   "scripts/lib/release-rules.mjs",
   "scripts/lib/service-worker-template.js",
 ]);
-const TEST_FILE_PATTERN = /\.test\.[cm]?[jt]sx?$/;
+// A test and the snapshot it keeps are not built into the game.
+const TEST_FILE_PATTERN = /\.test\.[cm]?[jt]sx?(\.snap)?$/;
 
 export function parseVersion(text) {
   const match = VERSION_PATTERN.exec(text);

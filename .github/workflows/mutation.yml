@@ -1,8 +1,12 @@
 name: Mutation testing
 
-# Stryker runs every test once per mutant, so it is started by hand instead of on every push.
+# Stryker runs every test once per mutant (about 25 minutes), so it runs once a week and by hand on a branch, not on
+# every push. A score under the break threshold in stryker.config.json fails the run, and GitHub notifies whoever last
+# changed the schedule.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "37 4 * * 0"
 
 permissions:
   contents: read

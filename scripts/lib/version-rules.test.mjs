@@ -56,6 +56,8 @@ test("only the files the game is built from change the game", () => {
   assert.equal(changed(["scripts/lib/service-worker-template.js"]), true);
   assert.equal(changed(["scripts/lib/release-rules.mjs"]), true);
   assert.equal(changed(["src/sim/step.test.ts"]), false, "a test is not built into the game");
+  assert.equal(changed(["src/game/__snapshots__/step.test.ts.snap"]), false, "nor is the snapshot of a test");
+  assert.equal(changed(["src/game/step.snap"]), true, "a file named .snap that no test keeps may be built");
   assert.equal(changed(["docs/testing.md", "README.md", "e2e/menu.spec.ts", ".github/workflows/ci.yml"]), false);
   assert.equal(changed(["scripts/monitor-deployment.mjs"]), false);
   // package.json counts unless only its version moved.

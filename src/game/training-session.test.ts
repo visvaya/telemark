@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OWN_HILLS } from "./hill-choice";
 import { PHASE, notesShownBy } from "../sim/jump-logic";
+import type { WindState } from "../sim/wind";
 import {
   isJumpOver,
   nextJumpAllowed,
@@ -37,6 +38,23 @@ describe("training jump", () => {
     expect(jump.setup.wind.speedMPerS).toBeGreaterThanOrEqual(0);
     expect(jump.setup.wind.speedMPerS).toBeLessThanOrEqual(4.5);
     expect(jump.state.logic.frame).toBe(1);
+  });
+
+  it("draws the start wind and blows it through a jump as the port does", () => {
+    // The port matches the original frame for frame where the original's files are at hand (src/sim/*.golden.test.ts).
+    // This record of its values guards the wind code where they are not, as in CI and in the mutation tests.
+    if (!hill) throw new Error("no hill");
+    const winds = [1, 2, 3, 0xdeadbeef].map((seed) => {
+      let jump = startTrainingJump(hill, seed);
+      const start = jump.setup.wind;
+      const during: WindState[] = [];
+      for (let f = 1; f <= 600; f++) {
+        jump = stepTrainingJump(jump, { left: f === 70, right: false, dy: 0 });
+        if (f % 100 === 0) during.push(jump.state.wind);
+      }
+      return { seed, start, during };
+    });
+    expect(winds).toMatchSnapshot();
   });
 
   it("allows the next jump half a second after a disqualification", () => {
