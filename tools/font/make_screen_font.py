@@ -16,16 +16,17 @@ picture. Lower-case letters map to the capitals' glyphs.
 Usage, after a change to src/render/pixel-font.ts:
   node scripts/export-screen-glyphs.mjs <glyphs.json>
   python tools/font/make_screen_font.py <glyphs.json> src/ui/fonts/telemark-screen.woff2
-The script also writes the SHA-256 of the glyphs file next to the font
-(telemark-screen.glyphs.sha256); scripts/lib/screen-font-glyphs.test.mjs
-compares it with a fresh export.
+The script also writes the record of the build next to this script
+(telemark-screen.build.sha256: the glyphs, this script, the pinned font tools
+and the font); scripts/lib/screen-font-glyphs.test.mjs compares it with a fresh
+export and the files of today.
 """
 
-import hashlib
 import json
 import sys
 from pathlib import Path
 
+from build_record import write_record
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
@@ -37,6 +38,9 @@ PX = UNITS_PER_EM // PIXELS_PER_EM
 DEFAULT_SHADOW = (0x74 / 255, 0x74 / 255, 0x1E / 255, 1.0)
 FOREGROUND = 0xFFFF
 NO_BREAK_SPACE = 0x00A0
+# The font's first build, 2026-10-15 23:53:17, in seconds from 1904 as the
+# format counts; fixed, so a build from the same inputs gives the same file.
+BUILT_S_SINCE_1904 = 3874953197
 
 
 def runs(rows: list[str], mark: str) -> list[tuple[int, int, int]]:
@@ -106,6 +110,7 @@ def build(glyphs_path: str, out_path: str) -> None:
             cmap[NO_BREAK_SPACE] = name
 
     fb = FontBuilder(UNITS_PER_EM, isTTF=True)
+    fb.font["head"].created = fb.font["head"].modified = BUILT_S_SINCE_1904
     fb.setupGlyphOrder(order)
     fb.setupCharacterMap(cmap)
     fb.setupGlyf(outlines)
@@ -140,10 +145,8 @@ def build(glyphs_path: str, out_path: str) -> None:
     fb.setupPost()
     fb.font.flavor = "woff2"
     fb.save(out_path)
-    digest = hashlib.sha256(raw).hexdigest()
-    Path(out_path).with_name("telemark-screen.glyphs.sha256").write_bytes(
-        (digest + "\n").encode("ascii")
-    )
+    record = Path(__file__).with_name("telemark-screen.build.sha256")
+    write_record(record, {"glyphs": raw}, [__file__, out_path])
 
 
 if __name__ == "__main__":

@@ -1,16 +1,21 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { exportScreenGlyphs, glyphsDigest, SCREEN_FONT_DIGEST_PATH, serializeGlyphs } from "./screen-font-glyphs.mjs";
+import { readBuildRecord, sha256 } from "./font-build-record.mjs";
+import { exportScreenGlyphs, SCREEN_FONT_RECORD_PATH, serializeGlyphs } from "./screen-font-glyphs.mjs";
 
-const committedDigest = () => readFileSync(new URL(`../../${SCREEN_FONT_DIGEST_PATH}`, import.meta.url), "utf8").trim();
-
-test("the committed screens' font was built from the jump picture's glyphs of today", async () => {
-  const fresh = glyphsDigest(serializeGlyphs(await exportScreenGlyphs()));
-  assert.equal(
-    fresh,
-    committedDigest(),
+test("the committed screens' font was built from the glyphs, the script and the font tools of today", async () => {
+  const glyphs = sha256(serializeGlyphs(await exportScreenGlyphs()));
+  const { written, today } = readBuildRecord(SCREEN_FONT_RECORD_PATH, { glyphs });
+  assert.deepEqual(Object.keys(written), [
+    "glyphs",
+    "tools/font/make_screen_font.py",
+    "src/ui/fonts/telemark-screen.woff2",
+    "tools/font/requirements.txt",
+  ]);
+  assert.deepEqual(
+    today,
+    written,
     "src/ui/fonts/telemark-screen.woff2 is out of date: run scripts/export-screen-glyphs.mjs and " +
       "tools/font/make_screen_font.py (see the header of tools/font/make_screen_font.py)",
   );

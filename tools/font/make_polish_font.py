@@ -8,16 +8,16 @@ Silkscreen draws lower and upper case alike, so both share one glyph.
 Usage: python make_polish_font.py <silkscreen-latin-400-normal.woff2> <out.woff2>
 
 The base font comes from @fontsource/silkscreen in node_modules. The script also
-writes the SHA-256 of the base font next to this script
-(tools/font/telemark-polish.base.sha256); scripts/lib/polish-font-base.test.mjs compares
-it with the base font installed now, so an update of Silkscreen asks for the
-font to be built again.
+writes the record of the build next to this script (telemark-polish.build.sha256:
+the base font, this script, the pinned font tools and the font);
+scripts/lib/polish-font-build.test.mjs compares it with the files of today, so an
+update of Silkscreen or of the font tools asks for the font to be built again.
 """
 
-import hashlib
 import sys
 from pathlib import Path
 
+from build_record import write_record
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.pens.transformPen import TransformPen
@@ -26,6 +26,9 @@ from fontTools.ttLib import TTFont
 
 FAMILY = "Telemark Polish"
 PX = 125
+# The font's first build, 2026-10-11 11:24:50, in seconds from 1904 as the
+# format counts; fixed, so a build from the same inputs gives the same file.
+BUILT_S_SINCE_1904 = 3874562690
 
 # (glyph name, code points, base glyph, base shift in px, advance change in px,
 #  extra pixels as (column, row) with row 0 on the baseline, acute shift in px)
@@ -77,6 +80,7 @@ def build(source_path: str, out_path: str) -> None:
             cmap[code] = name
 
     fb = FontBuilder(src["head"].unitsPerEm, isTTF=True)
+    fb.font["head"].created = fb.font["head"].modified = BUILT_S_SINCE_1904
     fb.setupGlyphOrder(order)
     fb.setupCharacterMap(cmap)
     fb.setupGlyf(outlines)
@@ -108,10 +112,8 @@ def build(source_path: str, out_path: str) -> None:
     fb.setupPost()
     fb.font.flavor = "woff2"
     fb.save(out_path)
-    digest = hashlib.sha256(Path(source_path).read_bytes()).hexdigest()
-    Path(__file__).with_name("telemark-polish.base.sha256").write_bytes(
-        (digest + "\n").encode("ascii")
-    )
+    record = Path(__file__).with_name("telemark-polish.build.sha256")
+    write_record(record, {}, [source_path, __file__, out_path])
 
 
 if __name__ == "__main__":
