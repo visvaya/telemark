@@ -18,15 +18,26 @@ REPO = SCRIPT_DIR.parents[1]
 
 
 def write_record(
-    record_path: str | Path, inputs: dict[str, bytes], files: list[str | Path]
+    record_path: Path,
+    font_path: str,
+    committed_font: str,
+    inputs: dict[str, bytes],
+    files: list[str | Path],
 ) -> None:
-    """Writes the record of a build from `inputs` (name to content), the
-    repository's `files` and the pinned font tools."""
+    """Writes the record of a build of `font_path` from `inputs` (name to
+    content), the repository's `files` and the pinned font tools. Only a build
+    of the committed font is recorded: a build anywhere else, say for a
+    comparison, leaves the record as it is."""
+    built = os.path.normcase(os.path.abspath(font_path))
+    if built != os.path.normcase(str(REPO / committed_font)):
+        print(f"{font_path}: not {committed_font}, so the record is left as it is")
+        return
     entries = dict(inputs)
-    for path in [*files, SCRIPT_DIR / "requirements.txt"]:
+    for path in [*files, font_path, SCRIPT_DIR / "requirements.txt"]:
         name = Path(os.path.abspath(path)).relative_to(REPO).as_posix()
         entries[name] = Path(path).read_bytes()
     lines = [
-        f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in entries.items()
+        f"{hashlib.sha256(data).hexdigest()}  {name}\n"
+        for name, data in entries.items()
     ]
     Path(record_path).write_bytes("".join(lines).encode("utf-8"))
