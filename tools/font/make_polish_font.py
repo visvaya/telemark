@@ -26,6 +26,7 @@ from fontTools.ttLib import TTFont
 
 FAMILY = "Telemark Polish"
 PX = 125
+COMMITTED_FONT = "src/ui/fonts/telemark-polish.woff2"
 # The font's first build, 2026-10-11 11:24:50, in seconds from 1904 as the
 # format counts; fixed, so a build from the same inputs gives the same file.
 BUILT_S_SINCE_1904 = 3874562690
@@ -113,7 +114,7 @@ def build(source_path: str, out_path: str) -> None:
     fb.font.flavor = "woff2"
     fb.save(out_path)
     record = Path(__file__).with_name("telemark-polish.build.sha256")
-    write_record(record, {}, [source_path, __file__, out_path])
+    write_record(record, out_path, COMMITTED_FONT, {}, [source_path, __file__])
 
 
 if __name__ == "__main__":

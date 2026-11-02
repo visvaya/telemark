@@ -31,6 +31,7 @@ from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 FAMILY = "Telemark Screen"
+COMMITTED_FONT = "src/ui/fonts/telemark-screen.woff2"
 UNITS_PER_EM = 1000
 PIXELS_PER_EM = 8
 PX = UNITS_PER_EM // PIXELS_PER_EM
@@ -146,7 +147,7 @@ def build(glyphs_path: str, out_path: str) -> None:
     fb.font.flavor = "woff2"
     fb.save(out_path)
     record = Path(__file__).with_name("telemark-screen.build.sha256")
-    write_record(record, {"glyphs": raw}, [__file__, out_path])
+    write_record(record, out_path, COMMITTED_FONT, {"glyphs": raw}, [__file__])
 
 
 if __name__ == "__main__":
