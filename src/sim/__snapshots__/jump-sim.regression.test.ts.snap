@@ -5,7 +5,7 @@ exports[`jump simulation regression on a synthetic hill > clean telemark 1`] = `
   "distanceM": 67.37999725341797,
   "fallType": 0,
   "frames": 923,
-  "hash": "78434c70",
+  "hash": "fa0b0f94",
   "notes": [
     16,
     16.5,
@@ -22,7 +22,7 @@ exports[`jump simulation regression on a synthetic hill > late takeoff, tail win
   "distanceM": 28.100000381469727,
   "fallType": 0,
   "frames": 956,
-  "hash": "89f93bf9",
+  "hash": "703b5646",
   "notes": [
     15.5,
     13.5,
@@ -39,7 +39,7 @@ exports[`jump simulation regression on a synthetic hill > no landing (crash) 1`]
   "distanceM": 67.30999755859375,
   "fallType": 4,
   "frames": 962,
-  "hash": "a3dbb5b7",
+  "hash": "59b90ff8",
   "notes": [
     2,
     2.5,

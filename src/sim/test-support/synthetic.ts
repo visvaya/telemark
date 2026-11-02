@@ -66,30 +66,38 @@ export function makeBot(
   };
 }
 
-/** FNV-1a over the single-precision bits of the main state, frame by frame. */
+/**
+ * FNV-1a over the bytes of the main state, frame by frame: the jumper's motion, the body angle, every joint and
+ * segment of both legs (the figure is drawn from all of them), the generator's seed and the phase. Byte by byte:
+ * mixed as whole words, a sign flipped in two values cancels out ([1, 2] and [-1, -2] hash alike).
+ */
 export function stateHash(prev: number, s: JumpSimState): number {
   const view = new DataView(new ArrayBuffer(4));
   let h = prev >>> 0;
-  const mix = (bits: number) => {
-    h ^= bits;
-    h = Math.imul(h, 0x01000193) >>> 0;
+  const mixWord = () => {
+    for (let byte = 0; byte < 4; byte++) h = Math.imul(h ^ view.getUint8(byte), 0x01000193) >>> 0;
   };
-  const values = [
+  const floats = [
     s.jumper.xM,
     s.jumper.yM,
     s.jumper.vxMPerS,
     s.jumper.vyMPerS,
     s.jumper.speedMPerS,
     s.logic.bodyAngleRad,
-    s.pose.legs[0].joints.current[1] ?? 0,
-    s.pose.legs[1].joints.current[1] ?? 0,
-    s.pose.legs[0].segments.current[0] ?? 0,
+    ...s.pose.legs.flatMap((leg) => [
+      ...leg.joints.current,
+      ...leg.joints.target,
+      ...leg.segments.current,
+      ...leg.segments.target,
+    ]),
   ];
-  for (const v of values) {
+  for (const v of floats) {
     view.setFloat32(0, v, true);
-    mix(view.getUint32(0, true));
+    mixWord();
   }
-  mix(s.randomSeed);
-  mix(s.logic.phase);
+  for (const word of [s.randomSeed, s.logic.phase, s.pose.poseId]) {
+    view.setUint32(0, word >>> 0, true);
+    mixWord();
+  }
   return h;
 }
