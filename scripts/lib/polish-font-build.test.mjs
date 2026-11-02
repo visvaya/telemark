@@ -6,7 +6,7 @@ import { readBuildRecord } from "./font-build-record.mjs";
 const BASE_FONT = "node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2";
 
 test("the committed font of Polish letters was built from the Silkscreen, the script and the font tools of today", () => {
-  const { written, today } = readBuildRecord("src/ui/fonts/telemark-polish.build.sha256", {});
+  const { written, today } = readBuildRecord("tools/font/telemark-polish.build.sha256", {});
   assert.deepEqual(Object.keys(written), [
     BASE_FONT,
     "tools/font/make_polish_font.py",

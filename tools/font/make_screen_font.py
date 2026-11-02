@@ -16,7 +16,7 @@ picture. Lower-case letters map to the capitals' glyphs.
 Usage, after a change to src/render/pixel-font.ts:
   node scripts/export-screen-glyphs.mjs <glyphs.json>
   python tools/font/make_screen_font.py <glyphs.json> src/ui/fonts/telemark-screen.woff2
-The script also writes the record of the build next to the font
+The script also writes the record of the build next to this script
 (telemark-screen.build.sha256: the glyphs, this script, the pinned font tools
 and the font); scripts/lib/screen-font-glyphs.test.mjs compares it with a fresh
 export and the files of today.
@@ -145,7 +145,7 @@ def build(glyphs_path: str, out_path: str) -> None:
     fb.setupPost()
     fb.font.flavor = "woff2"
     fb.save(out_path)
-    record = Path(out_path).with_name("telemark-screen.build.sha256")
+    record = Path(__file__).with_name("telemark-screen.build.sha256")
     write_record(record, {"glyphs": raw}, [__file__, out_path])
 
 

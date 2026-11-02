@@ -8,9 +8,9 @@ Silkscreen draws lower and upper case alike, so both share one glyph.
 Usage: python make_polish_font.py <silkscreen-latin-400-normal.woff2> <out.woff2>
 
 The base font comes from @fontsource/silkscreen in node_modules. The script also
-writes the record of the build next to the font (telemark-polish.build.sha256:
+writes the record of the build next to this script (telemark-polish.build.sha256:
 the base font, this script, the pinned font tools and the font);
-scripts/lib/polish-font-base.test.mjs compares it with the files of today, so an
+scripts/lib/polish-font-build.test.mjs compares it with the files of today, so an
 update of Silkscreen or of the font tools asks for the font to be built again.
 """
 
@@ -112,7 +112,7 @@ def build(source_path: str, out_path: str) -> None:
     fb.setupPost()
     fb.font.flavor = "woff2"
     fb.save(out_path)
-    record = Path(out_path).with_name("telemark-polish.build.sha256")
+    record = Path(__file__).with_name("telemark-polish.build.sha256")
     write_record(record, {}, [source_path, __file__, out_path])
 
 

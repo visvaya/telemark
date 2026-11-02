@@ -1,12 +1,12 @@
 // The glyphs of the screens' font ("Telemark Screen"), exported from the jump picture's own font
 // (src/render/pixel-font.ts), so the menus and the picture share one drawing of every letter.
 //
-// tools/font/make_screen_font.py builds the web font from this export and writes the record of the build next to
-// the font; a test compares it with a fresh export, so the committed font cannot drift from the picture's glyphs
+// tools/font/make_screen_font.py builds the web font from this export and writes the record of the build in
+// tools/font; a test compares it with a fresh export, so the committed font cannot drift from the picture's glyphs
 // unnoticed.
 import { loadTypeScript } from "./load-typescript.mjs";
 
-export const SCREEN_FONT_RECORD_PATH = "src/ui/fonts/telemark-screen.build.sha256";
+export const SCREEN_FONT_RECORD_PATH = "tools/font/telemark-screen.build.sha256";
 
 // { frame, glyphs: [{ char, rows }] }: `rows` from the frame's top, `#` body, `o` shadow, `.` empty.
 export async function exportScreenGlyphs() {
