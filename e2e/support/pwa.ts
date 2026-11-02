@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrowserContext, Page } from "@playwright/test";
 import type { TestRelease } from "../releases/paths";
+import { PWA_CONFIG } from "../../src/pwa/pwa-config";
 import { TEXT } from "./app";
 import { expect, test } from "./fixtures";
 import { asSet, setPatternSource } from "./typeset-text";
@@ -85,6 +86,37 @@ export function sourceShaSeenBy(page: Page): Promise<string> {
     const sourceSha: unknown = typeof release === "object" && release !== null ? Reflect.get(release, "sourceSha") : "";
     return typeof sourceSha === "string" ? sourceSha : "";
   });
+}
+
+/** How long the worker that controls a page may take to say which release it holds. */
+const WORKER_ANSWER_TIMEOUT_MS = 5000;
+
+/**
+ * The commit of the release whose worker controls the page, asked of that worker itself; null without one or
+ * without an answer. Unlike sourceShaSeenBy it cannot be misled by a request the browser lets through to the
+ * network, which a worker slow to start under load gets.
+ */
+function controllerShaOf(page: Page): Promise<string | null> {
+  return page.evaluate(
+    ({ type, timeoutMs }) =>
+      new Promise<string | null>((resolve) => {
+        const worker = navigator.serviceWorker.controller;
+        if (worker === null) {
+          resolve(null);
+          return;
+        }
+        const channel = new MessageChannel();
+        channel.port1.addEventListener("message", (event: MessageEvent<unknown>) => {
+          const sha: unknown =
+            typeof event.data === "object" && event.data !== null ? Reflect.get(event.data, "sourceSha") : null;
+          resolve(typeof sha === "string" ? sha : null);
+        });
+        channel.port1.start();
+        worker.postMessage({ type }, [channel.port2]);
+        setTimeout(() => resolve(null), timeoutMs);
+      }),
+    { type: PWA_CONFIG.RELEASE_MESSAGE_TYPE, timeoutMs: WORKER_ANSWER_TIMEOUT_MS },
+  );
 }
 
 /** What the page gets for a path: the HTTP status and the body as text, or null when the request fails. */
@@ -262,7 +294,10 @@ async function reopenUntil(
   throw new Error(`The release ${release.sourceSha} did not take over after ${REOPEN_LIMIT} launches`);
 }
 
-/** How long a launch may take to show the menu before it counts as one that came too early. */
+/**
+ * How long a launch may take to load, and then to show the menu, before it counts as one that came too early. A
+ * navigation in the moment the browser switches workers can also hang (seen in Chromium under load).
+ */
 const LAUNCH_MENU_WAIT_MS = 10_000;
 
 /**
@@ -294,16 +329,12 @@ export function relaunchUntil(context: BrowserContext, origin: string, release: 
         () => true,
         () => false,
       );
-    const launched = await page.goto(`${origin}/`).then(
+    const launched = await page.goto(`${origin}/`, { timeout: LAUNCH_MENU_WAIT_MS }).then(
       () => Promise.race([menuShown, scriptMissing]),
       () => false,
     );
     if (!launched) return false;
-    return (
-      (await controlled(page)) &&
-      (await sourceShaSeenBy(page)) === release.sourceSha &&
-      (await scriptOf(page)) === scriptPathOf(release)
-    );
+    return (await controllerShaOf(page)) === release.sourceSha && (await scriptOf(page)) === scriptPathOf(release);
   });
 }
 
@@ -319,12 +350,12 @@ export function openFileUntil(
   release: TestRelease,
 ): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    // A navigation the switch of workers breaks off is a launch that came too early, as in relaunchUntil.
-    const opened = await page.goto(`${origin}${path}`).then(
+    // A navigation the switch of workers breaks off or holds up is a launch that came too early, as in relaunchUntil.
+    const opened = await page.goto(`${origin}${path}`, { timeout: LAUNCH_MENU_WAIT_MS }).then(
       () => true,
       () => false,
     );
-    return opened && (await controlled(page)) && (await sourceShaSeenBy(page)) === release.sourceSha;
+    return opened && (await controllerShaOf(page)) === release.sourceSha;
   });
 }
 
