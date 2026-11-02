@@ -1,9 +1,86 @@
 # Weekly version updates, grouped per ecosystem, seven days after a release: no
 # shorter than the three days pnpm-workspace.yaml requires, and the minimum the
-# zizmor dependabot-cooldown audit accepts. npm is not listed: npm versions are
-# updated by hand for now.
+# zizmor dependabot-cooldown audit accepts. Security updates skip the cooldown,
+# but pnpm still refuses a version younger than three days; a fix that cannot
+# wait goes into minimumReleaseAgeExclude by hand.
+#
+# An npm update of the game changes pnpm-lock.yaml, so the pull request must
+# move the version like any other change to the game: before merging, run
+# `corepack pnpm version:bump "<title>"` on its branch and push the commit.
+# Titles are Conventional Commits ("build(deps): ...", "build(deps-dev): ..."),
+# and group names stay short, because the title check allows 72 characters.
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      prefix-development: build
+      include: scope
+    ignore:
+      # The major version of the Node types follows the Node line in .nvmrc.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    # Families that must move together get a group of their own, majors included;
+    # the two catch-all groups exclude them.
+    groups:
+      # Vitest refuses mixed versions of its packages (coverage breaks).
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      # oxlint and its type-aware rules move together; a minor oxfmt bump can
+      # reformat files before 1.0, so read that diff.
+      oxc:
+        patterns: ["oxlint", "oxlint-tsgolint", "oxfmt"]
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      stryker:
+        patterns: ["@stryker-mutator/*"]
+      # CI caches the browsers by Playwright's version; a new one downloads them.
+      playwright:
+        patterns: ["@playwright/test"]
+      prod:
+        dependency-type: production
+        update-types: [minor, patch]
+        exclude-patterns: ["react", "react-dom"]
+      dev:
+        dependency-type: development
+        update-types: [minor, patch]
+        exclude-patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "oxlint"
+          - "oxlint-tsgolint"
+          - "oxfmt"
+          - "@types/react"
+          - "@types/react-dom"
+          - "@stryker-mutator/*"
+          - "@playwright/test"
+
+  # The deployment tool, a project of its own with its own lockfile. It does not
+  # change the game, so its pull requests keep the version.
+  - package-ecosystem: npm
+    directory: /deploy
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Warsaw
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      prefix-development: build
+      include: scope
+    groups:
+      deploy:
+        patterns: ["*"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
