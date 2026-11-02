@@ -10,6 +10,7 @@
 | `src/render/jump-view.pixels.test.ts` | hashes of all pixels of whole frames (14 moments of a jump, times of day, weather, view widths) in a snapshot; each further own hill has a smaller set in it under its own keys | everywhere, CI included |
 | `src/render/scene-motion.test.ts` | invariants of the picture's motion throughout a bot's jump on each own hill, by day and at night, at a width of 480 and 356 in square pixels and 320 in the original's pixels. Props and line ends: places from the same functions the drawing uses; the distance from the top of the surface under them (fence, inrun rail, edge of the landing hill), read from the pixels drawn by that surface's function, does not change; the column shows its own table index (320) or a neighbouring index (square pixels); nothing moves back while the camera travels one way; the places do not depend on the picture's width apart from its offset. Birds: with the scrolling of layer 7 (horizontally up to 0.5 px, vertically up to 2 rows of bobbing); moon: one place in the sky per jump (the place depends on the picture's width); the wind box stays in place. These places are computed, not read from pixels | everywhere, CI included |
 | `src/render/scene-anchor.guard.test.ts` | the files of `src/render` outside the places module (`scene-anchor.ts`) and the layer primitives do not call the low-level projection (`viewColumn`, `nearestViewColumn`, `layerRows`, `.camX`/`.camY`, `sceneView`, layer scrolling divided by the pixel width); `gatePlace` only for the start gate; `originalColumn` and `rowsAt` only in the files that draw surfaces; the source is read split into comments, strings, templates and regular expressions; exceptions with a justification in the test; in the files that draw surfaces the test cannot tell a surface row from a place computed by hand | everywhere, CI included |
+| `src/original/mz-image.test.ts` | the load image of `Dsj.exe`: its place from the header, refusal of a short file, a wrong magic and a header that does not fit; 2000 files of seeded random bytes, half with a plausible header, are each read inside the file or refused with an error | everywhere, CI included |
 | `src/original/test-support/scripted-jump.test.ts` | replay plan: the input of a scripted player on a synthetic hill comes back from the plan frame for frame | everywhere, CI included |
 | `src/storage/original-replay-file.test.ts` | writing an `.rpl` file: the plan's fields at the described offsets, the header, the cipher and the checksum read back by the decoder | everywhere, CI included |
 | `src/original/test-support/fall-search.test.ts` | fall search on a synthetic hill: each plan found, reproduced in the port, gives its fall type | everywhere, CI included |
@@ -300,8 +301,8 @@ what was seen or heard (a screenshot or a recording) and whether the error repea
 ## Code coverage
 
 `pnpm test:coverage` runs the same tests with coverage measurement (v8), and that is how they are run in CI.
-Measured are `src/sim` (without `src/sim/data`), `src/storage` and `src/hills`, without tests and `test-support`
-directories. Each directory has its own thresholds (statements, branches, functions, lines) in `vite.config.ts`,
+Measured are `src/sim` (without `src/sim/data`), `src/storage`, `src/hills`, `src/original` (the reading of the
+player's game files) and `src/game`, without tests and `test-support` directories. Each directory has its own thresholds (statements, branches, functions, lines) in `vite.config.ts`,
 set two points below the values measured without the game files, because that is how CI runs; with the traces the
 coverage of `src/sim` is higher. The thresholds are only raised when the coverage grows, never lowered. The HTML
 report goes to `coverage/`.

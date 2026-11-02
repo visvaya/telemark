@@ -33,22 +33,28 @@ export default defineConfig({
     // Three times the default keeps a hung test caught. Time budgets are checked by their own tests, not by this.
     testTimeout: 15_000,
     // Coverage is measured where a wrong value does not crash anything but silently gives wrong results: the
-    // simulation, the save with records and replays, and the hill format with its checks. Each directory keeps
+    // simulation, the save with records and replays, the hill format with its checks, the reading of the player's
+    // files of the original game, and the game logic around the jump. Each directory keeps
     // its own thresholds; tests and test helpers are not counted.
     coverage: {
       provider: "v8",
-      include: ["src/sim/**", "src/storage/**", "src/hills/**"],
+      include: ["src/sim/**", "src/storage/**", "src/hills/**", "src/original/**", "src/game/**"],
       exclude: ["src/**/*.test.ts", "src/**/test-support/**", "src/sim/data/**"],
       reporter: ["text-summary", "html"],
       // Two points under the values measured on 2026-10-16 without files of the original game, as in CI, where
       // the golden tests are skipped, rounded down: sim statements 96.41, branches 82.28, functions 98.75, lines
       // 97.19; storage statements 91.14, branches 89.28, functions 88.44, lines 93.18; hills statements 99.03,
       // branches 93.45, functions 100, lines 99.44.
+      // The player's game files and the game logic since 2026-11-02, measured the same way before the test of the
+      // MZ reader was added: original statements 88.26, branches 75, functions 89.65, lines 88.71; game statements
+      // 96.73, branches 91.23, functions 97, lines 98.28.
       // Raise them when coverage improves; never lower them to make a run pass.
       thresholds: {
         "src/sim/**": { statements: 94, branches: 80, functions: 96, lines: 95 },
         "src/storage/**": { statements: 89, branches: 87, functions: 86, lines: 91 },
         "src/hills/**": { statements: 97, branches: 91, functions: 98, lines: 97 },
+        "src/original/**": { statements: 86, branches: 73, functions: 87, lines: 86 },
+        "src/game/**": { statements: 94, branches: 89, functions: 95, lines: 96 },
       },
     },
   },
