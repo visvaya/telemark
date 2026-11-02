@@ -34,6 +34,14 @@ interface Options {
 }
 
 /**
+ * Firefox's message for a request the page gave up while the service worker answered it: a reload stops the icons
+ * still loading, and the request no longer has an address. Not a defect of the game, which never sees it; a request
+ * the worker failed on its own names its address.
+ */
+const CANCELED_BY_THE_PAGE =
+  /^console error: \[JavaScript Error: "Failed to load \u2018\u2019\. A ServiceWorker intercepted the request and encountered an unexpected error\."/;
+
+/**
  * The local mode runs a real browser without a window, and such a browser can still take the mouse of the
  * machine when the game captures it for a jump: the cursor of whoever is working there freezes. In that mode the
  * capture is refused in the page, which the game allows for (it plays without it). The runner has no cursor
@@ -128,7 +136,8 @@ export const test = base.extend<Fixtures & Options>({
     });
   },
   // Every page of the test's browser context is watched, so a test that opens a second window is covered too.
-  // Nothing is allowed by default: the game logs no errors of its own, and an error on any screen is a defect.
+  // Nothing is allowed by default but a request the page itself gave up (CANCELED_BY_THE_PAGE): the game logs no
+  // errors of its own, and an error on any screen is a defect.
   pageProblems: [
     async ({ context, expectedProblems }, provide) => {
       const problems: string[] = [];
@@ -137,7 +146,9 @@ export const test = base.extend<Fixtures & Options>({
         if (message.type() === "error") problems.push(`console error: ${message.text()}`);
       });
       await provide(problems);
-      const unexpected = problems.filter((problem) => expectedProblems?.test(problem) !== true);
+      const unexpected = problems.filter(
+        (problem) => !CANCELED_BY_THE_PAGE.test(problem) && expectedProblems?.test(problem) !== true,
+      );
       expect(unexpected, "page errors and console errors during the test").toEqual([]);
     },
     { auto: true },

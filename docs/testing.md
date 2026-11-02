@@ -198,11 +198,14 @@ What the files in `e2e/` check:
 | `two-windows.spec.ts` | two game windows: the record and the last jump from one and a jump kept in the second, which held an older list and an older save, stay in both after a reload; the record is the longer of the two jumps, and its replay is that jump | all |
 | `storage-blocked.spec.ts` | with the storage blocked the game warns, works and keeps the settings until the end of the visit, without unhandled errors | `desktop-chromium`, `android-portrait` |
 
-A jump runs in real time (70 simulation steps per second), so the test controls it by the page's clock, counted
-from the message "Skok rozpoczęty." in the `aria-live` region next to the picture. The moments of the presses lie
-in the middle of windows measured in the simulation on many seeds (described in `e2e/support/jump-timing.ts`; the
-test `src/game/scripted-jump-timing.test.ts` checks that they give a clean landing with a margin of 0.1 s). A jump
-that ends in a fall is repeated by the test, at most three times, as a player would do.
+A jump runs in real time (70 simulation steps per second). The test presses by the game's own steps, not by the
+clock: under automation (`navigator.webdriver`) the jump picture carries the simulation frame, the frame in which
+the jumper left the gate and whether the jump is over (`data-sim-frame`, `data-sim-start-frame`, `data-sim-over`,
+`src/ui/automation-marks.ts`), so a game slowed down by a loaded machine gets its presses that much later. The
+moments of the presses lie in the middle of windows measured in the simulation on many seeds (described in
+`e2e/support/jump-timing.ts`; the test `src/game/scripted-jump-timing.test.ts` checks that they give a clean landing
+with a margin of 0.1 s). A jump that ends in a fall is repeated by the test, at most three times, as a player would
+do.
 
 The regression scenarios of the simulation are in `src/sim/test-support/regression-scenarios.ts`; the Vitest test
 and the test page use them. The page is built by the project's Vite before the tests (`e2e/sim-harness.setup.ts`)

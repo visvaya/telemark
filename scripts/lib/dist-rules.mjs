@@ -25,8 +25,11 @@
 // margin of about 4%.
 // JavaScript measured again on 2026-10-19: 165034 bytes with the World Cup (its standings and podium) and a
 // competition kept between visits and in a file (its strict reader); the budget keeps a margin of about 4%.
+// JavaScript measured again on 2026-11-02: 171553 bytes on master (0.25.10), 47 bytes under the budget after the
+// changes since 2026-10-19 had used its margin; 171678 bytes with the marks the jump picture carries for the browser
+// tests under automation. The budget keeps a margin of about 4% again.
 export const DIST_BUDGETS = {
-  JS_GZIP_BUDGET_BYTES: 171_600,
+  JS_GZIP_BUDGET_BYTES: 178_500,
   CSS_GZIP_BUDGET_BYTES: 25_800,
   // Measured on 2026-10-13: the service worker 3890 bytes gzip (3160 before it kept the release before for the
   // pages that still need it), the four icons 9682 bytes.

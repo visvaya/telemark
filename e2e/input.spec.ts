@@ -5,9 +5,11 @@ import {
   centerOf,
   finishedOutcome,
   restartJump,
+  simStartFrame,
   startAnnouncedAt,
   startWithMouse,
-  waitForPageTime,
+  stepsIn,
+  waitForSimSteps,
   type JumpOutcome,
   type Point,
 } from "./support/jump";
@@ -73,14 +75,14 @@ async function chord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord)
 }
 
 /** The chord at the gate, pressed slowly: the jump starts when the left button goes down, not before. */
-async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord): Promise<number> {
+async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord): Promise<void> {
   if (pressFirst === "right") {
     await page.mouse.down({ button: "right" });
     await nudge(page, at, true);
     await page.waitForTimeout(300);
     await expect(announcement(page), "the right button alone does not start a jump").toHaveText("");
   }
-  // Watched while the button goes down, so the time is that of the start and not of a later look.
+  // Watched while the button goes down, so the announcement of the start is not missed.
   const [startedAt] = await Promise.all([startAnnouncedAt(page, 5000), page.mouse.down({ button: "left" })]);
   if (startedAt === null) throw new Error("The jump did not start when the left button went down in a chord");
   if (pressFirst === "left") await page.mouse.down({ button: "right" });
@@ -89,7 +91,6 @@ async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst 
   await nudge(page, at, true);
   await page.mouse.up({ button: other(releaseFirst) });
   await nudge(page, at, false);
-  return startedAt;
 }
 
 /**
@@ -104,10 +105,11 @@ async function jumpWithChords(page: Page, keys: Chord): Promise<JumpOutcome> {
   await page.waitForTimeout(GATE_OPEN_MS);
   const middle = await centerOf(jumpCanvas(page));
   await page.mouse.move(middle.x, middle.y);
-  const startedAt = await startWithChord(page, middle, keys);
-  await waitForPageTime(page, startedAt + TAKEOFF_CHORD_AFTER_START_MS);
+  await startWithChord(page, middle, keys);
+  const start = await simStartFrame(page);
+  await waitForSimSteps(page, start, stepsIn(TAKEOFF_CHORD_AFTER_START_MS));
   await chord(page, middle, keys);
-  await waitForPageTime(page, startedAt + TAKEOFF_CHORD_AFTER_START_MS + LANDING_CHORD_AFTER_TAKEOFF_MS);
+  await waitForSimSteps(page, start, stepsIn(TAKEOFF_CHORD_AFTER_START_MS + LANDING_CHORD_AFTER_TAKEOFF_MS));
   await chord(page, middle, keys);
   return finishedOutcome(page);
 }
