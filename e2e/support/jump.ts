@@ -56,6 +56,16 @@ function parseOutcome(text: string): JumpOutcome {
 
 export const pageNow = (page: Page): Promise<number> => page.evaluate(() => performance.now());
 
+/**
+ * Whether the page has said how the jump ended (a landing, a fall, a disqualification) or has left the jump. A
+ * press after that goes on to what comes next, so a jump that ended early, as on a stalled machine, gets no more.
+ */
+const jumpHasEnded = (page: Page): Promise<boolean> =>
+  page.evaluate((started) => {
+    const said = document.querySelector("p[aria-live]")?.textContent;
+    return said === undefined || (said !== "" && said !== started);
+  }, STARTED);
+
 /** Waits on the page's clock, checked every animation frame, so the delay of the test runner does not add up. */
 export async function waitForPageTime(page: Page, targetMs: number): Promise<void> {
   await page.waitForFunction((target) => performance.now() >= target, targetMs, { polling: "raf" });
@@ -102,11 +112,13 @@ async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
   await page.mouse.up({ button: "right" });
   await page.mouse.up({ button: "left" });
   await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
+  if (await jumpHasEnded(page)) return;
   await clickMouse(page, "right");
   await waitForPageTime(
     page,
     startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
   );
+  if (await jumpHasEnded(page)) return;
   await clickMouse(page, "left");
 }
 
@@ -130,11 +142,13 @@ async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
   await page.touchscreen.tap(left.x, left.y);
   await page.touchscreen.tap(right.x, right.y);
   await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
+  if (await jumpHasEnded(page)) return;
   await page.touchscreen.tap(right.x, right.y);
   await waitForPageTime(
     page,
     startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
   );
+  if (await jumpHasEnded(page)) return;
   await page.touchscreen.tap(left.x, left.y);
 }
 
