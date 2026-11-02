@@ -3,7 +3,7 @@ import { button, openHillList, openJump, openJumpControls, openJumpFromStart, pr
 import { expect, test, type DeviceTraits } from "../support/fixtures";
 import { restartJump, startWithMouse, waitForPageTime } from "../support/jump";
 import { reportMeasurement } from "../support/measurement-log";
-import { memorySample, protocolSession } from "../support/perf";
+import { fixLook, memorySample, protocolSession } from "../support/perf";
 import { PERF_BUDGET } from "./perf-budget";
 
 // What the page holds after many jumps: a screen that leaves listeners, nodes or memory behind each time it is
@@ -42,6 +42,7 @@ test("a series of jumps leaves no listeners or nodes behind and the heap within 
   traits,
 }, testInfo) => {
   test.setTimeout(TEST_TIMEOUT_MS);
+  await fixLook(page.context());
   const session = await protocolSession(page);
   await openJumpFromStart(page, traits);
   for (let index = 0; index < WARM_UP_CYCLES; index++) await cycle(page, traits, index % 2 === 1);

@@ -6,6 +6,7 @@ import { medianOf, reportMeasurement } from "../support/measurement-log";
 import {
   CPU_SLOWDOWN_FACTOR,
   DIAGNOSTICS_ADDRESS,
+  fixLook,
   frameStats,
   longTasksSince,
   protocolSession,
@@ -37,6 +38,7 @@ interface JumpMeasurement {
 }
 
 async function prepare(page: Page, slowdown: number): Promise<void> {
+  await fixLook(page.context());
   await watchLongTasks(page.context());
   await slowProcessor(await protocolSession(page), slowdown);
 }
