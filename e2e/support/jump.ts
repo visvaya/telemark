@@ -106,6 +106,7 @@ export async function startWithMouse(page: Page): Promise<number> {
 async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
   const startedAt = (await startWithMouse(page)) + (await postponement(options));
   await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
+  if (await jumpHasEnded(page)) return;
   await page.mouse.down({ button: "left" });
   await page.mouse.down({ button: "right" });
   await page.waitForTimeout(PRESS_HOLD_MS);
@@ -139,6 +140,7 @@ async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
   const left = await centerOf(button(page, TEXT.leftPad));
   const right = await centerOf(button(page, TEXT.rightPad));
   await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
+  if (await jumpHasEnded(page)) return;
   await page.touchscreen.tap(left.x, left.y);
   await page.touchscreen.tap(right.x, right.y);
   await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
