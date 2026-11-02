@@ -11,6 +11,8 @@ import { asSet, setPatternSource } from "./typeset-text";
 export const OFFLINE_NOTE = {
   ready: "Gotowe do gry bez internetu.",
   unavailable: "Gra bez internetu nie jest jeszcze gotowa.",
+  /** Storing the release failed: no network, or no room on the disk. */
+  installFailed: /^Nie udało się zapisać plików gry\./,
   /** Part of the stored release is missing, and the button that installs the game again. */
   incomplete: /^Części plików gry brakuje w pamięci przeglądarki/,
   reinstall: "Zainstaluj grę od nowa",

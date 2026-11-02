@@ -77,8 +77,28 @@ const either = (...patterns: RegExp[]): RegExp => new RegExp(patterns.map((patte
 const gameCaches = (names: readonly string[]): string[] => names.filter((name) => GAME_CACHE.test(name));
 /** The releases of the game the browser has stored; the one before goes a moment after a new page has started. */
 const storedReleases = async (page: Page): Promise<string[]> => gameCaches(await cacheNames(page));
+/** Room for a site that holds less than one file of the release. */
+const NO_ROOM_BYTES = 10_000;
 /** A file of the game that is not its start page. */
 const LICENCE_PATH = "/licenses/silkscreen-ofl.txt";
+
+test.describe("when the device has no room", () => {
+  test.skip(({ browserName }) => browserName !== "chromium", "only Chromium lets a test set the room a site has");
+
+  test("the game is played, and says it is not ready without a network and why", async ({ page }) => {
+    const server = testServer();
+    const devtools = await page.context().newCDPSession(page);
+    // Less room than one file of the release: storing it fails, as it does on a full disk.
+    await devtools.send("Storage.overrideQuotaForOrigin", { origin: server.origin, quotaSize: NO_ROOM_BYTES });
+    await openGame(page, server.origin);
+    await requireServiceWorkers(page);
+    await expect(page.getByText(OFFLINE_NOTE.unavailable)).toBeVisible();
+    await expect(page.getByText(OFFLINE_NOTE.installFailed)).toBeVisible();
+    // Nothing of the release is left behind, and the menu still leads to a jump.
+    expect(await storedReleases(page)).toEqual([]);
+    await expect(button(page, TEXT.training)).toBeEnabled();
+  });
+});
 
 test.describe("without a network", () => {
   test.use({ expectedProblems: NO_NETWORK });
