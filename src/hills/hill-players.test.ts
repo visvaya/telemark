@@ -18,8 +18,11 @@ import { fullAimSweep } from "./test-support/full-aim-sweep";
 const [training] = OWN_HILLS;
 if (training === undefined) throw new Error("no own hill");
 
-/** Trying all 41 aims for 8 seeds takes about 3 s alone, longer under coverage. */
-const SWEEP_TIMEOUT_MS = 60_000;
+/**
+ * Trying all 41 aims for 8 seeds takes about 3 s alone, longer under coverage; under coverage on a loaded laptop it
+ * took 72 to 88 s (four local runs up to 2026-11-02), so the limit only catches a run that hangs.
+ */
+const SWEEP_TIMEOUT_MS = 180_000;
 
 const meanDistance = (v: readonly { distanceM: number }[]): number => v.reduce((a, o) => a + o.distanceM, 0) / v.length;
 
