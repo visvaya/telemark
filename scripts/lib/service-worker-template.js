@@ -12,7 +12,8 @@
 //   interrupted. The browser activates the new worker once every window of the game is closed, or sooner
 //   when the player asks for it from a menu: the page then sends the one message that makes this worker take
 //   over (skipWaiting) and reloads itself once it has. Other open windows are switched to this worker
-//   without a reload; they keep running the code they started with.
+//   without a reload; they keep running the code they started with. On taking over, the worker checks its
+//   release once more and stores again what went missing meanwhile.
 // - the release before stays stored until a page of this release starts. The browser may answer one more
 //   launch with the page of the outgoing release and switch workers under it; that page then asks this worker
 //   for its script, which the server no longer has, and gets it from the release it belongs to.
@@ -146,6 +147,14 @@ async function describeRelease() {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(install());
+});
+
+// The worker that ran before learns late of this one and may have removed this release's cache after install
+// found it whole (a return to a release still stored). The specification stops it before this event, so what is
+// checked here stays: a cache with a file gone is stored again. Without a network the release still takes over,
+// and its pages come from the network until it is stored.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(install().catch(() => undefined));
 });
 
 self.addEventListener("fetch", (event) => {
