@@ -6,9 +6,17 @@ so text set in Silkscreen falls back to these glyphs for the other letters.
 Silkscreen draws lower and upper case alike, so both share one glyph.
 
 Usage: python make_polish_font.py <silkscreen-latin-400-normal.woff2> <out.woff2>
+
+The base font comes from @fontsource/silkscreen in node_modules. The script also
+writes the SHA-256 of the base font next to this script
+(tools/font/telemark-polish.base.sha256); scripts/lib/polish-font-base.test.mjs compares
+it with the base font installed now, so an update of Silkscreen asks for the
+font to be built again.
 """
 
+import hashlib
 import sys
+from pathlib import Path
 
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.recordingPen import DecomposingRecordingPen
@@ -100,6 +108,10 @@ def build(source_path: str, out_path: str) -> None:
     fb.setupPost()
     fb.font.flavor = "woff2"
     fb.save(out_path)
+    digest = hashlib.sha256(Path(source_path).read_bytes()).hexdigest()
+    Path(__file__).with_name("telemark-polish.base.sha256").write_bytes(
+        (digest + "\n").encode("ascii")
+    )
 
 
 if __name__ == "__main__":
