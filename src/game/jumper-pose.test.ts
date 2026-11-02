@@ -7,13 +7,16 @@ import {
 } from "../sim/test-support/regression-scenarios";
 import { makeBot } from "../sim/test-support/synthetic";
 
-/** FNV-1a over the float32 bits of every value, in order. */
+/**
+ * FNV-1a over the bytes of every value's float32 bits, in order. Byte by byte: mixed as whole words, a sign flipped
+ * in two values cancels out ([1, 2] and [-1, -2] hash alike).
+ */
 function hashValues(previous: number, values: readonly number[]): number {
   const view = new DataView(new ArrayBuffer(4));
   let hash = previous;
   for (const value of values) {
     view.setFloat32(0, value, true);
-    hash = Math.imul(hash ^ view.getUint32(0, true), 0x01000193) >>> 0;
+    for (let byte = 0; byte < 4; byte++) hash = Math.imul(hash ^ view.getUint8(byte), 0x01000193) >>> 0;
   }
   return hash;
 }
@@ -28,6 +31,10 @@ const poseValues = ({ pose }: JumpSimState): number[] =>
   ]);
 
 describe("the jumper's pose through a jump", () => {
+  it("is hashed so that signs flipped in two values change the hash", () => {
+    expect(hashValues(0x811c9dc5, [1, 2])).not.toBe(hashValues(0x811c9dc5, [-1, -2]));
+  });
+
   // The simulation's regression test hashes the ski joints and one segment only; the figure is drawn from every
   // joint. The port matches the original's pose frame for frame where the original's files are at hand
   // (src/sim/*.golden.test.ts); this record of its values guards the pose code where they are not, as in CI and in
