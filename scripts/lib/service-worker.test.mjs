@@ -432,6 +432,28 @@ test("going back to a release that is still stored fetches nothing and keeps bot
   assert.deepEqual(sorted(world.caches.stores.keys()), sorted([cacheNameOf(RELEASE_A), "someone-elses-cache"]));
 });
 
+// The running worker learns late of a worker that is being stored: it may remove that release's cache after the
+// release was found stored in full, before the release takes over.
+test("a release whose cache went while it waited for its turn stores it again when it takes over", async () => {
+  const { world, workerB } = await afterTakeover();
+  world.network.served = { ...RELEASE_A };
+  const back = await installed(RELEASE_A, world);
+  await workerB.fetch("/", { mode: "navigate" });
+  assert.equal(world.caches.stores.has(cacheNameOf(RELEASE_A)), false);
+  await back.activate();
+  assert.equal(world.caches.stores.get(cacheNameOf(RELEASE_A)).size, Object.keys(RELEASE_A).length);
+});
+
+test("without a network that release still takes over, with no part of it stored", async () => {
+  const { world, workerB } = await afterTakeover();
+  world.network.served = { ...RELEASE_A };
+  const back = await installed(RELEASE_A, world);
+  await workerB.fetch("/", { mode: "navigate" });
+  world.network.offline = true;
+  await back.activate();
+  assert.equal(world.caches.stores.has(cacheNameOf(RELEASE_A)), false);
+});
+
 test("the worker never takes over pages on its own", async () => {
   const world = { caches: makeCacheStorage(), network: makeNetwork(RELEASE_A) };
   const worker = await installed(RELEASE_A, world);
