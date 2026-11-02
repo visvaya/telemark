@@ -19,6 +19,8 @@ const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
  */
 const LATE_FRAMES = 35;
 const FRAME_LIMIT = 6000;
+/** Frames between the two taps of the takeoff on a touch screen, which a test sends one after the other. */
+const TAP_GAP_FRAMES = 3;
 
 /** How late each press comes after the moment the script aims at, in frames. */
 interface Lateness {
@@ -27,11 +29,19 @@ interface Lateness {
   telemark: number;
 }
 
+/** How the test presses: the mouse holds a button for a moment; a tap counts for one frame. */
+const HANDS = {
+  mouse: { holdFrames: HOLD_FRAMES, rightAfterLeftFrames: 0 },
+  touch: { holdFrames: 1, rightAfterLeftFrames: TAP_GAP_FRAMES },
+} as const;
+
 /**
- * One jump as the browser test plays it with the mouse: the left button held until the jumper leaves the gate,
- * both buttons once the edge is near, then the right one, then the left one, each held for the same short time.
+ * One jump as the browser test plays it: the left button held until the jumper leaves the gate, both buttons once
+ * the edge is near (with touch, the right zone tapped a little after the left one), then the right one, then the
+ * left one.
  */
-function landsClean(hill: HillChoice, seed: number, late: Lateness): boolean {
+function landsClean(hill: HillChoice, seed: number, late: Lateness, hand: keyof typeof HANDS): boolean {
+  const { holdFrames, rightAfterLeftFrames } = HANDS[hand];
   let jump = startTrainingJump(hill, seed);
   let takeoffAt = -1;
   for (let f = 0; f < FRAME_LIMIT && !isJumpOver(jump); f++) {
@@ -41,10 +51,10 @@ function landsClean(hill: HillChoice, seed: number, late: Lateness): boolean {
     }
     const landingAt = takeoffAt + JUMP_TIMING.LANDING_AFTER_TAKEOFF_FRAMES + late.landing;
     const telemarkAt = landingAt + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES + late.telemark;
-    const held = (from: number) => takeoffAt >= 0 && logic.frame >= from && logic.frame < from + HOLD_FRAMES;
+    const held = (from: number) => takeoffAt >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
     jump = stepTrainingJump(jump, {
       left: logic.phase === PHASE.gate || held(takeoffAt) || held(telemarkAt),
-      right: held(takeoffAt) || held(landingAt),
+      right: held(takeoffAt + rightAfterLeftFrames) || held(landingAt),
       dy: 0,
     });
   }
@@ -58,15 +68,19 @@ describe("presses of the browser tests", () => {
   const [hill] = OWN_HILLS;
   if (hill === undefined) throw new Error("no built-in hill");
 
-  it.each<[string, Lateness]>([
+  const cases: [string, Lateness][] = [
     ["on time", ON_TIME],
     ["takeoff late", { ...ON_TIME, takeoff: LATE_FRAMES }],
     ["landing late", { ...ON_TIME, landing: LATE_FRAMES }],
     ["telemark late", { ...ON_TIME, telemark: LATE_FRAMES / 2 }],
     ["every press late", { takeoff: LATE_FRAMES / 2, landing: LATE_FRAMES / 2, telemark: LATE_FRAMES / 2 }],
-  ])("give a clean landing on the built-in hill: %s", (_, late) => {
-    expect(SEEDS.filter((seed) => !landsClean(hill, seed, late))).toEqual([]);
-  });
+  ];
+  it.each((["mouse", "touch"] as const).flatMap((hand) => cases.map(([name, late]) => [hand, name, late] as const)))(
+    "give a clean landing on the built-in hill with the %s: %s",
+    (hand, _, late) => {
+      expect(SEEDS.filter((seed) => !landsClean(hill, seed, late, hand))).toEqual([]);
+    },
+  );
 });
 
 const CHORD_HOLD_FRAMES = Math.ceil(JUMP_TIMING.CHORD_HOLD_MS / FRAME_MS);

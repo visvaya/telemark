@@ -7,13 +7,15 @@
  * simulation for one animation frame), so the jumper falls behind the clock and a press by time comes early.
  *
  * The values sit inside windows measured by running the built-in hill in the simulation with 12 seeds
- * (2026-11-02): a short press of both buttons 6 m before the edge of the takeoff, or up to 42 frames (0.6 s) after
- * that, takes off cleanly; a press of the right button between 14 and 101 frames after the takeoff prepares the
- * landing, and the left button up to 28 frames after it puts the telemark down at once, which makes the landing
- * clean wherever in the flight it happens.
+ * (2026-11-03): both buttons pressed 4.5 m before the edge of the takeoff, or up to 35 frames (half a second) after
+ * that, take off cleanly, held for a moment as a mouse holds them or tapped one after the other as on a touch
+ * screen (a tap counts for one frame); a press of the right button between 14 and 101 frames after the takeoff
+ * prepares the landing, and the left button up to 28 frames after it puts the telemark down at once, which makes
+ * the landing clean wherever in the flight it happens. Earlier than about 5 m a tap starts the takeoff so soon
+ * that the jumper leaves the inrun before the edge.
  */
 export const JUMP_TIMING = {
-  TAKEOFF_LEAD_M: 6,
+  TAKEOFF_LEAD_M: 4.5,
   LANDING_AFTER_TAKEOFF_FRAMES: 41,
   TELEMARK_AFTER_LANDING_FRAMES: 7,
   /** How long each scripted press holds its button down. */

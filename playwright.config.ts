@@ -59,7 +59,15 @@ const chromiumProjects: Project[] = [
 const firefoxAndWebkitProjects: Project[] = [
   {
     name: "desktop-firefox",
-    use: { ...devices["Desktop Firefox"], viewport: DESKTOP_VIEWPORT },
+    use: {
+      ...devices["Desktop Firefox"],
+      viewport: DESKTOP_VIEWPORT,
+      // The automated Firefox does not count a synthesized press as the gesture that lets a page play sound, so the
+      // audio context stayed suspended; allowed here, the sound tests check the game's own rules for sound in it.
+      launchOptions: {
+        firefoxUserPrefs: { "media.autoplay.default": 0, "media.autoplay.block-webaudio": false },
+      },
+    },
     dependencies: DESKTOP_SETUP,
   },
   {
