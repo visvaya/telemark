@@ -254,8 +254,9 @@ async function reopenUntil(
     const page = await context.newPage();
     if (await arrived(page)) return page;
     await page.close();
+    // Longer each time: on a loaded machine the browser needs a while with no window to switch workers.
     await new Promise((resolve) => {
-      setTimeout(resolve, REOPEN_WAIT_MS);
+      setTimeout(resolve, REOPEN_WAIT_MS * (attempt + 1));
     });
   }
   throw new Error(`The release ${release.sourceSha} did not take over after ${REOPEN_LIMIT} launches`);
@@ -277,14 +278,26 @@ const LAUNCH_MENU_WAIT_MS = 10_000;
  */
 export function relaunchUntil(context: BrowserContext, origin: string, release: TestRelease): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    const menu = page.getByRole("heading", { name: TEXT.menuHeading });
-    const launched = await page
-      .goto(`${origin}/`)
-      .then(() => menu.waitFor({ timeout: LAUNCH_MENU_WAIT_MS }))
+    // Watched from before the launch, so an answer that comes while the page loads is seen.
+    const scriptMissing = page
+      .waitForResponse((response) => response.url().endsWith(".js") && response.status() === 404, {
+        timeout: LAUNCH_MENU_WAIT_MS,
+      })
+      .then(
+        () => false,
+        () => false,
+      );
+    const menuShown = page
+      .getByRole("heading", { name: TEXT.menuHeading })
+      .waitFor({ timeout: LAUNCH_MENU_WAIT_MS })
       .then(
         () => true,
         () => false,
       );
+    const launched = await page.goto(`${origin}/`).then(
+      () => Promise.race([menuShown, scriptMissing]),
+      () => false,
+    );
     if (!launched) return false;
     return (
       (await controlled(page)) &&
@@ -306,8 +319,12 @@ export function openFileUntil(
   release: TestRelease,
 ): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    await page.goto(`${origin}${path}`);
-    return (await controlled(page)) && (await sourceShaSeenBy(page)) === release.sourceSha;
+    // A navigation the switch of workers breaks off is a launch that came too early, as in relaunchUntil.
+    const opened = await page.goto(`${origin}${path}`).then(
+      () => true,
+      () => false,
+    );
+    return opened && (await controlled(page)) && (await sourceShaSeenBy(page)) === release.sourceSha;
   });
 }
 
