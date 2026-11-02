@@ -15,7 +15,7 @@ import {
   TEXT,
 } from "./support/app";
 import { expect, test } from "./support/fixtures";
-import { playUntilLanded } from "./support/jump";
+import { playCleanJump } from "./support/jump";
 import {
   cacheNames,
   checkForUpdate,
@@ -127,8 +127,7 @@ test.describe("without a network", () => {
 
     await openHillList(launched, traits);
     await openJump(launched, traits);
-    const outcomes = await playUntilLanded(launched, traits);
-    expect(outcomes.at(-1)?.kind).toBe("landed");
+    await playCleanJump(launched, traits);
     await leaveJumpForHills(launched, traits);
     await expect(builtInHill(launched)).toContainText("rekord");
 

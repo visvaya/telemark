@@ -7,12 +7,18 @@ const STARTED = "Skok rozpoczęty.";
 /** The last sentence of the announcement made once the jumper has stopped: in a competition the press goes on. */
 const RESULT = /(jeszcze raz|dalej)\.$/;
 
-const { TAKEOFF_AFTER_START_MS, LANDING_AFTER_TAKEOFF_MS, TELEMARK_AFTER_LANDING_MS, PRESS_HOLD_MS } = JUMP_TIMING;
+const { TAKEOFF_LEAD_M, LANDING_AFTER_TAKEOFF_FRAMES, TELEMARK_AFTER_LANDING_FRAMES, PRESS_HOLD_MS } = JUMP_TIMING;
 /** A tap on the left zone starts the jump only once the gate opens, about a second in; until then it is repeated. */
 const START_TAP_WAIT_MS = 200;
 const START_TAP_LIMIT = 60;
 const START_TIMEOUT_MS = 20_000;
 const RESULT_TIMEOUT_MS = 40_000;
+/**
+ * The state of the jump is read on a timer, not on animation frames: a loaded machine draws few frames, and the
+ * simulation goes on between them.
+ */
+const PROBE_POLL_MS = 10;
+const PROBE_TIMEOUT_MS = 40_000;
 /** Presses that start the next jump early: how many, and the wait after each. */
 const EARLY_PRESS_LIMIT = 80;
 const EARLY_PRESS_WAIT_MS = 100;
@@ -25,14 +31,9 @@ export interface JumpOutcome {
 }
 
 interface JumpOptions {
-  /**
-   * Runs right after the jumper leaves the gate, during the inrun. Returns for how many milliseconds the game
-   * stood still meanwhile (a hidden page); the rest of the jump is played that much later.
-   */
-  afterStart?: () => Promise<number>;
+  /** Runs right after the jumper leaves the gate, during the inrun; the presses wait for where the jumper is. */
+  afterStart?: () => Promise<void>;
 }
-
-const postponement = async (options: JumpOptions): Promise<number> => (await options.afterStart?.()) ?? 0;
 
 export interface Point {
   x: number;
@@ -64,10 +65,57 @@ const saidNow = (page: Page): Promise<string | null> =>
 const tellsTheEnd = (said: string | null): boolean => said === null || (said !== "" && said !== STARTED);
 
 /**
- * Whether the jump has ended. A press after that goes on to what comes next, so a jump that ended early, as on a
- * stalled machine, gets no more.
+ * Waits for the state of the jump (src/ui/jump-probe.ts) to reach `target`: the jumper `target` metres or less
+ * before the edge of the takeoff, or the simulation at frame `target`. Returns the frame it was reached in, or
+ * null once the page says the jump has ended: a press after that goes on to what comes next, so a jump that
+ * ended early gets no more.
  */
-const jumpHasEnded = async (page: Page): Promise<boolean> => tellsTheEnd(await saidNow(page));
+async function probeUntil(page: Page, aim: "edge" | "frame", target: number): Promise<number | null> {
+  const handle = await page.waitForFunction(
+    ([kind, value, started]) => {
+      const said = document.querySelector("p[aria-live]")?.textContent ?? null;
+      if (said === null || (said !== "" && said !== started)) return { frame: null };
+      const probe = window.telemarkJumpProbe;
+      if (probe === undefined) return false;
+      const reached = kind === "edge" ? probe.toEdgeM <= value : probe.frame >= value;
+      return reached ? { frame: probe.frame } : false;
+    },
+    [aim, target, STARTED] as const,
+    { polling: PROBE_POLL_MS, timeout: PROBE_TIMEOUT_MS },
+  );
+  const reached = await handle.jsonValue();
+  return reached === false ? null : reached.frame;
+}
+
+/** The frame in which the jumper is close enough to the edge to take off, or null once the jump has ended. */
+export const nearTheEdge = (page: Page): Promise<number | null> => probeUntil(page, "edge", TAKEOFF_LEAD_M);
+
+/** Whether the simulation has reached `frame` before the jump ended. */
+export const reachedFrame = async (page: Page, frame: number): Promise<boolean> =>
+  (await probeUntil(page, "frame", frame)) !== null;
+
+/** The frame the simulation is in now. */
+export const frameNow = (page: Page): Promise<number> => page.evaluate(() => window.telemarkJumpProbe?.frame ?? -1);
+
+interface Hands {
+  both: () => Promise<void>;
+  right: () => Promise<void>;
+  left: () => Promise<void>;
+}
+
+/**
+ * The presses after the start, as a player who watches the jumper: both buttons as the edge comes near, then the
+ * right one to prepare the landing and the left one to put the telemark down, counted in frames of the simulation
+ * from the press before. Nothing more once the jump has ended.
+ */
+async function pressThroughJump(page: Page, hands: Hands): Promise<void> {
+  if ((await nearTheEdge(page)) === null) return;
+  await hands.both();
+  if (!(await reachedFrame(page, (await frameNow(page)) + LANDING_AFTER_TAKEOFF_FRAMES))) return;
+  await hands.right();
+  if (!(await reachedFrame(page, (await frameNow(page)) + TELEMARK_AFTER_LANDING_FRAMES))) return;
+  await hands.left();
+}
 
 /** Waits on the page's clock, checked every animation frame, so the delay of the test runner does not add up. */
 export async function waitForPageTime(page: Page, targetMs: number): Promise<void> {
@@ -107,59 +155,50 @@ export async function startWithMouse(page: Page): Promise<number> {
 }
 
 async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
-  const startedAt = (await startWithMouse(page)) + (await postponement(options));
-  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
-  if (await jumpHasEnded(page)) return;
-  await page.mouse.down({ button: "left" });
-  await page.mouse.down({ button: "right" });
-  await page.waitForTimeout(PRESS_HOLD_MS);
-  await page.mouse.up({ button: "right" });
-  await page.mouse.up({ button: "left" });
-  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
-  if (await jumpHasEnded(page)) return;
-  await clickMouse(page, "right");
-  await waitForPageTime(
-    page,
-    startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
-  );
-  if (await jumpHasEnded(page)) return;
-  await clickMouse(page, "left");
+  await startWithMouse(page);
+  await options.afterStart?.();
+  await pressThroughJump(page, {
+    both: async () => {
+      await page.mouse.down({ button: "left" });
+      await page.mouse.down({ button: "right" });
+      await page.waitForTimeout(PRESS_HOLD_MS);
+      await page.mouse.up({ button: "right" });
+      await page.mouse.up({ button: "left" });
+    },
+    right: () => clickMouse(page, "right"),
+    left: () => clickMouse(page, "left"),
+  });
 }
 
-/** Taps the left zone until the jumper leaves the gate; returns the page time just before the tap that did it. */
-async function startWithTouch(page: Page, left: Point): Promise<number> {
+/** Taps the left zone until the jumper leaves the gate. */
+async function startWithTouch(page: Page, left: Point): Promise<void> {
   for (let attempt = 0; attempt < START_TAP_LIMIT; attempt++) {
-    const tappedAt = await pageNow(page);
     await page.touchscreen.tap(left.x, left.y);
-    if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return tappedAt;
+    if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return;
     // Read once more at once: on a loaded machine a frame can take longer than the wait, and a tap on the inrun
     // spoils the jump.
     const said = await saidNow(page);
-    if (said === STARTED) return tappedAt;
+    if (said === STARTED) return;
     if (said !== null && tellsTheEnd(said)) throw new Error(`The jump ended before its start was seen: "${said}"`);
   }
   throw new Error("The jump did not start after repeated taps on the left zone");
 }
 
 async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
-  const startedAt =
-    (await startWithTouch(page, await centerOf(button(page, TEXT.leftPad)))) + (await postponement(options));
+  await startWithTouch(page, await centerOf(button(page, TEXT.leftPad)));
+  await options.afterStart?.();
   // Measured after the start: what happens right after it may move the zones (a turn of the phone).
   const left = await centerOf(button(page, TEXT.leftPad));
   const right = await centerOf(button(page, TEXT.rightPad));
-  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
-  if (await jumpHasEnded(page)) return;
-  await page.touchscreen.tap(left.x, left.y);
-  await page.touchscreen.tap(right.x, right.y);
-  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
-  if (await jumpHasEnded(page)) return;
-  await page.touchscreen.tap(right.x, right.y);
-  await waitForPageTime(
-    page,
-    startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
-  );
-  if (await jumpHasEnded(page)) return;
-  await page.touchscreen.tap(left.x, left.y);
+  const tap = (at: Point) => page.touchscreen.tap(at.x, at.y);
+  await pressThroughJump(page, {
+    both: async () => {
+      await tap(left);
+      await tap(right);
+    },
+    right: () => tap(right),
+    left: () => tap(left),
+  });
 }
 
 /** Waits until the jumper has stopped and returns what the page announced. */
@@ -207,24 +246,11 @@ export async function restartJump(page: Page, traits: DeviceTraits): Promise<voi
 }
 
 /**
- * Jumps until a jump is landed cleanly, as a player who fell would jump again. The timing leaves a wide margin,
- * but the game keeps real time and a stalled machine can still spoil one jump; a fall is a valid end of a jump,
- * not a failure of the page. Returns every outcome, the clean landing last.
+ * One jump that must end in a clean landing: the presses follow the state of the jump, so a fall means the page
+ * lost or misread a press, however loaded the machine.
  */
-export async function playUntilLanded(
-  page: Page,
-  traits: DeviceTraits,
-  options: JumpOptions = {},
-  attempts = 3,
-): Promise<JumpOutcome[]> {
-  const outcomes: JumpOutcome[] = [];
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    if (attempt > 0) await restartJump(page, traits);
-    const outcome = await playJump(page, traits, options);
-    outcomes.push(outcome);
-    if (outcome.kind === "landed") return outcomes;
-  }
-  throw new Error(
-    `No clean landing in ${attempts} jumps: ${outcomes.map((outcome) => outcome.announcement).join(" | ")}`,
-  );
+export async function playCleanJump(page: Page, traits: DeviceTraits, options: JumpOptions = {}): Promise<JumpOutcome> {
+  const outcome = await playJump(page, traits, options);
+  if (outcome.kind !== "landed") throw new Error(`No clean landing: ${outcome.announcement}`);
+  return outcome;
 }
