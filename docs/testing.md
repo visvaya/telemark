@@ -508,14 +508,18 @@ so far.
 pnpm mutation
 ```
 
-The HTML report goes to `reports/mutation/`. In CI it is run manually (the workflow "Mutation testing").
-Without the game files the physics is checked only by the regression tests, so the local result with the traces is
-higher.
+The HTML report goes to `reports/mutation/`. In CI the workflow "Mutation testing" runs every Sunday and by hand on
+a branch. A score under 70% (`break` in `stryker.config.json`, 2.5 points under the measurement below) fails the run;
+raise it when the score rises, never lower it to make a run pass. Stryker runs the simulation tests and three tests
+outside `src/sim` that pin what only the golden tests check otherwise (`vitest.stryker.config.ts`): the training
+wind through a jump, the replay file read back, and a replay played through its input. Without the game files the
+physics is checked only by the regression tests, so the local result with the traces is higher.
 
-Result without traces (2026-11-01, the workflow on GitHub, 3085 mutants, Stryker 10.1.1, the same with Vitest 4.1
-and 5) **[measurement]**: 64.47% overall (1989 killed or timed out, 773 survived, 323 without coverage), about 10 to
-14 minutes. The lowest are `training-wind.ts` (0%, no test reaches it), `replay.ts` (2%, only the golden tests test
-it), `wind.ts` (32%) and `pose.ts` (56%). On 2026-10-11 (2700 mutants) it was 61.67%.
+Result without traces (2026-11-02, the workflow on GitHub, 3085 mutants, Stryker 10.1.1, Vitest 5) **[measurement]**:
+72.55% overall (2196 killed, 32 timed out, 705 survived, 138 without coverage, 14 errors), about 24 minutes. The
+lowest is `pose.ts` (57%); `replay.ts` 95%, `training-wind.ts` 86%, `wind.ts` 80%. Before the three tests outside
+`src/sim` were added (2026-11-01): 64.47%, with `training-wind.ts` at 0% and `replay.ts` at 2%; on 2026-10-11
+(2700 mutants) 61.67%.
 
 Limitations of the tools (as of 2026-11):
 
