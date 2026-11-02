@@ -230,6 +230,8 @@ test.describe("after every window of the release before is closed", () => {
   // A launch right after the last window closes may get the page of the release before without its script (a 404 in
   // the console); relaunchUntil closes it and launches again, as a player would (e2e/support/pwa.ts).
   test.use({ expectedProblems: /Failed to load resource.*404/ });
+  // Each relaunch may wait 10 s for the menu, and a loaded machine needs several: more than the default 90 s.
+  test.describe.configure({ timeout: 180_000 });
 
   test("a new release waits until every window is closed, then takes over and keeps the player's data", async ({
     page,

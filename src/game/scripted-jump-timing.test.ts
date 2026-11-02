@@ -5,7 +5,7 @@ import { OWN_HILLS, type HillChoice } from "./hill-choice";
 import { isJumpOver, startTrainingJump, stepTrainingJump } from "./training-session";
 
 /**
- * The browser tests jump by these press times, turned into simulation steps, on the built-in hill (e2e/support/jump-timing.ts). Their press times were measured
+ * The browser tests jump by time on the built-in hill (e2e/support/jump-timing.ts). Their press times were measured
  * on its inrun; a change of the hill that moves the edge of the takeoff must move them too, and this test says so
  * before the slow browser run does.
  */

@@ -8,7 +8,6 @@ import type { TrainingJump } from "../game/training-session";
 import type { JumpSimState } from "../sim/jump-sim";
 import { VIEW_HEIGHT_PX, drawJumpView, viewWidthFor, type Scenery } from "../render/jump-view";
 import { UI_TEXT } from "../text/ui-text";
-import { automated, startFrameOf } from "./automation-marks";
 import { createJumpDiagnostics } from "./jump-diagnostics";
 import { listenToPlayerInput, watchPointerLock, type PointerLockWatch } from "./jump-input-listeners";
 import { makePicture, pictureSize, titlePlaceFor, type TitlePlace, type JumpPicture } from "./jump-picture";
@@ -189,8 +188,6 @@ export function useJumpLoop(options: JumpLoopOptions) {
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    const marked = automated();
-    let startFrame: number | null = null;
     let acc = 0;
     let last = performance.now();
     let raf = 0;
@@ -216,12 +213,6 @@ export function useJumpLoop(options: JumpLoopOptions) {
       meter?.stepsEnd();
       const { over, clock } = current.settle();
       const { jump, newRecord, previousRecordM, ghost } = current.now();
-      if (marked) {
-        startFrame = startFrameOf(startFrame, jump.state.logic);
-        canvas.dataset["simFrame"] = String(jump.state.logic.frame);
-        canvas.dataset["simStartFrame"] = startFrame === null ? "" : String(startFrame);
-        canvas.dataset["simOver"] = String(over);
-      }
       sounds.play(jump.state, clock, newRecord, paused || document.hidden);
       meter?.drawBegin();
       const v = { jump, newRecord, previousRecordM, ghost, over, clock, title, replay: view, ...lookOf(runs, live) };

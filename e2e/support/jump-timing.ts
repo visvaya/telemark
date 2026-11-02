@@ -1,9 +1,9 @@
 /**
- * When the buttons of a scripted jump go down, counted from the moment the jumper leaves the gate. Kept apart from
- * the Playwright code, so a unit test can run the same presses in the simulation.
+ * When the buttons of a scripted jump go down, on the page's own clock, counted from the moment the jumper leaves
+ * the gate. Kept apart from the Playwright code, so a unit test can run the same presses in the simulation.
  *
- * The values are times at 70 simulation steps a second; the browser tests turn them into steps and press by the
- * game's own frames (e2e/support/jump.ts), so a game slowed down by a loaded machine gets them later. The values sit in the middle of windows measured by running the built-in hill in the simulation with 40 seeds:
+ * The game runs in real time at 70 simulation steps a second, so the browser tests play like a player: by time.
+ * The values sit in the middle of windows measured by running the built-in hill in the simulation with 40 seeds:
  * a short press of both buttons between 3.30 s and 4.09 s after the start takes off (the edge of the inrun comes
  * at 3.71 s; a press just after it still counts), a press of the right button between 0.20 s and 0.95 s later
  * prepares the landing, and the left button up to 0.40 s after it puts the telemark down at once, which makes the

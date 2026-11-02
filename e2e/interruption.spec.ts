@@ -3,7 +3,7 @@ import { openJumpFromStart } from "./support/app";
 import { AUDIBLE_LEVEL, audioState, installAudioProbe, SILENT_LEVEL } from "./support/audio-probe";
 import { expect, test } from "./support/fixtures";
 import { scrollState } from "./support/geometry";
-import { playUntilLanded } from "./support/jump";
+import { pageNow, playUntilLanded } from "./support/jump";
 import { expectTouchZonesPlaced } from "./support/touch-zones";
 
 /** How long the page stays hidden in the middle of the inrun. */
@@ -30,6 +30,7 @@ test.describe("turning the phone in the middle of a jump", () => {
         await page.setViewportSize(screen);
         await expectTouchZonesPlaced(page, screen);
         expect(await scrollState(page)).toEqual({ overflowXPx: 0, overflowYPx: 0, scrolledXPx: 0, scrolledYPx: 0 });
+        return 0;
       },
     });
     expect(outcomes.at(-1)?.kind).toBe("landed");
@@ -57,12 +58,13 @@ test.describe("hiding the page in the middle of a jump", () => {
     await installAudioProbe(page);
     await openJumpFromStart(page, traits);
 
-    // The rest of the jump is pressed by the game's own steps. It can only end in a clean landing if the game stood
-    // still while hidden and went on from where it was: had it skipped ahead on return, the takeoff press would come
-    // only after the steps had already passed the edge of the inrun.
+    // The rest of the jump is played later by exactly the time the page was hidden. It can only end in a clean
+    // landing if the game stood still for that time and went on from where it was: had it kept running, or
+    // skipped ahead on return, the takeoff would come far past the edge of the inrun.
     const outcomes = await playUntilLanded(page, traits, {
       afterStart: async () => {
         await expect.poll(level(page), "the inrun is heard").toBeGreaterThan(AUDIBLE_LEVEL);
+        const hiddenAt = await pageNow(page);
         await setWindow("minimized");
         const wentHidden = await expect
           .poll(hidden(page), { timeout: 2000 })
@@ -76,6 +78,7 @@ test.describe("hiding the page in the middle of a jump", () => {
         expect((await audioState(page)).level, "silent while hidden").toBeLessThan(SILENT_LEVEL);
         await setWindow("normal");
         await expect.poll(hidden(page)).toBe(false);
+        return (await pageNow(page)) - hiddenAt;
       },
     });
     expect(outcomes.at(-1)?.kind).toBe("landed");

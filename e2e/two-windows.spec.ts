@@ -21,7 +21,7 @@ test("two windows of the game keep each other's replays and records", async ({ p
   const second = await context.newPage();
   await openMenu(second);
 
-  // A player jumps in the window in front: one behind it gets its animation frames throttled, and the jump with them.
+  // A player jumps in the window in front: one behind it gets its animation frames throttled, and the game's real-time jump with them.
   await page.bringToFront();
   await openJumpFromStart(page, traits);
   const first = (await playUntilLanded(page, traits)).at(-1);

@@ -8,13 +8,6 @@ const STARTED = "Skok rozpoczęty.";
 const RESULT = /(jeszcze raz|dalej)\.$/;
 
 const { TAKEOFF_AFTER_START_MS, LANDING_AFTER_TAKEOFF_MS, TELEMARK_AFTER_LANDING_MS, PRESS_HOLD_MS } = JUMP_TIMING;
-/** Simulation steps a second: the presses go by the game's steps, which a loaded machine slows down with it. */
-const SIM_STEPS_PER_S = 70;
-const MS_PER_S = 1000;
-export const stepsIn = (ms: number): number => Math.round((ms * SIM_STEPS_PER_S) / MS_PER_S);
-const TAKEOFF_STEPS = stepsIn(TAKEOFF_AFTER_START_MS);
-const LANDING_STEPS = TAKEOFF_STEPS + stepsIn(LANDING_AFTER_TAKEOFF_MS);
-const TELEMARK_STEPS = LANDING_STEPS + stepsIn(TELEMARK_AFTER_LANDING_MS);
 /** A tap on the left zone starts the jump only once the gate opens, about a second in; until then it is repeated. */
 const START_TAP_WAIT_MS = 200;
 const START_TAP_LIMIT = 60;
@@ -33,11 +26,13 @@ export interface JumpOutcome {
 
 interface JumpOptions {
   /**
-   * Runs right after the jumper leaves the gate, during the inrun. The presses after it go by the game's steps,
-   * so a game that stood still meanwhile (a hidden page) gets them that much later.
+   * Runs right after the jumper leaves the gate, during the inrun. Returns for how many milliseconds the game
+   * stood still meanwhile (a hidden page); the rest of the jump is played that much later.
    */
-  afterStart?: () => Promise<void>;
+  afterStart?: () => Promise<number>;
 }
+
+const postponement = async (options: JumpOptions): Promise<number> => (await options.afterStart?.()) ?? 0;
 
 export interface Point {
   x: number;
@@ -64,39 +59,6 @@ export const pageNow = (page: Page): Promise<number> => page.evaluate(() => perf
 /** Waits on the page's clock, checked every animation frame, so the delay of the test runner does not add up. */
 export async function waitForPageTime(page: Page, targetMs: number): Promise<void> {
   await page.waitForFunction((target) => performance.now() >= target, targetMs, { polling: "raf" });
-}
-
-/**
- * The simulation frame in which the jumper left the gate, as the jump picture shows it to automation
- * (src/ui/automation-marks.ts).
- */
-export async function simStartFrame(page: Page): Promise<number> {
-  const handle = await page.waitForFunction(
-    () => {
-      const start = document.querySelector<HTMLCanvasElement>("canvas[data-sim-frame]")?.dataset["simStartFrame"];
-      return start === undefined || start === "" ? null : Number(start);
-    },
-    undefined,
-    { polling: "raf", timeout: START_TIMEOUT_MS },
-  );
-  const start = await handle.jsonValue();
-  if (start === null) throw new Error("The jump picture shows no start frame");
-  return start;
-}
-
-/**
- * Waits, checked every animation frame, until the game has stepped `steps` frames past the start, or until the jump
- * is over: a jump that ends early (a fall) steps no further, and the test then reads how it ended.
- */
-export async function waitForSimSteps(page: Page, startFrame: number, steps: number): Promise<void> {
-  await page.waitForFunction(
-    (target) => {
-      const marks = document.querySelector<HTMLCanvasElement>("canvas[data-sim-frame]")?.dataset;
-      return marks?.["simOver"] === "true" || Number(marks?.["simFrame"] ?? Number.NaN) >= target;
-    },
-    startFrame + steps,
-    { polling: "raf" },
-  );
 }
 
 /** The page time at which the start was announced, or null when it was not within the timeout. */
@@ -132,43 +94,47 @@ export async function startWithMouse(page: Page): Promise<number> {
 }
 
 async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
-  await startWithMouse(page);
-  const start = await simStartFrame(page);
-  await options.afterStart?.();
-  await waitForSimSteps(page, start, TAKEOFF_STEPS);
+  const startedAt = (await startWithMouse(page)) + (await postponement(options));
+  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
   await page.mouse.down({ button: "left" });
   await page.mouse.down({ button: "right" });
   await page.waitForTimeout(PRESS_HOLD_MS);
   await page.mouse.up({ button: "right" });
   await page.mouse.up({ button: "left" });
-  await waitForSimSteps(page, start, LANDING_STEPS);
+  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
   await clickMouse(page, "right");
-  await waitForSimSteps(page, start, TELEMARK_STEPS);
+  await waitForPageTime(
+    page,
+    startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
+  );
   await clickMouse(page, "left");
 }
 
-/** Taps the left zone until the jumper leaves the gate. */
-async function startWithTouch(page: Page, left: Point): Promise<void> {
+/** Taps the left zone until the jumper leaves the gate; returns the page time just before the tap that did it. */
+async function startWithTouch(page: Page, left: Point): Promise<number> {
   for (let attempt = 0; attempt < START_TAP_LIMIT; attempt++) {
+    const tappedAt = await pageNow(page);
     await page.touchscreen.tap(left.x, left.y);
-    if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return;
+    if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return tappedAt;
   }
   throw new Error("The jump did not start after repeated taps on the left zone");
 }
 
 async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
-  await startWithTouch(page, await centerOf(button(page, TEXT.leftPad)));
-  const start = await simStartFrame(page);
-  await options.afterStart?.();
+  const startedAt =
+    (await startWithTouch(page, await centerOf(button(page, TEXT.leftPad)))) + (await postponement(options));
   // Measured after the start: what happens right after it may move the zones (a turn of the phone).
   const left = await centerOf(button(page, TEXT.leftPad));
   const right = await centerOf(button(page, TEXT.rightPad));
-  await waitForSimSteps(page, start, TAKEOFF_STEPS);
+  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS);
   await page.touchscreen.tap(left.x, left.y);
   await page.touchscreen.tap(right.x, right.y);
-  await waitForSimSteps(page, start, LANDING_STEPS);
+  await waitForPageTime(page, startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS);
   await page.touchscreen.tap(right.x, right.y);
-  await waitForSimSteps(page, start, TELEMARK_STEPS);
+  await waitForPageTime(
+    page,
+    startedAt + TAKEOFF_AFTER_START_MS + LANDING_AFTER_TAKEOFF_MS + TELEMARK_AFTER_LANDING_MS,
+  );
   await page.touchscreen.tap(left.x, left.y);
 }
 
@@ -217,8 +183,8 @@ export async function restartJump(page: Page, traits: DeviceTraits): Promise<voi
 }
 
 /**
- * Jumps until a jump is landed cleanly, as a player who fell would jump again. The presses follow the game's
- * steps with a wide margin, but a stalled test runner can still press late once; a fall is a valid end of a jump,
+ * Jumps until a jump is landed cleanly, as a player who fell would jump again. The timing leaves a wide margin,
+ * but the game keeps real time and a stalled machine can still spoil one jump; a fall is a valid end of a jump,
  * not a failure of the page. Returns every outcome, the clean landing last.
  */
 export async function playUntilLanded(
