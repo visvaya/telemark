@@ -4,14 +4,22 @@ import { expect, test } from "./support/fixtures";
 import { LAYOUT_SLACK_PX } from "./support/geometry";
 
 // Parts of a phone's screen are covered by a camera cut-out, rounded corners and the bar of system gestures.
-// The page reaches under them and keeps its content clear through four values (src/ui/app.css). No browser
-// under test has such a screen, so the test sets those values itself, to the insets of a phone held sideways
-// with the cut-out on the left, and checks what the layout does with them. Real insets are checked by hand
-// on a device.
+// The page reaches under them and keeps its content clear through four values that read the browser's
+// env(safe-area-inset-*) (src/ui/app.css). No browser under test has such a screen. Chromium is given the insets
+// of a phone held sideways, with the cut-out on the left, through its protocol, so the values come through env()
+// as on a phone; the other engines have no such switch, and there the test sets the four values itself. Real
+// insets are checked by hand on a device.
 const INSETS_PX = { top: 20, right: 34, bottom: 21, left: 47 };
+const SAFE_VALUES = ["--safe-top", "--safe-right", "--safe-bottom", "--safe-left"] as const;
 
 /** Everything a player reads or aims at. */
 const CONTENT = "h1, h2, button, canvas, label.pixel-button, .swatch, p.note";
+
+/** Gives Chromium a screen with the insets: env(safe-area-inset-*) reads them from then on. */
+async function overrideInsets(page: Page): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setSafeAreaInsetsOverride", { insets: INSETS_PX });
+}
 
 async function setInsets(page: Page): Promise<void> {
   await page.evaluate((insets) => {
@@ -21,6 +29,14 @@ async function setInsets(page: Page): Promise<void> {
     root.setProperty("--safe-bottom", `${insets.bottom}px`);
     root.setProperty("--safe-left", `${insets.left}px`);
   }, INSETS_PX);
+}
+
+/** The four values as the page computes them. */
+function safeValues(page: Page): Promise<string[]> {
+  return page.evaluate(
+    (names) => names.map((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()),
+    [...SAFE_VALUES],
+  );
 }
 
 interface Placement {
@@ -67,9 +83,18 @@ function contentPlacements(page: Page): Promise<Placement[]> {
   }, CONTENT);
 }
 
-test("no screen puts content under the covered edges of the display", async ({ page, traits }) => {
+test("no screen puts content under the covered edges of the display", async ({ page, traits, browserName }) => {
+  const throughEnv = browserName === "chromium";
+  if (throughEnv) await overrideInsets(page);
   await onEveryScreen(page, traits, async (screen) => {
-    await setInsets(page);
+    if (throughEnv) {
+      const { top, right, bottom, left } = INSETS_PX;
+      expect(await safeValues(page), `insets read through env() on "${screen}"`).toEqual(
+        [top, right, bottom, left].map((px) => `${px}px`),
+      );
+    } else {
+      await setInsets(page);
+    }
     const placements = await contentPlacements(page);
     expect(placements.length, `content on "${screen}"`).toBeGreaterThan(0);
     for (const placement of placements) {

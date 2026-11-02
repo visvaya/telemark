@@ -66,3 +66,16 @@ test("the page allows zooming and reaches under the cut-outs of the screen", asy
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#000000");
 });
+
+test("Chromium finds nothing that keeps the game from being installed", async ({ page }) => {
+  await page.goto("/");
+  const session = await page.context().newCDPSession(page);
+  // The manifest and its icons are fetched after the page: until then the check reports them missing. Every context
+  // of the tests is a private one, which no browser installs from, so that one reason is left out.
+  await expect
+    .poll(async () => {
+      const { installabilityErrors } = await session.send("Page.getInstallabilityErrors");
+      return installabilityErrors.map((error) => error.errorId).filter((id) => id !== "in-incognito");
+    })
+    .toEqual([]);
+});

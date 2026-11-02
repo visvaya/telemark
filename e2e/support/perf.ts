@@ -1,5 +1,7 @@
 import type { BrowserContext, CDPSession, Page } from "@playwright/test";
 import type { FrameStats } from "../../src/game/frame-meter";
+import type { Settings } from "../../src/storage/save-data";
+import { SAVE_KEY } from "./app";
 
 // What the measurements in e2e/perf share: slowing the processor and the network through the protocol of
 // Chromium, reading what the game measured of its own frames, long tasks, and the size of the page in memory.
@@ -9,6 +11,24 @@ export const DIAGNOSTICS_ADDRESS = "/?diag";
 /** Names of the User Timing marks (src/game/performance-marks.ts). */
 export const MARK_FIRST_SCREEN = "telemark:first-screen";
 export const MARK_FIRST_JUMP_FRAME = "telemark:first-jump-frame";
+
+/**
+ * The look of every measured jump: the night with snowfall and fog paints the most. A look drawn at random made two
+ * measurements of the same code differ by half (30 and 60 frames a second at a processor four times slower).
+ */
+const MEASURED_LOOK = { scenery: "night", weather: "snowFog" } as const satisfies Partial<Settings>;
+
+/** Before every page of the context starts, stores settings with the measured look, unless a save is there. */
+export async function fixLook(context: BrowserContext): Promise<void> {
+  await context.addInitScript(
+    ({ key, settings }) => {
+      if (localStorage.getItem(key) === null) {
+        localStorage.setItem(key, JSON.stringify({ schemaVersion: 2, records: {}, settings }));
+      }
+    },
+    { key: SAVE_KEY, settings: MEASURED_LOOK },
+  );
+}
 
 /** How many times slower the processor of the page runs in the slowed measurements. */
 export const CPU_SLOWDOWN_FACTOR = 4;
