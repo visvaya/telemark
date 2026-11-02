@@ -20,7 +20,7 @@ if (training === undefined) throw new Error("no own hill");
 
 /**
  * Trying all 41 aims for 8 seeds takes about 3 s alone, longer under coverage; under coverage on a loaded laptop it
- * took 72 to 88 s (four local runs up to 2026-11-02), so the limit only catches a run that hangs.
+ * took 72 to 88 s (three local gate runs up to 2026-11-02), so the limit only catches a run that hangs.
  */
 const SWEEP_TIMEOUT_MS = 180_000;
 
