@@ -64,11 +64,13 @@ function testServer(): StaticServer {
 
 const GAME_CACHE = /^telemark-shell-[0-9a-f]{16}$/;
 /**
- * What an engine logs when a request gets no answer because the test has taken the network away: the check
- * for a new worker, or the page itself. Only tests that do take it away expect this.
+ * What an engine logs when a request gets no answer because the test has taken the network away, at the server or
+ * in the browser: the check for a new worker, the question to the server before it, or the page itself. WebKit
+ * words a request refused by a browser without a network as an internal error. Only tests that do take the
+ * network away expect this.
  */
 const NO_NETWORK =
-  /Failed to load resource: (?:Connection terminated unexpectedly|The network connection was lost|net::ERR_\w+)/;
+  /Failed to load resource: (?:Connection terminated unexpectedly|The network connection was lost|WebKit encountered an internal error|net::ERR_\w+)/;
 /** Each engine words the refusal to register a worker whose script is not there in its own way. */
 const NO_WORKER_SCRIPT = /bad HTTP response code \(404\)|Failed to load resource.*404|sw\.js/;
 const either = (...patterns: RegExp[]): RegExp => new RegExp(patterns.map((pattern) => pattern.source).join("|"));
