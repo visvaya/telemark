@@ -136,6 +136,24 @@ test.describe("without a network", () => {
     await expect(running.getByText(UPDATE_CHECK.latest)).toBeVisible();
   });
 
+  test("a check on a device without a network says it could not check", async ({ page, context }) => {
+    const server = testServer();
+    await openGame(page, server.origin);
+    await requireServiceWorkers(page);
+    await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await page.close();
+    const running = await relaunchUntil(context, server.origin, RELEASE_A);
+
+    // The device loses its network while the server stays up: browsers answer the worker check differently
+    // from a server that drops the connection.
+    await context.setOffline(true);
+    await button(running, UPDATE_CHECK.button).click();
+    await expect(running.getByText(UPDATE_CHECK.unreachable)).toBeVisible();
+    await context.setOffline(false);
+    await button(running, UPDATE_CHECK.button).click();
+    await expect(running.getByText(UPDATE_CHECK.latest)).toBeVisible();
+  });
+
   test("a first visit without a network gets no game", async ({ page }) => {
     const server = testServer();
     server.setOffline(true);

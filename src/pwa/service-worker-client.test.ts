@@ -112,6 +112,8 @@ interface Setup {
   listening: () => boolean;
   /** The caches of the origin, by name; the page may delete them. */
   caches: Set<string>;
+  /** Whether the server answers the page's own request for the worker's script. */
+  server: { answers: boolean };
 }
 
 function start(register: () => Promise<FakeRegistration>, controlled = false): Setup {
@@ -121,8 +123,10 @@ function start(register: () => Promise<FakeRegistration>, controlled = false): S
   let returnListener: (() => void) | null = null;
   const askedToTakeOver: FakeWorker[] = [];
   let reloads = 0;
+  const server = { answers: true };
   const env: OfflineEnvironment<FakeWorker> = {
     register,
+    serverAnswers: () => Promise.resolve(server.answers),
     holdsWholeRelease: (worker) => Promise.resolve(worker.whole),
     versionOf: (worker) => Promise.resolve(worker.version),
     onReturn(listener) {
@@ -151,6 +155,7 @@ function start(register: () => Promise<FakeRegistration>, controlled = false): S
     clock,
     listening: () => returnListener !== null,
     caches,
+    server,
   };
 }
 
@@ -369,6 +374,20 @@ describe("checking for a new release on demand", () => {
     const registration = fakeRegistration({ active: fakeWorker("activated") });
     const { support } = start(() => Promise.resolve(registration));
     expect(await support.checkNow()).toBe("unreachable");
+  });
+
+  it("says the server could not be reached when it does not answer, even if the browser reports nothing new", async () => {
+    // Without a network Chromium settles update() as if the server had the same worker.
+    const registration = fakeRegistration({ active: fakeWorker("activated") });
+    let updates = 0;
+    registration.onUpdate = () => {
+      updates += 1;
+      return Promise.resolve(registration);
+    };
+    const { support, server } = start(() => Promise.resolve(registration));
+    server.answers = false;
+    expect(await support.checkNow()).toBe("unreachable");
+    expect(updates).toBe(0);
   });
 
   it("cannot check where the worker could not be registered", async () => {
