@@ -156,9 +156,12 @@ layer (palette entry 0, which the style sheet overrides for each shade through `
 layer in the text colour; the outline of the character alone is the body, for a browser without colour fonts.
 Grid: 8 pixels per em from two rows of marks above the capitals to the baseline, on which the last row of the body
 stands; the shadow and the marks below the letter go under it. Each character is 6 pixels wide, lower-case letters
-point to the characters of the capitals. Next to the font lies the SHA-256 hash of the export
-(`telemark-screen.glyphs.sha256`); `scripts/lib/screen-font-glyphs.test.mjs` compares it with a fresh export, so a
-change of the characters without rebuilding the font stops `pnpm test:scripts`. The commands are in the header of
+point to the characters of the capitals. Next to the font lies the record of its build
+(`telemark-screen.build.sha256`: SHA-256 hashes of the export, the build script, the pinned font tools and the font
+itself); `scripts/lib/screen-font-glyphs.test.mjs` compares it with a fresh export and the files of today, so a
+change of the characters, the script or the tools without rebuilding the font stops `pnpm test:scripts`, and so
+does a font changed by hand. The build is reproducible (fixed time stamps), so a rebuild from the same inputs gives
+the same file. The commands are in the header of
 `make_screen_font.py` (packages needed: `tools/font/requirements.txt`). Sizes on the screens are multiples of 8 px,
 so that the pixels stay sharp.
 

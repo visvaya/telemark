@@ -1,14 +1,12 @@
 // The glyphs of the screens' font ("Telemark Screen"), exported from the jump picture's own font
 // (src/render/pixel-font.ts), so the menus and the picture share one drawing of every letter.
 //
-// tools/font/make_screen_font.py builds the web font from this export and stores the SHA-256 of the exported
-// file next to the font; a test compares that digest with a fresh export, so the committed font cannot drift
-// from the picture's glyphs unnoticed.
-import { createHash } from "node:crypto";
-
+// tools/font/make_screen_font.py builds the web font from this export and writes the record of the build next to
+// the font; a test compares it with a fresh export, so the committed font cannot drift from the picture's glyphs
+// unnoticed.
 import { loadTypeScript } from "./load-typescript.mjs";
 
-export const SCREEN_FONT_DIGEST_PATH = "src/ui/fonts/telemark-screen.glyphs.sha256";
+export const SCREEN_FONT_RECORD_PATH = "src/ui/fonts/telemark-screen.build.sha256";
 
 // { frame, glyphs: [{ char, rows }] }: `rows` from the frame's top, `#` body, `o` shadow, `.` empty.
 export async function exportScreenGlyphs() {
@@ -19,7 +17,5 @@ export async function exportScreenGlyphs() {
   };
 }
 
-// The exact text written to the export file, which the digest is taken of.
+// The exact text written to the export file, which the record holds the digest of.
 export const serializeGlyphs = (glyphs) => `${JSON.stringify(glyphs, null, 2)}\n`;
-
-export const glyphsDigest = (text) => createHash("sha256").update(text, "utf8").digest("hex");
