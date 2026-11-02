@@ -171,7 +171,7 @@ async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
 }
 
 /** Taps the left zone until the jumper leaves the gate. */
-async function startWithTouch(page: Page, left: Point): Promise<void> {
+export async function startWithTouch(page: Page, left: Point): Promise<void> {
   for (let attempt = 0; attempt < START_TAP_LIMIT; attempt++) {
     await page.touchscreen.tap(left.x, left.y);
     if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return;

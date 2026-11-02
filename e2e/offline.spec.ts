@@ -19,6 +19,7 @@ import { playCleanJump } from "./support/jump";
 import {
   cacheNames,
   checkForUpdate,
+  finishUpdateChecks,
   controlled,
   fileSeenBy,
   OFFLINE_NOTE,
@@ -347,6 +348,7 @@ test("a release found on demand installs at once in the window that asks, and ot
     document.documentElement.dataset["untouched"] = "yes";
   });
 
+  await finishUpdateChecks(first);
   server.setRoot(RELEASE_B.dir);
   await button(first, UPDATE_CHECK.button).click();
   await expect(first.getByText(UPDATE_CHECK.found)).toBeVisible();

@@ -187,7 +187,8 @@ What the files in `e2e/` check:
 | `targets.spec.ts` | every control meets WCAG 2.5.8 (24 by 24 px or spacing) and nothing covers it; with the pause open the keyboard focus does not go under it | all; focus: touch ones |
 | `input.spec.ts` | both mouse buttons as a chord in both orders of pressing and releasing; a press shorter than a simulation step; a single Esc leaves the jump | desktops |
 | `interruption.spec.ts` | turning the phone during a jump: a correct layout and the jump to the end; hiding the page: the test skips itself, because no engine run by Playwright hides the page | phones; hiding: none |
-| `sound.spec.ts` | no audio context runs before the first gesture, one after it; sound switched off is silence at the output, also after a reload (`AudioContext` observed from the test) | all |
+| `sound.spec.ts` | no audio context runs before the first gesture, one after it; sound switched off is silence at the output, also after a reload (`AudioContext` observed from the test); Firefox runs with sound allowed without a gesture (`playwright.config.ts`), because it does not count a synthesized press as one, so there the order of the gesture is the game's own rule | all |
+| `touch-drag.spec.ts` | a finger dragged on the L area leans the jumper in flight, down one way and up the other (the lean read from the probe of the jump; the moving finger is sent through Chromium's protocol, `Input.dispatchTouchEvent`) | `android-portrait`, `android-landscape` |
 | `player-files.spec.ts` | a file that is not the game: a message in Polish, nothing is stored, the built-in hill available | all |
 | `page-basics.spec.ts` | a separate page title for each screen; the background set on `html`; a new screen opens at the top, without the scroll position of the previous one; the link to the source code at the foot of the menu; the room the game takes and its removal on "Gra jako aplikacja" | all |
 | `version.spec.ts` | the main menu and the jump menu show the version number from `package.json`, and `release.json` gives the same | all |
@@ -199,11 +200,15 @@ What the files in `e2e/` check:
 | `two-windows.spec.ts` | two game windows: the record and the last jump from one and a jump kept in the second, which held an older list and an older save, stay in both after a reload; the record is the longer of the two jumps, and its replay is that jump | all |
 | `storage-blocked.spec.ts` | with the storage blocked the game warns, works and keeps the settings until the end of the visit, without unhandled errors | `desktop-chromium`, `android-portrait` |
 
-A jump runs in real time (70 simulation steps per second), so the test controls it by the page's clock, counted
-from the message "Skok rozpoczęty." in the `aria-live` region next to the picture. The moments of the presses lie
-in the middle of windows measured in the simulation on many seeds (described in `e2e/support/jump-timing.ts`; the
-test `src/game/scripted-jump-timing.test.ts` checks that they give a clean landing with a margin of 0.1 s). A jump
-that ends in a fall is repeated by the test, at most three times, as a player would do.
+A jump runs in real time (70 simulation steps per second), but the test does not press by the clock: on a loaded
+machine the game drops time it cannot keep up with, and the jumper falls behind the clock. Under automation
+(`navigator.webdriver`) the jump screen puts the state of each frame on `window.telemarkJumpProbe`
+(`src/ui/jump-probe.ts`: the frame of the simulation, how far ahead the edge of the takeoff is, the lean of the
+body); a player's browser gets nothing. The test takes off when the jumper is close enough to the edge and counts
+the landing and the telemark in frames of the simulation from the press before (described in
+`e2e/support/jump-timing.ts`; the test `src/game/scripted-jump-timing.test.ts` checks, with a mouse that holds the
+buttons and with taps that count for one frame, that they give a clean landing with every press up to half a
+second late). A fall therefore fails the test: the page lost or misread a press.
 
 The regression scenarios of the simulation are in `src/sim/test-support/regression-scenarios.ts`; the Vitest test
 and the test page use them. The page is built by the project's Vite before the tests (`e2e/sim-harness.setup.ts`)

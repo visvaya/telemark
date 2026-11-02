@@ -6,6 +6,8 @@ export interface JumpProbe {
   frame: number;
   /** How far ahead of the jumper the edge of the takeoff is, in metres; below zero once past it. */
   toEdgeM: number;
+  /** The lean of the body in flight, which the mouse and a finger dragged on the left zone change. */
+  bodyAngleRad: number;
 }
 
 declare global {
@@ -17,6 +19,7 @@ declare global {
 export const probeOf = (state: JumpSimState, takeoffXM: number): JumpProbe => ({
   frame: state.logic.frame,
   toEdgeM: takeoffXM - state.jumper.xM,
+  bodyAngleRad: state.logic.bodyAngleRad,
 });
 
 /**
