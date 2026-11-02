@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the jumper's pose through a jump > clean telemark: every joint and segment as the port moves them 1`] = `
+{
+  "fallType": 0,
+  "frames": 923,
+  "hash": "d8a1aa66",
+}
+`;
+
+exports[`the jumper's pose through a jump > late takeoff, tail wind: every joint and segment as the port moves them 1`] = `
+{
+  "fallType": 0,
+  "frames": 956,
+  "hash": "a1d29607",
+}
+`;
+
+exports[`the jumper's pose through a jump > no landing (crash): every joint and segment as the port moves them 1`] = `
+{
+  "fallType": 4,
+  "frames": 962,
+  "hash": "dd3ec73e",
+}
+`;

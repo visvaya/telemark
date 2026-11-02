@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readMzImage } from "./mz-image";
+import { seededBytes } from "./test-support/seeded-bytes";
 
 const PAGE_BYTES = 512;
 const PARAGRAPH_BYTES = 16;
@@ -13,16 +14,6 @@ function mzFile(fileBytes: number, lastPageBytes: number, pages: number, headerP
   v.setUint16(4, pages, true);
   v.setUint16(8, headerParagraphs, true);
   return file;
-}
-
-/** A seeded generator of bytes (a 32-bit linear congruential one), so a failing case can be run again. */
-function seededBytes(seed: number): (count: number) => Uint8Array {
-  let state = seed >>> 0;
-  return (count) =>
-    Uint8Array.from({ length: count }, () => {
-      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-      return state >>> 24;
-    });
 }
 
 describe("the load image of an MZ executable", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decodePushedCalls, readHillTable } from "./hill-table";
+import { seededBytes } from "./test-support/seeded-bytes";
 
 /** Builds x86 code in the shape of the original hill setup routine (made-up values). */
 interface CodeBuilder {
@@ -170,5 +171,36 @@ describe("hill table in the executable", () => {
 
   it("rejects implausible values", () => {
     expect(() => readHillTable(buildImage([{ k: 0, takeoff: 52.3 }], false))).toThrow("hill 1");
+  });
+});
+
+describe("the hill table in any bytes a player may pick as the executable", () => {
+  it("is read with its hills in order, or refused with an error", () => {
+    const bytes = seededBytes(105);
+    const problems: string[] = [];
+    const outcomes = { read: 0, refused: 0 };
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const img = buildImage([
+        { k: 105, takeoff: 52.3 },
+        { k: 170, takeoff: 76.8 },
+        { k: 85, takeoff: 44 },
+      ]);
+      // Every other image is damaged in a few places; the rest stay whole, so both answers come.
+      const damage = attempt % 2 === 0 ? 1 + ((bytes(1)[0] ?? 0) % 4) : 0;
+      for (const [at = 0, value = 0] of Array.from({ length: damage }, () => bytes(2))) {
+        img[at % img.length] = value;
+      }
+      try {
+        const numbers = readHillTable(img).map((hill) => hill.number);
+        if (numbers.some((number, i) => number !== i + 1)) problems.push(`attempt ${attempt}: hills ${numbers.join()}`);
+        outcomes.read++;
+      } catch (error) {
+        if (!(error instanceof Error)) problems.push(`attempt ${attempt}: threw ${String(error)}`);
+        outcomes.refused++;
+      }
+    }
+    expect(problems).toEqual([]);
+    expect(outcomes.read).toBeGreaterThan(100);
+    expect(outcomes.refused).toBeGreaterThan(20);
   });
 });
