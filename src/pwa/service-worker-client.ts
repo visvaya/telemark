@@ -196,7 +196,7 @@ export function startOfflineSupport<W extends WorkerLike>(
     }
   });
 
-  const checkNow = () => lookForRelease(registered, env.serverAnswers, () => (lastCheckMs = env.nowMs()));
+  const checkNow = () => lookForRelease(registered, env, () => (lastCheckMs = env.nowMs()));
 
   const reinstalling = {
     registered: () => registered,
@@ -293,7 +293,7 @@ function announceVersion<W extends WorkerLike>(
 /** Looks for a new release now and says what was found; `onCheck` is called when a check starts. */
 async function lookForRelease<W extends WorkerLike>(
   registered: Promise<RegistrationLike<W> | null>,
-  serverAnswers: () => Promise<boolean>,
+  env: Pick<OfflineEnvironment<W>, "serverAnswers">,
   onCheck: () => void,
 ): Promise<UpdateCheckOutcome> {
   const registration = await registered;
@@ -301,7 +301,7 @@ async function lookForRelease<W extends WorkerLike>(
   onCheck();
   // Without a network Chromium settles update() as if the server had the same worker, which would tell a player
   // who cannot check that the game is up to date. The server is asked first.
-  if (!(await serverAnswers())) return "unreachable";
+  if (!(await env.serverAnswers())) return "unreachable";
   try {
     await registration.update();
   } catch {
