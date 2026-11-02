@@ -97,21 +97,35 @@ function drawTimesMs(hill: HillChoice): number[] {
   return timesMs;
 }
 
+/**
+ * Writes what was measured to the output of the run, a line of JSON after the prefix the browser measurements use,
+ * so a log shows how close each hill came to its budget and a budget can be set from the numbers.
+ */
+function report(measure: string, hill: string, valueMs: number, budgetMs: number): void {
+  const json = JSON.stringify({ measure, hill, valueMs: Number(valueMs.toFixed(4)), budgetMs });
+  // Straight to the output: Vitest shows no console output of a test that passes.
+  process.stdout.write(`PERF ${json}\n`);
+}
+
 /** Every own hill: each one's scenery is drawn within the budget. */
 const HILLS: readonly { id: string; hill: HillChoice }[] = OWN_HILLS.map((hill) => ({ id: hill.id, hill }));
 
-describe.each(HILLS)("time budgets of a frame on $id", ({ hill }) => {
+describe.each(HILLS)("time budgets of a frame on $id", ({ id, hill }) => {
   it("steps the simulation within its budget", () => {
     const batchesMs = simBatchTimesMs(hill);
     expect(batchesMs.length * STEPS_PER_BATCH).toBeGreaterThanOrEqual(MIN_SIM_STEPS);
     // The fastest batch: under coverage on a loaded machine the median of the batches passed the budget (0.40 ms
     // on 2026-11-02), while a regression by an order of magnitude slows every batch.
-    expect(Math.min(...batchesMs) / STEPS_PER_BATCH).toBeLessThanOrEqual(SIM_STEP_BUDGET_MS);
+    const stepMs = Math.min(...batchesMs) / STEPS_PER_BATCH;
+    report("sim-step-fastest", id, stepMs, SIM_STEP_BUDGET_MS);
+    expect(stepMs).toBeLessThanOrEqual(SIM_STEP_BUDGET_MS);
   }, 60_000);
 
   it("draws the widest picture within its budget", () => {
     const timesMs = drawTimesMs(hill);
     expect(timesMs.length).toBeGreaterThanOrEqual(MIN_DRAWN_FRAMES);
-    expect(spreadOf(timesMs).median).toBeLessThanOrEqual(DRAW_BUDGET_MS);
+    const drawMs = spreadOf(timesMs).median;
+    report("draw-median", id, drawMs, DRAW_BUDGET_MS);
+    expect(drawMs).toBeLessThanOrEqual(DRAW_BUDGET_MS);
   }, 60_000);
 });
