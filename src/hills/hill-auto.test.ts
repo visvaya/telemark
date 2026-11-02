@@ -57,10 +57,15 @@ describe("hills from their size alone", () => {
     const c = drawn.find((d) => landingFallOf(d) !== undefined);
     if (c === undefined) throw new Error("no character with a landing area that stays");
     expect(drawn.some((d) => landingFallOf(d) === undefined)).toBe(true);
-    // Measured about 15 ms once the code has warmed up; the draw of a character tries up to 200 of them.
-    const started = performance.now();
+    // Measured about 15 ms once the code has warmed up; the draw of a character tries up to 200 of them. The fastest
+    // of a few calls is the cost of the function itself: one call alone passed 200 ms on a loaded machine.
+    const timedCallsMs = Array.from({ length: 5 }, () => {
+      const started = performance.now();
+      landingFallOf(c);
+      return performance.now() - started;
+    });
+    expect(Math.min(...timedCallsMs)).toBeLessThan(200);
     const fall = landingFallOf(c);
-    expect(performance.now() - started).toBeLessThan(200);
     expect(fall?.dropAtTenthOfK).toBeGreaterThan(0);
     expect(fall?.dropAtThreeQuartersOfK).toBeGreaterThan(fall?.dropAtHalfOfK ?? Infinity);
     expect(landingFallOf({ ...c, kPointM: 20 })).toBeUndefined();

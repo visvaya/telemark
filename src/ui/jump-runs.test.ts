@@ -18,11 +18,19 @@ vi.mock("../game/haptics", async (importOriginal) => {
   return { ...actual, vibrate: (event: string) => felt.push(event) };
 });
 
-/** A seed for the next jumps in place of a random one; null leaves them random. */
-const seeds = vi.hoisted(() => ({ fixed: null as number | null }));
+/**
+ * The seeds of the jumps: `fixed` for every jump, or else the next of a sequence that starts again in each test.
+ * Random seeds made the scripted hands fail about once in 130 jumps: an early fall ended the jump before the landing
+ * press, which then started another jump.
+ */
+const FIRST_SEED = 1;
+const seeds = vi.hoisted(() => ({ fixed: null as number | null, next: 0 }));
 vi.mock("../game/training-session", async (importOriginal) => {
-  const actual = await importOriginal<{ newSeed: () => number }>();
-  return { ...actual, newSeed: () => seeds.fixed ?? actual.newSeed() };
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, newSeed: () => seeds.fixed ?? seeds.next++ };
+});
+beforeEach(() => {
+  seeds.next = FIRST_SEED;
 });
 
 const hill = OWN_HILLS[0];
@@ -187,11 +195,9 @@ describe("a competition jump", () => {
     expect(t.runs.current().now().jump).toBe(jumped);
     t.runs.controls.watchReplay();
     expect(t.replay()).not.toBeNull();
-    // The wind is drawn at random: after an early fall a scripted press may already have moved on once.
-    const before = next;
-    expect(before).toBeLessThanOrEqual(1);
+    expect(next).toBe(0);
     t.runs.controls.endReplay();
-    expect(next).toBe(before + 1);
+    expect(next).toBe(1);
     expect(t.finished).toHaveLength(1);
   });
 });

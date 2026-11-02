@@ -84,7 +84,10 @@ describe("player policy", () => {
   });
 });
 
-describe("player training", () => {
+/** About 2 s alone; 19 s under coverage on a loaded machine passed the 15 s default of the suite. */
+const OWN_HILLS_SCORE_TIMEOUT_MS = 60_000;
+
+describe("player training", { timeout: OWN_HILLS_SCORE_TIMEOUT_MS }, () => {
   it("reproduces the recorded score of the trained player on the own hills", () => {
     expect(ownHillsScore(TRAINED_PLAYER_POLICY)).toBe(TRAINED_POLICY_SCORES.ownHills);
   });

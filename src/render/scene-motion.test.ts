@@ -41,8 +41,11 @@ import { VIEW_MAX_WIDTH_PX } from "./view-size";
  * all; those places are computed, not read from pixels.
  */
 
-/** A whole jump is a few hundred frames; on a loaded machine the jump and the checks take a few seconds. */
-const MOTION_TIMEOUT_MS = 60_000;
+/**
+ * A whole jump is a few hundred frames; on a quiet machine the jump and the checks take a few seconds, under coverage
+ * on a loaded one up to 70 s (2026-11-02).
+ */
+const MOTION_TIMEOUT_MS = 180_000;
 /**
  * Every second frame of the jump is checked on the first own hill; every eighth on the others, whose things are
  * placed by the same code from other tables, so that each further hill costs a few seconds and not tens.
