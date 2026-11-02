@@ -28,6 +28,8 @@ export interface RegistrationLike<W extends WorkerLike> {
 
 export interface OfflineEnvironment<W extends WorkerLike> {
   register(): Promise<RegistrationLike<W>>;
+  /** Whether the server answers a request for the worker's script, past every cache; false without a network. */
+  serverAnswers(): Promise<boolean>;
   /** Asks a worker whether it holds every file of its release; null when it does not answer in time. */
   holdsWholeRelease(worker: W): Promise<boolean | null>;
   /** Asks a worker which version of the game its release is; null when it does not say. */
@@ -194,7 +196,7 @@ export function startOfflineSupport<W extends WorkerLike>(
     }
   });
 
-  const checkNow = () => lookForRelease(registered, () => (lastCheckMs = env.nowMs()));
+  const checkNow = () => lookForRelease(registered, env, () => (lastCheckMs = env.nowMs()));
 
   const reinstalling = {
     registered: () => registered,
@@ -291,11 +293,15 @@ function announceVersion<W extends WorkerLike>(
 /** Looks for a new release now and says what was found; `onCheck` is called when a check starts. */
 async function lookForRelease<W extends WorkerLike>(
   registered: Promise<RegistrationLike<W> | null>,
+  env: Pick<OfflineEnvironment<W>, "serverAnswers">,
   onCheck: () => void,
 ): Promise<UpdateCheckOutcome> {
   const registration = await registered;
   if (registration === null) return "unavailable";
   onCheck();
+  // Without a network Chromium settles update() as if the server had the same worker, which would tell a player
+  // who cannot check that the game is up to date. The server is asked first.
+  if (!(await env.serverAnswers())) return "unreachable";
   try {
     await registration.update();
   } catch {
@@ -438,6 +444,12 @@ export function browserOfflineEnvironment(container: ServiceWorkerContainer): Of
         // The browser's own cache never answers for the worker's script.
         updateViaCache: "none",
       }),
+    // HEAD, which the worker leaves to the network, and no-store, so no stored copy can answer.
+    serverAnswers: () =>
+      fetch(PWA_CONFIG.SERVICE_WORKER_URL, { method: "HEAD", cache: "no-store" }).then(
+        (response) => response.ok,
+        () => false,
+      ),
     holdsWholeRelease: (worker) => askWorker(worker).then((data) => (data === null ? null : saysComplete(data))),
     versionOf: (worker) => askWorker(worker).then(versionIn),
     onReturn(listener) {

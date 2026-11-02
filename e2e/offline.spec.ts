@@ -64,11 +64,13 @@ function testServer(): StaticServer {
 
 const GAME_CACHE = /^telemark-shell-[0-9a-f]{16}$/;
 /**
- * What an engine logs when a request gets no answer because the test has taken the network away: the check
- * for a new worker, or the page itself. Only tests that do take it away expect this.
+ * What an engine logs when a request gets no answer because the test has taken the network away, at the server or
+ * in the browser: the check for a new worker, the question to the server before it, or the page itself. WebKit
+ * words a request refused by a browser without a network as an internal error. Only tests that do take the
+ * network away expect this.
  */
 const NO_NETWORK =
-  /Failed to load resource: (?:Connection terminated unexpectedly|The network connection was lost|net::ERR_\w+)/;
+  /Failed to load resource: (?:Connection terminated unexpectedly|The network connection was lost|WebKit encountered an internal error|net::ERR_\w+)/;
 /** Each engine words the refusal to register a worker whose script is not there in its own way. */
 const NO_WORKER_SCRIPT = /bad HTTP response code \(404\)|Failed to load resource.*404|sw\.js/;
 const either = (...patterns: RegExp[]): RegExp => new RegExp(patterns.map((pattern) => pattern.source).join("|"));
@@ -132,6 +134,24 @@ test.describe("without a network", () => {
     await expect(running.getByText(UPDATE_CHECK.unreachable)).toBeVisible();
     // Pressed again once the network is back, the check answers.
     server.setOffline(false);
+    await button(running, UPDATE_CHECK.button).click();
+    await expect(running.getByText(UPDATE_CHECK.latest)).toBeVisible();
+  });
+
+  test("a check on a device without a network says it could not check", async ({ page, context }) => {
+    const server = testServer();
+    await openGame(page, server.origin);
+    await requireServiceWorkers(page);
+    await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await page.close();
+    const running = await relaunchUntil(context, server.origin, RELEASE_A);
+
+    // The device loses its network while the server stays up: browsers answer the worker check differently
+    // from a server that drops the connection.
+    await context.setOffline(true);
+    await button(running, UPDATE_CHECK.button).click();
+    await expect(running.getByText(UPDATE_CHECK.unreachable)).toBeVisible();
+    await context.setOffline(false);
     await button(running, UPDATE_CHECK.button).click();
     await expect(running.getByText(UPDATE_CHECK.latest)).toBeVisible();
   });
