@@ -254,12 +254,16 @@ async function reopenUntil(
     const page = await context.newPage();
     if (await arrived(page)) return page;
     await page.close();
+    // Longer each time: on a loaded machine the browser needs a while with no window to switch workers.
     await new Promise((resolve) => {
-      setTimeout(resolve, REOPEN_WAIT_MS);
+      setTimeout(resolve, REOPEN_WAIT_MS * (attempt + 1));
     });
   }
   throw new Error(`The release ${release.sourceSha} did not take over after ${REOPEN_LIMIT} launches`);
 }
+
+/** How long a launch may take to show the menu before it counts as one that came too early. */
+const LAUNCH_MENU_WAIT_MS = 10_000;
 
 /**
  * Launches the game again, as a player does after closing every window of it, until the given release is the
@@ -268,10 +272,33 @@ async function reopenUntil(
  * A waiting worker takes over once no window is left; the browser does that a moment after the last one
  * closes. A launch in that moment may still be started from the old release, even while the new worker is
  * already the one that answers afterwards; such a launch is closed and repeated, as a player's next one is.
+ * It may also get the page of the old release without its script, which the new worker no longer has: the page
+ * then keeps its loading note with a link to load it again (a 404 for the script in the console), and that launch
+ * is closed and repeated too.
  */
 export function relaunchUntil(context: BrowserContext, origin: string, release: TestRelease): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    await openGame(page, origin);
+    // Watched from before the launch, so an answer that comes while the page loads is seen.
+    const scriptMissing = page
+      .waitForResponse((response) => response.url().endsWith(".js") && response.status() === 404, {
+        timeout: LAUNCH_MENU_WAIT_MS,
+      })
+      .then(
+        () => false,
+        () => false,
+      );
+    const menuShown = page
+      .getByRole("heading", { name: TEXT.menuHeading })
+      .waitFor({ timeout: LAUNCH_MENU_WAIT_MS })
+      .then(
+        () => true,
+        () => false,
+      );
+    const launched = await page.goto(`${origin}/`).then(
+      () => Promise.race([menuShown, scriptMissing]),
+      () => false,
+    );
+    if (!launched) return false;
     return (
       (await controlled(page)) &&
       (await sourceShaSeenBy(page)) === release.sourceSha &&
@@ -292,8 +319,12 @@ export function openFileUntil(
   release: TestRelease,
 ): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    await page.goto(`${origin}${path}`);
-    return (await controlled(page)) && (await sourceShaSeenBy(page)) === release.sourceSha;
+    // A navigation the switch of workers breaks off is a launch that came too early, as in relaunchUntil.
+    const opened = await page.goto(`${origin}${path}`).then(
+      () => true,
+      () => false,
+    );
+    return opened && (await controlled(page)) && (await sourceShaSeenBy(page)) === release.sourceSha;
   });
 }
 
