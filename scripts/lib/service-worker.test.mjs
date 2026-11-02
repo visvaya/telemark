@@ -392,6 +392,26 @@ for (const pending of ["installing", "waiting"]) {
   });
 }
 
+test("a release stored while the running one lists the caches to remove keeps its cache", async () => {
+  const registration = { installing: null, waiting: null };
+  const world = { caches: makeCacheStorage(), network: makeNetwork(RELEASE_A), registration };
+  const workerA = await installed(RELEASE_A, world);
+  await workerA.activate();
+  world.network.served = { ...RELEASE_B };
+  // The next release starts to be stored and is stored in full in the moment the running one lists the caches.
+  const listCaches = world.caches.keys;
+  world.caches.keys = async () => {
+    world.caches.keys = listCaches;
+    registration.installing = {};
+    await installed(RELEASE_B, world);
+    return listCaches();
+  };
+
+  const page = await workerA.fetch("/", { mode: "navigate" });
+  assert.equal(await page.text(), RELEASE_A["/"]);
+  assert.deepEqual(sorted(world.caches.stores.keys()), sorted([cacheNameOf(RELEASE_A), cacheNameOf(RELEASE_B)]));
+});
+
 test("a start page that had to come from the network removes nothing", async () => {
   const { world, workerB } = await afterTakeover();
   world.caches.stores.delete(cacheNameOf(RELEASE_B));

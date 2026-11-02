@@ -91,13 +91,17 @@ async function otherReleaseCaches() {
   return names.filter((name) => name.startsWith(RELEASE.cachePrefix) && name !== CACHE_NAME);
 }
 
+// Whether a release is being stored or waits for its turn.
+const nextReleaseComing = () => self.registration.installing !== null || self.registration.waiting !== null;
+
 async function removeOtherReleases() {
   if (onlyThisReleaseIsStored) return;
   // A release that is being stored, or waits for its turn, answers from its cache once it takes over. Anything
   // but a plain "none" keeps the caches: one release too many is stored then, and nothing is lost.
-  const { installing, waiting } = self.registration;
-  if (installing !== null || waiting !== null) return;
+  if (nextReleaseComing()) return;
   const outdated = await otherReleaseCaches();
+  // Asked again after the list: a release stored meanwhile is on it, and would take over without its files.
+  if (nextReleaseComing()) return;
   await Promise.all(outdated.map((name) => caches.delete(name)));
   onlyThisReleaseIsStored = true;
 }
