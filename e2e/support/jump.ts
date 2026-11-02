@@ -56,15 +56,18 @@ function parseOutcome(text: string): JumpOutcome {
 
 export const pageNow = (page: Page): Promise<number> => page.evaluate(() => performance.now());
 
+/** What the page says right now, read at once rather than on an animation frame; null once it has left the jump. */
+const saidNow = (page: Page): Promise<string | null> =>
+  page.evaluate(() => document.querySelector("p[aria-live]")?.textContent ?? null);
+
+/** Whether what the page says tells how the jump ended (a landing, a fall, a disqualification) or the jump is left. */
+const tellsTheEnd = (said: string | null): boolean => said === null || (said !== "" && said !== STARTED);
+
 /**
- * Whether the page has said how the jump ended (a landing, a fall, a disqualification) or has left the jump. A
- * press after that goes on to what comes next, so a jump that ended early, as on a stalled machine, gets no more.
+ * Whether the jump has ended. A press after that goes on to what comes next, so a jump that ended early, as on a
+ * stalled machine, gets no more.
  */
-const jumpHasEnded = (page: Page): Promise<boolean> =>
-  page.evaluate((started) => {
-    const said = document.querySelector("p[aria-live]")?.textContent;
-    return said === undefined || (said !== "" && said !== started);
-  }, STARTED);
+const jumpHasEnded = async (page: Page): Promise<boolean> => tellsTheEnd(await saidNow(page));
 
 /** Waits on the page's clock, checked every animation frame, so the delay of the test runner does not add up. */
 export async function waitForPageTime(page: Page, targetMs: number): Promise<void> {
@@ -129,6 +132,11 @@ async function startWithTouch(page: Page, left: Point): Promise<number> {
     const tappedAt = await pageNow(page);
     await page.touchscreen.tap(left.x, left.y);
     if ((await startAnnouncedAt(page, START_TAP_WAIT_MS)) !== null) return tappedAt;
+    // Read once more at once: on a loaded machine a frame can take longer than the wait, and a tap on the inrun
+    // spoils the jump.
+    const said = await saidNow(page);
+    if (said === STARTED) return tappedAt;
+    if (said !== null && tellsTheEnd(said)) throw new Error(`The jump ended before its start was seen: "${said}"`);
   }
   throw new Error("The jump did not start after repeated taps on the left zone");
 }
