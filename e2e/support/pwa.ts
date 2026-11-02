@@ -261,6 +261,9 @@ async function reopenUntil(
   throw new Error(`The release ${release.sourceSha} did not take over after ${REOPEN_LIMIT} launches`);
 }
 
+/** How long a launch may take to show the menu before it counts as one that came too early. */
+const LAUNCH_MENU_WAIT_MS = 10_000;
+
 /**
  * Launches the game again, as a player does after closing every window of it, until the given release is the
  * one that runs: its worker answers and the page itself was started from its files.
@@ -268,10 +271,21 @@ async function reopenUntil(
  * A waiting worker takes over once no window is left; the browser does that a moment after the last one
  * closes. A launch in that moment may still be started from the old release, even while the new worker is
  * already the one that answers afterwards; such a launch is closed and repeated, as a player's next one is.
+ * It may also get the page of the old release without its script, which the new worker no longer has: the page
+ * then keeps its loading note with a link to load it again (a 404 for the script in the console), and that launch
+ * is closed and repeated too.
  */
 export function relaunchUntil(context: BrowserContext, origin: string, release: TestRelease): Promise<Page> {
   return reopenUntil(context, release, async (page) => {
-    await openGame(page, origin);
+    const menu = page.getByRole("heading", { name: TEXT.menuHeading });
+    const launched = await page
+      .goto(`${origin}/`)
+      .then(() => menu.waitFor({ timeout: LAUNCH_MENU_WAIT_MS }))
+      .then(
+        () => true,
+        () => false,
+      );
+    if (!launched) return false;
     return (
       (await controlled(page)) &&
       (await sourceShaSeenBy(page)) === release.sourceSha &&

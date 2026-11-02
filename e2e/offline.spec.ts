@@ -226,52 +226,58 @@ test.describe("when the worker cannot be fetched", () => {
   });
 });
 
-test("a new release waits until every window is closed, then takes over and keeps the player's data", async ({
-  page,
-  context,
-}) => {
-  const server = testServer();
-  await openGame(page, server.origin);
-  await requireServiceWorkers(page);
-  await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
-  await page.close();
+test.describe("after every window of the release before is closed", () => {
+  // A launch right after the last window closes may get the page of the release before without its script (a 404 in
+  // the console); relaunchUntil closes it and launches again, as a player would (e2e/support/pwa.ts).
+  test.use({ expectedProblems: /Failed to load resource.*404/ });
 
-  const first = await relaunchUntil(context, server.origin, RELEASE_A);
-  await plantPlayerData(first);
-  const second = await context.newPage();
-  await openGame(second, server.origin);
-  // Set on the page itself: gone if anything reloads it.
-  await first.evaluate(() => {
-    document.documentElement.dataset["untouched"] = "yes";
+  test("a new release waits until every window is closed, then takes over and keeps the player's data", async ({
+    page,
+    context,
+  }) => {
+    const server = testServer();
+    await openGame(page, server.origin);
+    await requireServiceWorkers(page);
+    await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await page.close();
+
+    const first = await relaunchUntil(context, server.origin, RELEASE_A);
+    await plantPlayerData(first);
+    const second = await context.newPage();
+    await openGame(second, server.origin);
+    // Set on the page itself: gone if anything reloads it.
+    await first.evaluate(() => {
+      document.documentElement.dataset["untouched"] = "yes";
+    });
+
+    server.setRoot(RELEASE_B.dir);
+    expect(await checkForUpdate(first)).toBe("installed");
+    for (const window of [first, second]) {
+      await expect(window.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
+      expect(await sourceShaSeenBy(window)).toBe(RELEASE_A.sourceSha);
+    }
+    expect(await first.evaluate(() => document.documentElement.dataset["untouched"])).toBe("yes");
+    expect(await workerStates(first)).toEqual({ installing: false, waiting: true, active: true });
+    expect(gameCaches(await cacheNames(first))).toHaveLength(2);
+
+    // One window closed, the other still open in the background: the old release goes on, also for a new window.
+    await first.close();
+    const third = await context.newPage();
+    await openGame(third, server.origin);
+    expect(await sourceShaSeenBy(third)).toBe(RELEASE_A.sourceSha);
+    await expect(third.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
+    expect(await workerStates(third)).toEqual({ installing: false, waiting: true, active: true });
+    // The page that started just now belongs to the running release; the waiting one keeps what it has stored.
+    expect(await storedReleases(third)).toHaveLength(2);
+
+    await second.close();
+    await third.close();
+    const updated = await relaunchUntil(context, server.origin, RELEASE_B);
+    await expect(updated.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await expect(updated.getByText(OFFLINE_NOTE.updateWaiting)).toHaveCount(0);
+    await expect.poll(() => storedReleases(updated)).toHaveLength(1);
+    expect(await playerData(updated)).toEqual(PLANTED_DATA);
   });
-
-  server.setRoot(RELEASE_B.dir);
-  expect(await checkForUpdate(first)).toBe("installed");
-  for (const window of [first, second]) {
-    await expect(window.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
-    expect(await sourceShaSeenBy(window)).toBe(RELEASE_A.sourceSha);
-  }
-  expect(await first.evaluate(() => document.documentElement.dataset["untouched"])).toBe("yes");
-  expect(await workerStates(first)).toEqual({ installing: false, waiting: true, active: true });
-  expect(gameCaches(await cacheNames(first))).toHaveLength(2);
-
-  // One window closed, the other still open in the background: the old release goes on, also for a new window.
-  await first.close();
-  const third = await context.newPage();
-  await openGame(third, server.origin);
-  expect(await sourceShaSeenBy(third)).toBe(RELEASE_A.sourceSha);
-  await expect(third.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
-  expect(await workerStates(third)).toEqual({ installing: false, waiting: true, active: true });
-  // The page that started just now belongs to the running release; the waiting one keeps what it has stored.
-  expect(await storedReleases(third)).toHaveLength(2);
-
-  await second.close();
-  await third.close();
-  const updated = await relaunchUntil(context, server.origin, RELEASE_B);
-  await expect(updated.getByText(OFFLINE_NOTE.ready)).toBeVisible();
-  await expect(updated.getByText(OFFLINE_NOTE.updateWaiting)).toHaveCount(0);
-  await expect.poll(() => storedReleases(updated)).toHaveLength(1);
-  expect(await playerData(updated)).toEqual(PLANTED_DATA);
 });
 
 test("a check with nothing new on the server says the game is up to date", async ({ page, context }) => {

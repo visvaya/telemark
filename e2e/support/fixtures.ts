@@ -110,7 +110,13 @@ function watchFocusLoss(settleMs: number): void {
   document.addEventListener("pointerdown", () => {
     if (last !== null && !gone(last)) setTimeout(() => (last = document.activeElement === document.body ? null : last));
   });
-  new MutationObserver(check).observe(document, { childList: true, subtree: true, attributes: true });
+  // Only what can remove or hide an element: each check measures the focused element, which costs a layout, and
+  // attributes that change every frame (the jump picture's marks for the tests) would make a slower page.
+  new MutationObserver(check).observe(document, {
+    childList: true,
+    subtree: true,
+    attributeFilter: ["class", "style", "hidden", "open", "inert"],
+  });
 }
 
 export const test = base.extend<Fixtures & Options>({
