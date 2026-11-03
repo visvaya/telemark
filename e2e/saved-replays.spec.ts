@@ -11,7 +11,7 @@ import {
   replayRows,
 } from "./support/app";
 import { expect, test } from "./support/fixtures";
-import { jumpAndGoOnEarly, playUntilLanded } from "./support/jump";
+import { jumpAndGoOnEarly, playCleanJump } from "./support/jump";
 import { asSet, setPatternSource } from "./support/typeset-text";
 
 test("a record keeps its replay, a jump can be kept by hand, and both stay after a reload", async ({
@@ -19,8 +19,7 @@ test("a record keeps its replay, a jump can be kept by hand, and both stay after
   traits,
 }) => {
   await openJumpFromStart(page, traits);
-  const landed = (await playUntilLanded(page, traits)).at(-1);
-  expect(landed?.kind).toBe("landed");
+  const landed = await playCleanJump(page, traits);
 
   // Kept by hand once; a second time it is the same jump.
   await openJumpControls(page, traits);
@@ -33,7 +32,7 @@ test("a record keeps its replay, a jump can be kept by hand, and both stay after
   // A reload reads the replays back from the browser's store.
   await page.reload();
   await openReplays(page, traits);
-  const distance = landed?.distance ?? "";
+  const distance = landed.distance ?? "";
   await expect(replayRows(page, "Rekordy skoczni")).toHaveCount(1);
   await expect(replayRows(page, "Rekordy skoczni")).toContainText(`${distance} m`);
   await expect(replayRows(page, "Rekordy skoczni")).toContainText(/\d+,\d\sKB/);
@@ -49,7 +48,7 @@ test("a record keeps its replay, a jump can be kept by hand, and both stay after
   // Watched from here, it plays to the same landing.
   await press(replayRows(page, "Zachowane").getByRole("button", { name: "Obejrzyj" }), traits);
   await expect(announcement(page)).toHaveText(/^Powtórka skoku\./);
-  await expect(announcement(page)).toContainText(`Lądowanie: ${landed?.distance ?? ""} metra`, { timeout: 30_000 });
+  await expect(announcement(page)).toContainText(`Lądowanie: ${landed.distance ?? ""} metra`, { timeout: 30_000 });
 
   // Removed after a second press that confirms it.
   await openReplays(page, traits);
@@ -113,8 +112,7 @@ test("the replay screen keeps the last jumps and switches the clean-up on; the s
 
 test("replays go out to a file and come back from it, each once", async ({ page, traits }) => {
   await openJumpFromStart(page, traits);
-  const landed = (await playUntilLanded(page, traits)).at(-1);
-  expect(landed?.kind).toBe("landed");
+  await playCleanJump(page, traits);
   await openReplays(page, traits);
   await expect(replayRows(page, "Rekordy skoczni")).toHaveCount(1);
   // The last jumps are kept from the start: the same jump is there a second time.

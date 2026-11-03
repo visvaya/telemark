@@ -15,10 +15,11 @@ import {
   TEXT,
 } from "./support/app";
 import { expect, test } from "./support/fixtures";
-import { playUntilLanded } from "./support/jump";
+import { playCleanJump } from "./support/jump";
 import {
   cacheNames,
   checkForUpdate,
+  finishUpdateChecks,
   controlled,
   fileSeenBy,
   OFFLINE_NOTE,
@@ -127,8 +128,7 @@ test.describe("without a network", () => {
 
     await openHillList(launched, traits);
     await openJump(launched, traits);
-    const outcomes = await playUntilLanded(launched, traits);
-    expect(outcomes.at(-1)?.kind).toBe("landed");
+    await playCleanJump(launched, traits);
     await leaveJumpForHills(launched, traits);
     await expect(builtInHill(launched)).toContainText("rekord");
 
@@ -348,6 +348,7 @@ test("a release found on demand installs at once in the window that asks, and ot
     document.documentElement.dataset["untouched"] = "yes";
   });
 
+  await finishUpdateChecks(first);
   server.setRoot(RELEASE_B.dir);
   await button(first, UPDATE_CHECK.button).click();
   await expect(first.getByText(UPDATE_CHECK.found)).toBeVisible();
@@ -460,41 +461,48 @@ test("a release replaced on the server while it is being stored leaves no part o
   expect(await checkForUpdate(running)).toBe("installed");
 });
 
-test("going back to the earlier release reaches a player who has the newer one, and keeps the data", async ({
-  page,
-  context,
-  browser,
-}) => {
-  const server = testServer();
-  server.setRoot(RELEASE_B.dir);
-  await openGame(page, server.origin);
-  await requireServiceWorkers(page);
-  await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
-  await page.close();
-  const newer = await relaunchUntil(context, server.origin, RELEASE_B);
-  await plantPlayerData(newer);
+test.describe("after the host goes back to the earlier release", () => {
+  // A launch right after the newer release's last window closes may get its page without its script (a 404 in the
+  // console); relaunchUntil closes it and launches again, as a player would (e2e/support/pwa.ts).
+  test.use({ expectedProblems: /Failed to load resource.*404/ });
+  test.describe.configure({ timeout: 180_000 });
 
-  // The host serves release A again. For the player's browser that is one more update.
-  server.setRoot(RELEASE_A.dir);
-  expect(await checkForUpdate(newer)).toBe("installed");
-  await expect(newer.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
-  expect(await sourceShaSeenBy(newer)).toBe(RELEASE_B.sourceSha);
-  await newer.close();
+  test("going back to the earlier release reaches a player who has the newer one, and keeps the data", async ({
+    page,
+    context,
+    browser,
+  }) => {
+    const server = testServer();
+    server.setRoot(RELEASE_B.dir);
+    await openGame(page, server.origin);
+    await requireServiceWorkers(page);
+    await expect(page.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await page.close();
+    const newer = await relaunchUntil(context, server.origin, RELEASE_B);
+    await plantPlayerData(newer);
 
-  const back = await relaunchUntil(context, server.origin, RELEASE_A);
-  await expect(back.getByText(OFFLINE_NOTE.ready)).toBeVisible();
-  await expect.poll(() => storedReleases(back)).toHaveLength(1);
-  expect(await playerData(back)).toEqual(PLANTED_DATA);
+    // The host serves release A again. For the player's browser that is one more update.
+    server.setRoot(RELEASE_A.dir);
+    expect(await checkForUpdate(newer)).toBe("installed");
+    await expect(newer.getByText(OFFLINE_NOTE.updateWaiting)).toBeVisible();
+    expect(await sourceShaSeenBy(newer)).toBe(RELEASE_B.sourceSha);
+    await newer.close();
 
-  // A player who comes for the first time gets release A too.
-  const freshContext = await browser.newContext();
-  try {
-    const fresh = await freshContext.newPage();
-    await openGame(fresh, server.origin);
-    expect(await sourceShaSeenBy(fresh)).toBe(RELEASE_A.sourceSha);
-  } finally {
-    await freshContext.close();
-  }
+    const back = await relaunchUntil(context, server.origin, RELEASE_A);
+    await expect(back.getByText(OFFLINE_NOTE.ready)).toBeVisible();
+    await expect.poll(() => storedReleases(back)).toHaveLength(1);
+    expect(await playerData(back)).toEqual(PLANTED_DATA);
+
+    // A player who comes for the first time gets release A too.
+    const freshContext = await browser.newContext();
+    try {
+      const fresh = await freshContext.newPage();
+      await openGame(fresh, server.origin);
+      expect(await sourceShaSeenBy(fresh)).toBe(RELEASE_A.sourceSha);
+    } finally {
+      await freshContext.close();
+    }
+  });
 });
 
 test.describe("when a page of the release before is still open", () => {

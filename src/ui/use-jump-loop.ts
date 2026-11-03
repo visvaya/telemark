@@ -9,6 +9,7 @@ import type { JumpSimState } from "../sim/jump-sim";
 import { VIEW_HEIGHT_PX, drawJumpView, viewWidthFor, type Scenery } from "../render/jump-view";
 import { UI_TEXT } from "../text/ui-text";
 import { createJumpDiagnostics } from "./jump-diagnostics";
+import { jumpProbePublisher } from "./jump-probe";
 import { listenToPlayerInput, watchPointerLock, type PointerLockWatch } from "./jump-input-listeners";
 import { makePicture, pictureSize, titlePlaceFor, type TitlePlace, type JumpPicture } from "./jump-picture";
 import { REPLAY_SPEED_LABEL, type ReplaySource, type ReplayView } from "./jump-replay";
@@ -158,6 +159,7 @@ export function useJumpLoop(options: JumpLoopOptions) {
     const sounds = createJumpSounds(() => o().soundRef.current);
     const lock = watchPointerLock(canvas, input, () => o().openMenu());
     const runs = createRunSwitch(hill, o, sounds, lock.release);
+    const publishProbe = jumpProbePublisher(hill.profile.takeoffXM);
     controlsRef.current = runs.controls;
     // Another hill: nothing to watch again yet.
     o().onReplayAvailable(false);
@@ -213,6 +215,7 @@ export function useJumpLoop(options: JumpLoopOptions) {
       meter?.stepsEnd();
       const { over, clock } = current.settle();
       const { jump, newRecord, previousRecordM, ghost } = current.now();
+      publishProbe?.(jump.state);
       sounds.play(jump.state, clock, newRecord, paused || document.hidden);
       meter?.drawBegin();
       const v = { jump, newRecord, previousRecordM, ghost, over, clock, title, replay: view, ...lookOf(runs, live) };

@@ -4,13 +4,14 @@ import { expect, test } from "./support/fixtures";
 import {
   centerOf,
   finishedOutcome,
-  restartJump,
+  nearTheEdge,
+  whenReached,
   startAnnouncedAt,
   startWithMouse,
-  waitForPageTime,
   type JumpOutcome,
   type Point,
 } from "./support/jump";
+import { JUMP_TIMING } from "./support/jump-timing";
 
 type Side = "left" | "right";
 const other = (side: Side): Side => (side === "left" ? "right" : "left");
@@ -19,18 +20,7 @@ const other = (side: Side): Side => (side === "left" ? "right" : "left");
 const SIM_STEP_MS = 1000 / 70;
 /** The gate opens 65 steps (under a second) after the jump screen appears; this leaves a margin. */
 const GATE_OPEN_MS = 1500;
-/**
- * Timing of a jump played with chords, on the page's clock from the start (see support/jump.ts for the method).
- * The takeoff chord comes a little before the edge of the inrun. The landing chord follows half a second later,
- * at the very beginning of the flight: its first button prepares the landing and its second puts the telemark
- * down. Run in the simulation with many seeds and with these times shifted by up to a third of a second, every
- * such jump lands cleanly when both buttons of both chords count, and falls when the second button is lost,
- * because a landing prepared this early and never put down is held too long.
- */
-const TAKEOFF_CHORD_AFTER_START_MS = 3300;
-const LANDING_CHORD_AFTER_TAKEOFF_MS = 480;
-const CHORD_HOLD_MS = 100;
-const ATTEMPTS = 3;
+const { CHORD_HOLD_MS, LANDING_CHORD_AFTER_TAKEOFF_FRAMES } = JUMP_TIMING;
 
 interface PressProbe {
   /** Milliseconds between the last press of the left button and its release, as the page saw them. */
@@ -73,7 +63,7 @@ async function chord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord)
 }
 
 /** The chord at the gate, pressed slowly: the jump starts when the left button goes down, not before. */
-async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord): Promise<number> {
+async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst }: Chord): Promise<void> {
   if (pressFirst === "right") {
     await page.mouse.down({ button: "right" });
     await nudge(page, at, true);
@@ -89,7 +79,6 @@ async function startWithChord(page: Page, at: Point, { pressFirst, releaseFirst 
   await nudge(page, at, true);
   await page.mouse.up({ button: other(releaseFirst) });
   await nudge(page, at, false);
-  return startedAt;
 }
 
 /**
@@ -104,11 +93,14 @@ async function jumpWithChords(page: Page, keys: Chord): Promise<JumpOutcome> {
   await page.waitForTimeout(GATE_OPEN_MS);
   const middle = await centerOf(jumpCanvas(page));
   await page.mouse.move(middle.x, middle.y);
-  const startedAt = await startWithChord(page, middle, keys);
-  await waitForPageTime(page, startedAt + TAKEOFF_CHORD_AFTER_START_MS);
-  await chord(page, middle, keys);
-  await waitForPageTime(page, startedAt + TAKEOFF_CHORD_AFTER_START_MS + LANDING_CHORD_AFTER_TAKEOFF_MS);
-  await chord(page, middle, keys);
+  await startWithChord(page, middle, keys);
+  const takeoffSeen = await nearTheEdge(page);
+  if (takeoffSeen !== null) {
+    await chord(page, middle, keys);
+    if ((await whenReached(page, takeoffSeen + LANDING_CHORD_AFTER_TAKEOFF_FRAMES)) !== null) {
+      await chord(page, middle, keys);
+    }
+  }
   return finishedOutcome(page);
 }
 
@@ -122,18 +114,9 @@ for (const keys of CHORDS) {
   test(`both mouse buttons work as a chord: ${pressFirst} pressed first, ${releaseFirst} released first`, async ({
     page,
     traits,
-  }, testInfo) => {
+  }) => {
     await openJumpFromStart(page, traits);
-    const outcomes: JumpOutcome[] = [];
-    for (let attempt = 0; attempt < ATTEMPTS && outcomes.at(-1)?.kind !== "landed"; attempt++) {
-      if (attempt > 0) await restartJump(page, traits);
-      outcomes.push(await jumpWithChords(page, keys));
-    }
-    testInfo.annotations.push({
-      type: "jumps",
-      description: outcomes.map((outcome) => outcome.kind).join(", "),
-    });
-    expect(outcomes.map((outcome) => outcome.announcement).at(-1)).toMatch(/^Lądowanie: /);
+    expect((await jumpWithChords(page, keys)).announcement).toMatch(/^Lądowanie: /);
   });
 }
 

@@ -178,6 +178,10 @@ export function checkForUpdate(page: Page): Promise<"installed" | "redundant" | 
       setTimeout(() => resolve(null), 1000);
     });
     await registration.update();
+    // A check the browser is already running (its own, when the page loaded) takes this call in instead of starting
+    // another, and it may have read the server before the test changed it; on a loaded machine it can still be
+    // running. The second call starts a check of its own.
+    if (registration.installing === null) await registration.update();
     const worker = registration.installing ?? (await Promise.race([announced, quiet]));
     if (worker === null) return "none";
     return new Promise<"installed" | "redundant">((resolve) => {
@@ -187,6 +191,16 @@ export function checkForUpdate(page: Page): Promise<"installed" | "redundant" | 
       worker.addEventListener("statechange", settle);
       settle();
     });
+  });
+}
+
+/**
+ * Waits for a check for a new release that the browser is running on its own (it starts one when a page loads),
+ * so that a check the page makes after the test changes the server reads the server as it is then.
+ */
+export async function finishUpdateChecks(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await (await navigator.serviceWorker.getRegistration())?.update();
   });
 }
 
