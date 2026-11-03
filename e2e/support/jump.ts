@@ -90,9 +90,8 @@ async function probeUntil(page: Page, aim: "edge" | "frame", target: number): Pr
 /** The frame in which the jumper is close enough to the edge to take off, or null once the jump has ended. */
 export const nearTheEdge = (page: Page): Promise<number | null> => probeUntil(page, "edge", TAKEOFF_LEAD_M);
 
-/** Whether the simulation has reached `frame` before the jump ended. */
-export const reachedFrame = async (page: Page, frame: number): Promise<boolean> =>
-  (await probeUntil(page, "frame", frame)) !== null;
+/** The frame in which the test saw the simulation at `frame` or past it, or null once the jump has ended. */
+export const whenReached = (page: Page, frame: number): Promise<number | null> => probeUntil(page, "frame", frame);
 
 /** The frame the simulation is in now. */
 export const frameNow = (page: Page): Promise<number> => page.evaluate(() => window.telemarkJumpProbe?.frame ?? -1);
@@ -105,15 +104,19 @@ interface Hands {
 
 /**
  * The presses after the start, as a player who watches the jumper: both buttons as the edge comes near, then the
- * right one to prepare the landing and the left one to put the telemark down, counted in frames of the simulation
- * from the press before. Nothing more once the jump has ended.
+ * right one to prepare the landing and the left one to put the telemark down. Each is counted in frames of the
+ * simulation from the frame in which the test saw the moment of the press before, not from the end of that press:
+ * every press reaches the page about equally late, so the spaces between them hold, while the time a press takes
+ * (long in WebKit) does not add up. Nothing more once the jump has ended.
  */
 async function pressThroughJump(page: Page, hands: Hands): Promise<void> {
-  if ((await nearTheEdge(page)) === null) return;
+  const takeoffSeen = await nearTheEdge(page);
+  if (takeoffSeen === null) return;
   await hands.both();
-  if (!(await reachedFrame(page, (await frameNow(page)) + LANDING_AFTER_TAKEOFF_FRAMES))) return;
+  const landingSeen = await whenReached(page, takeoffSeen + LANDING_AFTER_TAKEOFF_FRAMES);
+  if (landingSeen === null) return;
   await hands.right();
-  if (!(await reachedFrame(page, (await frameNow(page)) + TELEMARK_AFTER_LANDING_FRAMES))) return;
+  if ((await whenReached(page, landingSeen + TELEMARK_AFTER_LANDING_FRAMES)) === null) return;
   await hands.left();
 }
 
@@ -158,12 +161,11 @@ async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
   await startWithMouse(page);
   await options.afterStart?.();
   await pressThroughJump(page, {
+    // Sent together, so that a slow round trip of the test runner (WebKit) does not hold the buttons longer.
     both: async () => {
-      await page.mouse.down({ button: "left" });
-      await page.mouse.down({ button: "right" });
+      await Promise.all([page.mouse.down({ button: "left" }), page.mouse.down({ button: "right" })]);
       await page.waitForTimeout(PRESS_HOLD_MS);
-      await page.mouse.up({ button: "right" });
-      await page.mouse.up({ button: "left" });
+      await Promise.all([page.mouse.up({ button: "right" }), page.mouse.up({ button: "left" })]);
     },
     right: () => clickMouse(page, "right"),
     left: () => clickMouse(page, "left"),

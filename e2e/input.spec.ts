@@ -4,9 +4,8 @@ import { expect, test } from "./support/fixtures";
 import {
   centerOf,
   finishedOutcome,
-  frameNow,
   nearTheEdge,
-  reachedFrame,
+  whenReached,
   startAnnouncedAt,
   startWithMouse,
   type JumpOutcome,
@@ -95,9 +94,10 @@ async function jumpWithChords(page: Page, keys: Chord): Promise<JumpOutcome> {
   const middle = await centerOf(jumpCanvas(page));
   await page.mouse.move(middle.x, middle.y);
   await startWithChord(page, middle, keys);
-  if ((await nearTheEdge(page)) !== null) {
+  const takeoffSeen = await nearTheEdge(page);
+  if (takeoffSeen !== null) {
     await chord(page, middle, keys);
-    if (await reachedFrame(page, (await frameNow(page)) + LANDING_CHORD_AFTER_TAKEOFF_FRAMES)) {
+    if ((await whenReached(page, takeoffSeen + LANDING_CHORD_AFTER_TAKEOFF_FRAMES)) !== null) {
       await chord(page, middle, keys);
     }
   }

@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { button, openJumpFromStart, TEXT } from "./support/app";
 import { expect, test } from "./support/fixtures";
-import { centerOf, frameNow, nearTheEdge, reachedFrame, startWithTouch, type Point } from "./support/jump";
+import { centerOf, nearTheEdge, startWithTouch, whenReached, type Point } from "./support/jump";
 
 /** Frames after the takeoff taps by which the jumper is surely in the air. */
 const IN_FLIGHT_FRAMES = 20;
@@ -30,12 +30,13 @@ test("a finger dragged on the left zone leans the jumper in flight, down one way
 }) => {
   await openJumpFromStart(page, traits);
   await startWithTouch(page, await centerOf(button(page, TEXT.leftPad)));
-  expect(await nearTheEdge(page), "the jumper reaches the edge").not.toBeNull();
+  const takeoffSeen = await nearTheEdge(page);
+  expect(takeoffSeen, "the jumper reaches the edge").not.toBeNull();
   const left = await centerOf(button(page, TEXT.leftPad));
   const right = await centerOf(button(page, TEXT.rightPad));
   await page.touchscreen.tap(left.x, left.y);
   await page.touchscreen.tap(right.x, right.y);
-  expect(await reachedFrame(page, (await frameNow(page)) + IN_FLIGHT_FRAMES), "the jumper flies").toBe(true);
+  expect(await whenReached(page, (takeoffSeen ?? 0) + IN_FLIGHT_FRAMES), "the jumper flies").not.toBeNull();
 
   const devtools = await page.context().newCDPSession(page);
   const drag = async (from: Point, byPx: number) => {
