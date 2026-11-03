@@ -7,21 +7,28 @@
  * simulation for one animation frame), so the jumper falls behind the clock and a press by time comes early.
  *
  * The values sit inside windows measured by running the built-in hill in the simulation with 12 seeds
- * (2026-11-03): both buttons pressed 4.5 m before the edge of the takeoff, or up to 35 frames (half a second) after
- * that, take off cleanly, held for a moment as a mouse holds them or tapped one after the other as on a touch
- * screen (a tap counts for one frame); a press of the right button between 14 and 101 frames after the takeoff
- * prepares the landing, and the left button up to 28 frames after it puts the telemark down at once, which makes
- * the landing clean wherever in the flight it happens. Earlier than about 5 m a tap starts the takeoff so soon
- * that the jumper leaves the inrun before the edge.
+ * (2026-11-03): both buttons pressed 4.5 m before the edge of the takeoff, or up to 35 frames (half a second)
+ * after that, take off cleanly, held for a moment as a mouse holds them or tapped one after the other as on a touch
+ * screen (a tap counts for one frame); from about 5 m on, a tap starts the takeoff so soon that the jumper leaves
+ * the inrun before the edge. In WebKit a mouse press of the test reaches the page about 22 frames after the test
+ * sees its moment and holds the buttons for about 48 frames (measured from the page's events), so there the mouse
+ * aims 7 m before the edge; 7 m with a quick press, in Chromium, fell short. A press of the right button between 14 and 101 frames
+ * after the takeoff prepares the landing, and the left button up to 28 frames after it puts the telemark down at
+ * once, which makes the landing clean wherever in the flight it happens.
  */
 export const JUMP_TIMING = {
   TAKEOFF_LEAD_M: 4.5,
+  /** Where the mouse aims in WebKit, whose presses arrive late. */
+  SLOW_INPUT_TAKEOFF_LEAD_M: 7,
   LANDING_AFTER_TAKEOFF_FRAMES: 41,
+  /** The least frames between the release of the takeoff and the landing press: the flight must be free. */
+  FRAMES_AFTER_RELEASE: 3,
   TELEMARK_AFTER_LANDING_FRAMES: 7,
   /** How long each scripted press holds its button down. */
   PRESS_HOLD_MS: 60,
   /**
-   * A jump played with chords, both buttons at once (e2e/input.spec.ts): the takeoff chord at the same place, the
+   * A jump played with chords, both buttons at once (e2e/input.spec.ts): the takeoff chord where the mouse takes
+   * off, the
    * landing chord this many frames after it, at the very beginning of the flight. Its first button prepares the
    * landing and its second puts the telemark down: the jump lands clean when both buttons of both chords count,
    * and falls when the second button of the landing chord is lost, because a landing prepared this early and never
