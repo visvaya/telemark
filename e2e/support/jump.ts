@@ -7,7 +7,14 @@ const STARTED = "Skok rozpoczęty.";
 /** The last sentence of the announcement made once the jumper has stopped: in a competition the press goes on. */
 const RESULT = /(jeszcze raz|dalej)\.$/;
 
-const { TAKEOFF_LEAD_M, LANDING_AFTER_TAKEOFF_FRAMES, TELEMARK_AFTER_LANDING_FRAMES, PRESS_HOLD_MS } = JUMP_TIMING;
+const {
+  TAKEOFF_LEAD_M,
+  SLOW_INPUT_TAKEOFF_LEAD_M,
+  LANDING_AFTER_TAKEOFF_FRAMES,
+  TELEMARK_AFTER_LANDING_FRAMES,
+  FRAMES_AFTER_RELEASE,
+  PRESS_HOLD_MS,
+} = JUMP_TIMING;
 /** A tap on the left zone starts the jump only once the gate opens, about a second in; until then it is repeated. */
 const START_TAP_WAIT_MS = 200;
 const START_TAP_LIMIT = 60;
@@ -87,8 +94,13 @@ async function probeUntil(page: Page, aim: "edge" | "frame", target: number): Pr
   return reached === false ? null : reached.frame;
 }
 
-/** The frame in which the jumper is close enough to the edge to take off, or null once the jump has ended. */
-export const nearTheEdge = (page: Page): Promise<number | null> => probeUntil(page, "edge", TAKEOFF_LEAD_M);
+/** The frame in which the jumper is `leadM` or less before the edge, or null once the jump has ended. */
+export const nearTheEdge = (page: Page, leadM: number = TAKEOFF_LEAD_M): Promise<number | null> =>
+  probeUntil(page, "edge", leadM);
+
+/** Where the mouse takes off: earlier in WebKit, where a press of the test reaches the page late. */
+export const mouseTakeoffLeadM = (page: Page): number =>
+  page.context().browser()?.browserType().name() === "webkit" ? SLOW_INPUT_TAKEOFF_LEAD_M : TAKEOFF_LEAD_M;
 
 /** The frame in which the test saw the simulation at `frame` or past it, or null once the jump has ended. */
 export const whenReached = (page: Page, frame: number): Promise<number | null> => probeUntil(page, "frame", frame);
@@ -97,6 +109,8 @@ export const whenReached = (page: Page, frame: number): Promise<number | null> =
 export const frameNow = (page: Page): Promise<number> => page.evaluate(() => window.telemarkJumpProbe?.frame ?? -1);
 
 interface Hands {
+  /** How far before the edge the takeoff is pressed. */
+  leadM: number;
   both: () => Promise<void>;
   right: () => Promise<void>;
   left: () => Promise<void>;
@@ -110,12 +124,18 @@ interface Hands {
  * (long in WebKit) does not add up. Nothing more once the jump has ended.
  */
 async function pressThroughJump(page: Page, hands: Hands): Promise<void> {
-  const takeoffSeen = await nearTheEdge(page);
+  const takeoffSeen = await nearTheEdge(page, hands.leadM);
   if (takeoffSeen === null) return;
   await hands.both();
-  const landingSeen = await whenReached(page, takeoffSeen + LANDING_AFTER_TAKEOFF_FRAMES);
+  // The game takes the landing only in free flight, once both buttons are up: never sooner than a few frames after
+  // the release has arrived, however long the press took.
+  const released = await frameNow(page);
+  const landingAt = Math.max(takeoffSeen + LANDING_AFTER_TAKEOFF_FRAMES, released + FRAMES_AFTER_RELEASE);
+  const landingSeen = await whenReached(page, landingAt);
   if (landingSeen === null) return;
   await hands.right();
+  // Not held back by a slow release of the right button: the left one pressed while the right is still down lands
+  // on two legs, which is clean too.
   if ((await whenReached(page, landingSeen + TELEMARK_AFTER_LANDING_FRAMES)) === null) return;
   await hands.left();
 }
@@ -161,6 +181,7 @@ async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
   await startWithMouse(page);
   await options.afterStart?.();
   await pressThroughJump(page, {
+    leadM: mouseTakeoffLeadM(page),
     // Sent together, so that a slow round trip of the test runner (WebKit) does not hold the buttons longer.
     both: async () => {
       await Promise.all([page.mouse.down({ button: "left" }), page.mouse.down({ button: "right" })]);
@@ -194,6 +215,7 @@ async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
   const right = await centerOf(button(page, TEXT.rightPad));
   const tap = (at: Point) => page.touchscreen.tap(at.x, at.y);
   await pressThroughJump(page, {
+    leadM: TAKEOFF_LEAD_M,
     both: async () => {
       await tap(left);
       await tap(right);
