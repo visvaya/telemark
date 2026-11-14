@@ -82,8 +82,9 @@ function landsClean(hill: HillChoice, seed: number, late: Lateness, hand: keyof 
       released + JUMP_TIMING.FRAMES_AFTER_RELEASE,
     );
     const landingAt = landingSeen + late.landing;
+    // The telemark is sent only after the landing press has ended, so it never comes before it.
     const telemarkAt = telemarkApart
-      ? landingSeen + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES + late.telemark
+      ? Math.max(landingSeen + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES, landingAt) + late.telemark
       : landingAt;
     const held = (from: number) => takeoffSeen >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
     jump = stepTrainingJump(jump, {
