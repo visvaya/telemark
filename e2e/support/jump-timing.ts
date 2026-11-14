@@ -19,10 +19,12 @@ export const JUMP_TIMING = {
   TAKEOFF_LEAD_M: 4.5,
   LANDING_AFTER_TAKEOFF_FRAMES: 41,
   /**
-   * The least frames between the end of the takeoff press and the landing: the game takes a landing only once both
-   * buttons are up, and a slow press (WebKit) can still hold them when the landing is due.
+   * The least frames between the end of the takeoff press and the landing: a takeoff press that arrived late, or a
+   * slow one that still holds the buttons (WebKit), would otherwise be followed by the landing too soon. A narrow
+   * margin (2026-11-14, src/game/scripted-jump-timing.test.ts): with 8 a takeoff 35 frames late lands too soon after
+   * it, with 12 the slow mouse lands too late.
    */
-  FRAMES_AFTER_RELEASE: 3,
+  FRAMES_AFTER_RELEASE: 10,
   TELEMARK_AFTER_LANDING_FRAMES: 7,
   /** How long each scripted press holds its button down. */
   PRESS_HOLD_MS: 60,

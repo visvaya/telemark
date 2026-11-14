@@ -66,21 +66,26 @@ const HANDS = {
 function landsClean(hill: HillChoice, seed: number, late: Lateness, hand: keyof typeof HANDS): boolean {
   const { holdFrames, rightAfterLeftFrames, telemarkApart } = HANDS[hand];
   let jump = startTrainingJump(hill, seed);
-  let takeoffAt = -1;
+  // The frame in which the test sees the moment of the takeoff; the press reaches the page `late.takeoff` later.
+  let takeoffSeen = -1;
   for (let f = 0; f < FRAME_LIMIT && !isJumpOver(jump); f++) {
     const { logic, jumper } = jump.state;
-    if (takeoffAt < 0 && hill.profile.takeoffXM - jumper.xM <= JUMP_TIMING.TAKEOFF_LEAD_M) {
-      takeoffAt = logic.frame + late.takeoff;
+    if (takeoffSeen < 0 && hill.profile.takeoffXM - jumper.xM <= JUMP_TIMING.TAKEOFF_LEAD_M) {
+      takeoffSeen = logic.frame;
     }
-    // The test presses for the landing only once the takeoff press has ended, as e2e/support/jump.ts does.
+    const takeoffAt = takeoffSeen + late.takeoff;
+    // As e2e/support/jump.ts does: the landing is aimed from the frame the takeoff was seen in, but never sooner than
+    // a few frames after the takeoff press has ended, and the telemark from the frame the landing was aimed at.
     const released = takeoffAt + rightAfterLeftFrames + holdFrames;
-    const landingAt =
-      Math.max(takeoffAt + JUMP_TIMING.LANDING_AFTER_TAKEOFF_FRAMES, released + JUMP_TIMING.FRAMES_AFTER_RELEASE) +
-      late.landing;
+    const landingSeen = Math.max(
+      takeoffSeen + JUMP_TIMING.LANDING_AFTER_TAKEOFF_FRAMES,
+      released + JUMP_TIMING.FRAMES_AFTER_RELEASE,
+    );
+    const landingAt = landingSeen + late.landing;
     const telemarkAt = telemarkApart
-      ? landingAt + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES + late.telemark
+      ? landingSeen + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES + late.telemark
       : landingAt;
-    const held = (from: number) => takeoffAt >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
+    const held = (from: number) => takeoffSeen >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
     jump = stepTrainingJump(jump, {
       left: logic.phase === PHASE.gate || held(takeoffAt) || held(telemarkAt),
       right: held(takeoffAt + rightAfterLeftFrames) || held(landingAt),
