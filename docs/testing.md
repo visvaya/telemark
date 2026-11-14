@@ -205,10 +205,14 @@ machine the game drops time it cannot keep up with, and the jumper falls behind 
 (`navigator.webdriver`) the jump screen puts the state of each frame on `window.telemarkJumpProbe`
 (`src/ui/jump-probe.ts`: the frame of the simulation, how far ahead the edge of the takeoff is, the lean of the
 body); a player's browser gets nothing. The test takes off when the jumper is close enough to the edge and counts
-the landing and the telemark in frames of the simulation from the press before (described in
+the landing and the telemark in frames of the simulation from the press before, the landing never sooner than a
+few frames after the takeoff press has ended. The mouse lands with a chord, both buttons at once: pressed apart, the
+left button came up to 38 frames after the right one in WebKit, whose every step of the mouse takes 130 to 250 ms,
+and the jumper fell. A touch screen taps the right zone and then the left one. The timing is described in
 `e2e/support/jump-timing.ts`; the test `src/game/scripted-jump-timing.test.ts` checks, with a mouse that holds the
-buttons and with taps that count for one frame, that they give a clean landing with every press up to half a
-second late). A fall therefore fails the test: the page lost or misread a press.
+buttons, with the slow mouse measured in WebKit and with taps that count for one frame, that they give a clean
+landing with every press up to half a second late (the slow mouse: up to the 22 frames measured). A fall therefore
+fails the test: the page lost or misread a press.
 
 The regression scenarios of the simulation are in `src/sim/test-support/regression-scenarios.ts`; the Vitest test
 and the test page use them. The page is built by the project's Vite before the tests (`e2e/sim-harness.setup.ts`)
