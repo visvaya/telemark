@@ -41,6 +41,8 @@ come as time allows.
   `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`; description up to 72 characters). The pull
   request is merged by squash, and the title becomes the commit.
 - Say what changed and why, what you checked and what you did not.
+- CodeRabbit comments on each pull request, with the project's rules from `.coderabbit.yaml`. Its comments are
+  suggestions: answer or resolve them, the maintainer decides.
 - Only the maintainer merges. A merge into `master` publishes the game, so a pull request from a fork waits for the
   maintainer's review, and its workflows for the maintainer's approval on a first contribution.
 
