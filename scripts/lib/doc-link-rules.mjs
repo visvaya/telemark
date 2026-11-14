@@ -13,9 +13,10 @@ import { posix } from "node:path";
 const LINK = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()\\]|\\.)*\)))?\)/g;
 /**
  * A code span: a run of backticks up to the next run of the same length. A link written inside one is an example,
- * not a link. Backticks without such a closing run are text.
+ * not a link. Backticks without such a closing run are text, and so is a backtick after an odd number of
+ * backslashes, which escape it.
  */
-const CODE_SPAN = /(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)/g;
+const CODE_SPAN = /(?<!(?<!\\)\\(?:\\\\)*)(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)/g;
 /** A backticked token without white space. */
 const BACKTICKED = /`([^`\s]+)`/g;
 /** A scheme (https:, mailto:) marks an address, not a file of the repository. */

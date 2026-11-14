@@ -87,6 +87,11 @@ test("backticks without a closing run of the same length are text, and a link af
   assert.deepEqual(check("README.md", "` note [x](missing.md) ``"), ["README.md:1: link `missing.md` does not exist"]);
 });
 
+test("an escaped backtick opens no code span, a backtick after an escaped backslash does", () => {
+  assert.deepEqual(check("README.md", "\\` [x](missing.md) \\`"), ["README.md:1: link `missing.md` does not exist"]);
+  assert.deepEqual(check("README.md", "\\\\`[x](missing.md)`"), []);
+});
+
 test("problems of several documents keep their order", () => {
   const docs = [
     { file: "README.md", text: "`src/a.ts`" },
