@@ -205,10 +205,14 @@ machine the game drops time it cannot keep up with, and the jumper falls behind 
 (`navigator.webdriver`) the jump screen puts the state of each frame on `window.telemarkJumpProbe`
 (`src/ui/jump-probe.ts`: the frame of the simulation, how far ahead the edge of the takeoff is, the lean of the
 body); a player's browser gets nothing. The test takes off when the jumper is close enough to the edge and counts
-the landing and the telemark in frames of the simulation from the press before (described in
+the landing and the telemark in frames of the simulation from the press before, the landing never sooner than a
+few frames after the takeoff press has ended. The mouse lands with a chord, both buttons at once: pressed apart, the
+left button came up to 38 frames after the right one in WebKit, whose every step of the mouse takes 130 to 250 ms,
+and the jumper fell. A touch screen taps the right zone and then the left one. The timing is described in
 `e2e/support/jump-timing.ts`; the test `src/game/scripted-jump-timing.test.ts` checks, with a mouse that holds the
-buttons and with taps that count for one frame, that they give a clean landing with every press up to half a
-second late). A fall therefore fails the test: the page lost or misread a press.
+buttons, with the slow mouse measured in WebKit and with taps that count for one frame, that they give a clean
+landing with every press up to half a second late (the slow mouse: up to the 22 frames measured). A fall therefore
+fails the test: the page lost or misread a press.
 
 The regression scenarios of the simulation are in `src/sim/test-support/regression-scenarios.ts`; the Vitest test
 and the test page use them. The page is built by the project's Vite before the tests (`e2e/sim-harness.setup.ts`)
@@ -245,6 +249,15 @@ measurement mode: `playwright-report-perf/` and `test-results-perf/`). CI stores
 `playwright-report-<zestaw>-<silnik>-<część>` (e.g. `playwright-report-browser-webkit-2`,
 `playwright-report-perf-chromium-1`; 7 days) when the tests failed, and also when a test passed only on a retry:
 the run is then green, and the trace of the failed attempt is the only record of the cause.
+
+The picture at the top of the README is taken by `e2e/readme-screenshot.shot.ts`, which runs only with the variable
+`BROWSER_TESTS_SCREENSHOTS` set: it plays a jump on the built-in hill at dusk in snowfall and writes the jump
+picture in flight to `docs/screenshot.png`. It is not a test and nothing in CI runs it; it is refreshed by hand when
+a visible change makes the old picture misleading. The wind is drawn at random, so two runs differ in details.
+
+```sh
+pnpm exec cross-env BROWSER_TESTS_SCREENSHOTS=1 BROWSER_TESTS_EDGE=1 playwright test   # in Microsoft Edge
+```
 
 Emulation is not a device: the phone and tablet profiles set the window size, the pixel density, touch and the
 browser header, but the engine stays a desktop one. No engine in the tests installs the page on the home screen,

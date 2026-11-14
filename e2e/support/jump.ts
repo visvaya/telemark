@@ -7,7 +7,13 @@ const STARTED = "Skok rozpoczęty.";
 /** The last sentence of the announcement made once the jumper has stopped: in a competition the press goes on. */
 const RESULT = /(jeszcze raz|dalej)\.$/;
 
-const { TAKEOFF_LEAD_M, LANDING_AFTER_TAKEOFF_FRAMES, TELEMARK_AFTER_LANDING_FRAMES, PRESS_HOLD_MS } = JUMP_TIMING;
+const {
+  TAKEOFF_LEAD_M,
+  LANDING_AFTER_TAKEOFF_FRAMES,
+  FRAMES_AFTER_RELEASE,
+  TELEMARK_AFTER_LANDING_FRAMES,
+  PRESS_HOLD_MS,
+} = JUMP_TIMING;
 /** A tap on the left zone starts the jump only once the gate opens, about a second in; until then it is repeated. */
 const START_TAP_WAIT_MS = 200;
 const START_TAP_LIMIT = 60;
@@ -97,27 +103,31 @@ export const whenReached = (page: Page, frame: number): Promise<number | null> =
 export const frameNow = (page: Page): Promise<number> => page.evaluate(() => window.telemarkJumpProbe?.frame ?? -1);
 
 interface Hands {
-  both: () => Promise<void>;
-  right: () => Promise<void>;
-  left: () => Promise<void>;
+  takeoff: () => Promise<void>;
+  /** Prepares the landing; when there is no `telemark`, it also puts the telemark down. */
+  landing: () => Promise<void>;
+  telemark?: () => Promise<void>;
 }
 
 /**
  * The presses after the start, as a player who watches the jumper: both buttons as the edge comes near, then the
- * right one to prepare the landing and the left one to put the telemark down. Each is counted in frames of the
- * simulation from the frame in which the test saw the moment of the press before, not from the end of that press:
- * every press reaches the page about equally late, so the spaces between them hold, while the time a press takes
- * (long in WebKit) does not add up. Nothing more once the jump has ended.
+ * landing, and the telemark when the hand presses it apart. The landing is counted in frames of the simulation from
+ * the frame in which the test saw the moment of the takeoff, and the telemark from the frame in which it saw the
+ * moment of the landing. The wait for the next moment starts only once a press has ended, so a slow press (WebKit
+ * takes 130 to 250 ms for each step of the mouse) makes the next one late. Nothing more once the jump has ended.
  */
 async function pressThroughJump(page: Page, hands: Hands): Promise<void> {
   const takeoffSeen = await nearTheEdge(page);
   if (takeoffSeen === null) return;
-  await hands.both();
-  const landingSeen = await whenReached(page, takeoffSeen + LANDING_AFTER_TAKEOFF_FRAMES);
+  await hands.takeoff();
+  const released = await frameNow(page);
+  const landingAt = Math.max(takeoffSeen + LANDING_AFTER_TAKEOFF_FRAMES, released + FRAMES_AFTER_RELEASE);
+  const landingSeen = await whenReached(page, landingAt);
   if (landingSeen === null) return;
-  await hands.right();
+  await hands.landing();
+  if (hands.telemark === undefined) return;
   if ((await whenReached(page, landingSeen + TELEMARK_AFTER_LANDING_FRAMES)) === null) return;
-  await hands.left();
+  await hands.telemark();
 }
 
 /** Waits on the page's clock, checked every animation frame, so the delay of the test runner does not add up. */
@@ -157,19 +167,25 @@ export async function startWithMouse(page: Page): Promise<number> {
   return startedAt;
 }
 
+/**
+ * Both buttons as one chord, the right one first. Sent together, so that a slow round trip of the test runner
+ * (WebKit) neither holds the buttons longer nor puts frames between them.
+ */
+async function mouseChord(page: Page): Promise<void> {
+  await Promise.all([page.mouse.down({ button: "right" }), page.mouse.down({ button: "left" })]);
+  await page.waitForTimeout(PRESS_HOLD_MS);
+  await Promise.all([page.mouse.up({ button: "right" }), page.mouse.up({ button: "left" })]);
+}
+
+/**
+ * The mouse lands with a chord: its right button prepares the landing and its left one puts the telemark down at
+ * once. Pressed apart, the left button came 27 to 38 frames after the right one in WebKit on the runner, past the
+ * window of 28 frames, and the jumper fell.
+ */
 async function driveWithMouse(page: Page, options: JumpOptions): Promise<void> {
   await startWithMouse(page);
   await options.afterStart?.();
-  await pressThroughJump(page, {
-    // Sent together, so that a slow round trip of the test runner (WebKit) does not hold the buttons longer.
-    both: async () => {
-      await Promise.all([page.mouse.down({ button: "left" }), page.mouse.down({ button: "right" })]);
-      await page.waitForTimeout(PRESS_HOLD_MS);
-      await Promise.all([page.mouse.up({ button: "right" }), page.mouse.up({ button: "left" })]);
-    },
-    right: () => clickMouse(page, "right"),
-    left: () => clickMouse(page, "left"),
-  });
+  await pressThroughJump(page, { takeoff: () => mouseChord(page), landing: () => mouseChord(page) });
 }
 
 /** Taps the left zone until the jumper leaves the gate. */
@@ -194,12 +210,12 @@ async function driveWithTouch(page: Page, options: JumpOptions): Promise<void> {
   const right = await centerOf(button(page, TEXT.rightPad));
   const tap = (at: Point) => page.touchscreen.tap(at.x, at.y);
   await pressThroughJump(page, {
-    both: async () => {
+    takeoff: async () => {
       await tap(left);
       await tap(right);
     },
-    right: () => tap(right),
-    left: () => tap(left),
+    landing: () => tap(right),
+    telemark: () => tap(left),
   });
 }
 

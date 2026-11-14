@@ -18,6 +18,9 @@ import { defineConfig, devices, type PlaywrightTestProject as Project } from "@p
  * then runs the measurements in e2e/perf (`*.perf.ts`), one test at a time: they time the game, and a test
  * running beside them would be measured too. They have a report and a results directory of their own, so a run
  * of them leaves the traces of the ordinary run alone. Without the variable those files are not run at all.
+ *
+ * With BROWSER_TESTS_SCREENSHOTS set only `screenshots-chromium` runs: it plays a jump and writes the picture of
+ * the README (`*.shot.ts`, described in docs/testing.md). Without the variable those files are not run either.
  */
 const PORT = 4317;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -26,6 +29,7 @@ const SERVE = `node scripts/serve-dist.mjs --port ${PORT}`;
 const inCi = Boolean(process.env["CI"]);
 const localEdge = Boolean(process.env["BROWSER_TESTS_EDGE"]);
 const measuring = Boolean(process.env["BROWSER_TESTS_PERF"]);
+const screenshots = Boolean(process.env["BROWSER_TESTS_SCREENSHOTS"]);
 const ENGINES = ["chromium", "firefox", "webkit"] as const;
 const engine = process.env["BROWSER_TESTS_ENGINE"] ?? "";
 if (engine !== "" && !ENGINES.some((known) => known === engine)) {
@@ -98,6 +102,17 @@ const measuringProjects: Project[] = [
   },
 ];
 
+/** The pictures of the README: the jump picture alone, so the system's fonts do not change it. */
+const screenshotProjects: Project[] = [
+  {
+    name: "screenshots-chromium",
+    testMatch: "**/*.shot.ts",
+    use: { ...devices["Desktop Chrome"], viewport: DESKTOP_VIEWPORT, ...chromiumChannel },
+  },
+];
+
+const chosenProjects = measuring ? measuringProjects : screenshots ? screenshotProjects : functionalProjects;
+
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/*.spec.ts",
@@ -124,7 +139,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: measuring ? measuringProjects : functionalProjects,
+  projects: chosenProjects,
   // The tests run against the production build. CI has built it in an earlier step and serves exactly the files
   // it has just checked; the local mode builds first, so a stale dist/ is never tested.
   webServer: {

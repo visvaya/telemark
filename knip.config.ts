@@ -26,6 +26,8 @@ const config: KnipConfig = {
     "e2e/**/*.spec.ts",
     // The measurements, run only by `pnpm test:browser:perf`.
     "e2e/**/*.perf.ts",
+    // The README picture, taken only with BROWSER_TESTS_SCREENSHOTS set (playwright.config.ts).
+    "e2e/**/*.shot.ts",
     "e2e/**/*.setup.ts",
     "e2e/sim-harness/entry.ts",
   ],
