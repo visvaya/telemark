@@ -66,6 +66,10 @@ test("a link with a title is still checked", () => {
     "README.md:2: link `docs/gone.md` does not exist",
     "README.md:2: link `docs/gone.md` does not exist",
   ]);
+  assert.deepEqual(check("README.md", String.raw`[x](docs/gone.md "say \"hi\"") [y](docs/gone.md (a \) b))`), [
+    "README.md:1: link `docs/gone.md` does not exist",
+    "README.md:1: link `docs/gone.md` does not exist",
+  ]);
 });
 
 test("a link to a directory may end with a slash", () => {
@@ -76,6 +80,11 @@ test("a link to a directory may end with a slash", () => {
 test("a link written inside inline code is an example, not a link", () => {
   assert.deepEqual(check("README.md", "Write `[x](missing.md)` for a link."), []);
   assert.deepEqual(check("README.md", "[x]`a`(missing.md)"), []);
+  assert.deepEqual(check("README.md", "``a ` [x](missing.md)``"), []);
+});
+
+test("backticks without a closing run of the same length are text, and a link after them is checked", () => {
+  assert.deepEqual(check("README.md", "` note [x](missing.md) ``"), ["README.md:1: link `missing.md` does not exist"]);
 });
 
 test("problems of several documents keep their order", () => {

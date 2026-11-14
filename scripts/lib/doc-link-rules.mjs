@@ -6,10 +6,16 @@
 // string "file:line: message".
 import { posix } from "node:path";
 
-/** An inline Markdown link or image, [text](target) or ![alt](target), with an optional title after the target. */
-const LINK = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g;
-/** A code span: a link written inside one is an example, not a link. */
-const CODE_SPAN = /`[^`]*`/g;
+/**
+ * An inline Markdown link or image, [text](target) or ![alt](target), with an optional title after the target in
+ * double quotes, single quotes or parentheses, where a backslash escapes the closing character.
+ */
+const LINK = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^()\\]|\\.)*\)))?\)/g;
+/**
+ * A code span: a run of backticks up to the next run of the same length. A link written inside one is an example,
+ * not a link. Backticks without such a closing run are text.
+ */
+const CODE_SPAN = /(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)/g;
 /** A backticked token without white space. */
 const BACKTICKED = /`([^`\s]+)`/g;
 /** A scheme (https:, mailto:) marks an address, not a file of the repository. */
