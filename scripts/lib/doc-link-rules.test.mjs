@@ -54,6 +54,44 @@ test("fenced code blocks are skipped", () => {
   assert.deepEqual(check("README.md", text), []);
 });
 
+test("a fence closes only on a fence of the same character at least as long as the opening one", () => {
+  const text = ["````md", "```", "[x](gone.md)", "~~~", "```", "````", "[y](gone.md)"].join("\n");
+  assert.deepEqual(check("README.md", text), ["README.md:7: link `gone.md` does not exist"]);
+});
+
+test("a link with a title is still checked", () => {
+  const text = ['[a](docs/testing.md "T") [b](docs/gone.md "T")', "[c](docs/gone.md 'T') [d](docs/gone.md (T))"];
+  assert.deepEqual(check("README.md", text.join("\n")), [
+    "README.md:1: link `docs/gone.md` does not exist",
+    "README.md:2: link `docs/gone.md` does not exist",
+    "README.md:2: link `docs/gone.md` does not exist",
+  ]);
+  assert.deepEqual(check("README.md", String.raw`[x](docs/gone.md "say \"hi\"") [y](docs/gone.md (a \) b))`), [
+    "README.md:1: link `docs/gone.md` does not exist",
+    "README.md:1: link `docs/gone.md` does not exist",
+  ]);
+});
+
+test("a link to a directory may end with a slash", () => {
+  assert.deepEqual(check("README.md", "[sim](src/sim/) and [tests](./e2e/)"), []);
+  assert.deepEqual(check("README.md", "[scripts](scripts/)"), ["README.md:1: link `scripts/` does not exist"]);
+});
+
+test("a link written inside inline code is an example, not a link", () => {
+  assert.deepEqual(check("README.md", "Write `[x](missing.md)` for a link."), []);
+  assert.deepEqual(check("README.md", "[x]`a`(missing.md)"), []);
+  assert.deepEqual(check("README.md", "``a ` [x](missing.md)``"), []);
+});
+
+test("backticks without a closing run of the same length are text, and a link after them is checked", () => {
+  assert.deepEqual(check("README.md", "` note [x](missing.md) ``"), ["README.md:1: link `missing.md` does not exist"]);
+});
+
+test("an escaped backtick opens no code span, a backtick after an escaped backslash does", () => {
+  assert.deepEqual(check("README.md", "\\` [x](missing.md) \\`"), ["README.md:1: link `missing.md` does not exist"]);
+  assert.deepEqual(check("README.md", "\\\\`[x](missing.md)`"), []);
+});
+
 test("problems of several documents keep their order", () => {
   const docs = [
     { file: "README.md", text: "`src/a.ts`" },
