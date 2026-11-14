@@ -21,5 +21,9 @@ pmOnFail: ignore
 # typed-rest-client 2.3.1, which Stryker pulls in, pins qs to exactly 6.15.1, affected by
 # GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g and GHSA-6pq8-jhm2-2vcw.
 # 6.16.1 is the first release without any of them. Remove once typed-rest-client allows it.
+# @stryker-mutator/core 10.1.1 asks for minimatch ~10.2.4, affected by GHSA-g3hv-75wg-m249; the fix is only in
+# 11.0.1 and later. Stryker calls minimatch(), new Minimatch(), hasMagic(), negate and match(), which 11.0 keeps.
+# Remove once Stryker allows minimatch 11.
 overrides:
   typed-rest-client>qs: 6.16.1
+  "@stryker-mutator/core>minimatch": 11.0.8
