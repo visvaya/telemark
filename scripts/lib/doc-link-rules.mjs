@@ -43,10 +43,11 @@ const closesFence = (opening, fence, rest) =>
 function proseLines(text) {
   let opening = null;
   return text.split("\n").flatMap((content, index) => {
-    const [, fence, rest = ""] = FENCE.exec(content) ?? [];
-    if (opening === null && fence === undefined) return [{ line: index + 1, content }];
+    const match = FENCE.exec(content);
+    if (match === null) return opening === null ? [{ line: index + 1, content }] : [];
+    const [, fence, rest] = match;
     if (opening === null) opening = fence;
-    else if (fence !== undefined && closesFence(opening, fence, rest)) opening = null;
+    else if (closesFence(opening, fence, rest)) opening = null;
     return [];
   });
 }
