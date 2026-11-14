@@ -4,13 +4,14 @@ A ski jumping game for the browser. Its jump physics is a faithful port of Delux
 reconstructed from an analysis of the original executable and checked against the original game frame by frame.
 Graphics, interface and sound are new, made in the style of the original.
 
-![A jumper in flight over the built-in practice hill in snowfall](docs/screenshot.png)
+![A jumper in flight over the built-in practice hill at dusk, in snowfall](docs/screenshot.png)
 
 Telemark is a working title.
 
 ## Status
 
-As of 2026-10-22: in active development.
+As of 2026-11-14: in active development. Since late October the work has gone mainly into the reliability of the
+browser tests, of offline play and of updates; the next feature is team competitions (see "Plans").
 
 - Playable: training mode on 23 built-in hills (K50 to K300) and on the 37 original hills, a replay of the last jump
   (pause, half and quarter speed), the original's `.rpl` replays from your own copy of the game, and competitions
@@ -44,6 +45,27 @@ As of 2026-10-22: in active development.
 - A ghost of the hill record: the record's jump runs beside each training jump, leaving the gate with you.
 - Hill records, outfit colours and settings saved locally.
 - Installable on a phone's home screen; after the first visit it starts and plays without a network.
+
+## Plans
+
+As of 2026-11-14. These are plans, not promises, and their order can change.
+
+- **Team competitions** as in the original: a team contest on one hill first, then a team World Cup over several
+  hills.
+- **Players and records:** names, outfits and nationality for each player and computer jumper, as the original's
+  editor allows; hill records that count only in competitions, with a table of local records that can be cleared.
+- **Training tools:** setting the wind's direction and strength, another attempt in the same conditions, distances
+  to two decimal places.
+- **Hills inspired by real ones**, held to the same rules as the generated hills.
+- **Sound:** refined synthesised sounds, sounds in the menus, and optionally the original's samples read from the
+  player's own copy of the game, the way its hills are.
+- **Online multiplayer across devices:** players on phones, tablets and computers, in any supported browser,
+  compete on the same hills. The jump physics gives the same result on every device, so a server can set the hill,
+  the seed and the wind and recompute each jump from the player's input instead of trusting a reported result.
+  The first step is planned as a daily or weekly challenge with one attempt, a results table and replays to watch;
+  later ideas include rivals' ghosts during a jump, online seasons, private leagues and teams.
+- **Later:** an English version (after the first multiplayer release), a list of changes inside the game, and a
+  backup of all the player's data in one file.
 
 ## Development
 

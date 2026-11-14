@@ -246,6 +246,15 @@ measurement mode: `playwright-report-perf/` and `test-results-perf/`). CI stores
 `playwright-report-perf-chromium-1`; 7 days) when the tests failed, and also when a test passed only on a retry:
 the run is then green, and the trace of the failed attempt is the only record of the cause.
 
+The picture at the top of the README is taken by `e2e/readme-screenshot.shot.ts`, which runs only with the variable
+`BROWSER_TESTS_SCREENSHOTS` set: it plays a jump on the built-in hill at dusk in snowfall and writes the jump
+picture in flight to `docs/screenshot.png`. It is not a test and nothing in CI runs it; it is refreshed by hand when
+a visible change makes the old picture misleading. The wind is drawn at random, so two runs differ in details.
+
+```sh
+pnpm exec cross-env BROWSER_TESTS_SCREENSHOTS=1 BROWSER_TESTS_EDGE=1 playwright test   # in Microsoft Edge
+```
+
 Emulation is not a device: the phone and tablet profiles set the window size, the pixel density, touch and the
 browser header, but the engine stays a desktop one. No engine in the tests installs the page on the home screen,
 has real screen insets or a mode without the browser bar; the tests check the manifest, the icons and what the
