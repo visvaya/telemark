@@ -29,29 +29,64 @@ interface Lateness {
   telemark: number;
 }
 
-/** How the test presses: the mouse holds a button for a moment; a tap counts for one frame. */
+/**
+ * WebKit on a developer's machine held the buttons of a scripted mouse chord about 48 frames, and a press reached
+ * the page about 22 frames after the test saw its moment, measured from the page's events (2026-11-03).
+ */
+const SLOW_MOUSE_HOLD_FRAMES = 48;
+const SLOW_MOUSE_LATE_FRAMES = 22;
+
+/**
+ * How the test presses, and how late it may be: the mouse holds both buttons for a moment and lands with a chord;
+ * a tap counts for one frame, and the telemark is a tap of its own.
+ */
 const HANDS = {
-  mouse: { holdFrames: HOLD_FRAMES, rightAfterLeftFrames: 0 },
-  touch: { holdFrames: 1, rightAfterLeftFrames: TAP_GAP_FRAMES },
+  mouse: { holdFrames: HOLD_FRAMES, rightAfterLeftFrames: 0, telemarkApart: false, lateFrames: LATE_FRAMES },
+  "slow mouse": {
+    holdFrames: SLOW_MOUSE_HOLD_FRAMES,
+    rightAfterLeftFrames: 0,
+    telemarkApart: false,
+    lateFrames: SLOW_MOUSE_LATE_FRAMES,
+  },
+  touch: { holdFrames: 1, rightAfterLeftFrames: TAP_GAP_FRAMES, telemarkApart: true, lateFrames: LATE_FRAMES },
+  /** How the mouse landed before: the left button pressed on its own after the right one. */
+  "mouse pressing apart": {
+    holdFrames: HOLD_FRAMES,
+    rightAfterLeftFrames: 0,
+    telemarkApart: true,
+    lateFrames: LATE_FRAMES,
+  },
 } as const;
 
 /**
  * One jump as the browser test plays it: the left button held until the jumper leaves the gate, both buttons once
- * the edge is near (with touch, the right zone tapped a little after the left one), then the right one, then the
- * left one.
+ * the edge is near (with touch, the right zone tapped a little after the left one), then the landing: with the
+ * mouse both buttons again, with touch the right zone and then the left one.
  */
 function landsClean(hill: HillChoice, seed: number, late: Lateness, hand: keyof typeof HANDS): boolean {
-  const { holdFrames, rightAfterLeftFrames } = HANDS[hand];
+  const { holdFrames, rightAfterLeftFrames, telemarkApart } = HANDS[hand];
   let jump = startTrainingJump(hill, seed);
-  let takeoffAt = -1;
+  // The frame in which the test sees the moment of the takeoff; the press reaches the page `late.takeoff` later.
+  let takeoffSeen = -1;
   for (let f = 0; f < FRAME_LIMIT && !isJumpOver(jump); f++) {
     const { logic, jumper } = jump.state;
-    if (takeoffAt < 0 && hill.profile.takeoffXM - jumper.xM <= JUMP_TIMING.TAKEOFF_LEAD_M) {
-      takeoffAt = logic.frame + late.takeoff;
+    if (takeoffSeen < 0 && hill.profile.takeoffXM - jumper.xM <= JUMP_TIMING.TAKEOFF_LEAD_M) {
+      takeoffSeen = logic.frame;
     }
-    const landingAt = takeoffAt + JUMP_TIMING.LANDING_AFTER_TAKEOFF_FRAMES + late.landing;
-    const telemarkAt = landingAt + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES + late.telemark;
-    const held = (from: number) => takeoffAt >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
+    const takeoffAt = takeoffSeen + late.takeoff;
+    // As e2e/support/jump.ts does: the landing is aimed from the frame the takeoff was seen in, but never sooner than
+    // a few frames after the takeoff press has ended, and the telemark from the frame the landing was aimed at.
+    const released = takeoffAt + rightAfterLeftFrames + holdFrames;
+    const landingSeen = Math.max(
+      takeoffSeen + JUMP_TIMING.LANDING_AFTER_TAKEOFF_FRAMES,
+      released + JUMP_TIMING.FRAMES_AFTER_RELEASE,
+    );
+    const landingAt = landingSeen + late.landing;
+    // The telemark is sent only after the landing press has ended, so it never comes before it.
+    const telemarkAt = telemarkApart
+      ? Math.max(landingSeen + JUMP_TIMING.TELEMARK_AFTER_LANDING_FRAMES, landingAt) + late.telemark
+      : landingAt;
+    const held = (from: number) => takeoffSeen >= 0 && logic.frame >= from && logic.frame < from + holdFrames;
     jump = stepTrainingJump(jump, {
       left: logic.phase === PHASE.gate || held(takeoffAt) || held(telemarkAt),
       right: held(takeoffAt + rightAfterLeftFrames) || held(landingAt),
@@ -64,23 +99,32 @@ function landsClean(hill: HillChoice, seed: number, late: Lateness, hand: keyof 
 
 const ON_TIME: Lateness = { takeoff: 0, landing: 0, telemark: 0 };
 
+const casesFor = (late: number): [string, Lateness][] => [
+  ["on time", ON_TIME],
+  ["takeoff late", { ...ON_TIME, takeoff: late }],
+  ["landing late", { ...ON_TIME, landing: late }],
+  ["telemark late", { ...ON_TIME, telemark: late / 2 }],
+  ["every press late", { takeoff: late / 2, landing: late / 2, telemark: late / 2 }],
+];
+
 describe("presses of the browser tests", () => {
   const [hill] = OWN_HILLS;
   if (hill === undefined) throw new Error("no built-in hill");
 
-  const cases: [string, Lateness][] = [
-    ["on time", ON_TIME],
-    ["takeoff late", { ...ON_TIME, takeoff: LATE_FRAMES }],
-    ["landing late", { ...ON_TIME, landing: LATE_FRAMES }],
-    ["telemark late", { ...ON_TIME, telemark: LATE_FRAMES / 2 }],
-    ["every press late", { takeoff: LATE_FRAMES / 2, landing: LATE_FRAMES / 2, telemark: LATE_FRAMES / 2 }],
-  ];
-  it.each((["mouse", "touch"] as const).flatMap((hand) => cases.map(([name, late]) => [hand, name, late] as const)))(
-    "give a clean landing on the built-in hill with the %s: %s",
-    (hand, _, late) => {
-      expect(SEEDS.filter((seed) => !landsClean(hill, seed, late, hand))).toEqual([]);
-    },
-  );
+  it.each(
+    (["mouse", "slow mouse", "touch"] as const).flatMap((hand) =>
+      casesFor(HANDS[hand].lateFrames).map(([name, late]) => [hand, name, late] as const),
+    ),
+  )("give a clean landing on the built-in hill with the %s: %s", (hand, _, late) => {
+    expect(SEEDS.filter((seed) => !landsClean(hill, seed, late, hand))).toEqual([]);
+  });
+
+  it("let a mouse that presses the telemark apart fall when it comes as late as in WebKit on the runner", () => {
+    // 2026-11-14, traces of the failed runs: the left button came 27 to 38 frames after the right one, which is 20
+    // to 31 frames later than the script aims at.
+    const late = { ...ON_TIME, telemark: 31 };
+    expect(SEEDS.filter((seed) => !landsClean(hill, seed, late, "mouse pressing apart")).length).toBeGreaterThan(0);
+  });
 });
 
 const CHORD_HOLD_FRAMES = Math.ceil(JUMP_TIMING.CHORD_HOLD_MS / FRAME_MS);

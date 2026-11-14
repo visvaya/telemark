@@ -12,11 +12,19 @@
  * screen (a tap counts for one frame); a press of the right button between 14 and 101 frames after the takeoff
  * prepares the landing, and the left button up to 28 frames after it puts the telemark down at once, which makes
  * the landing clean wherever in the flight it happens. Earlier than about 5 m a tap starts the takeoff so soon
- * that the jumper leaves the inrun before the edge.
+ * that the jumper leaves the inrun before the edge. The mouse presses both buttons for the landing as one chord:
+ * pressed apart in WebKit, the left one came up to 38 frames after the right one.
  */
 export const JUMP_TIMING = {
   TAKEOFF_LEAD_M: 4.5,
   LANDING_AFTER_TAKEOFF_FRAMES: 41,
+  /**
+   * The least frames between the end of the takeoff press and the landing: a takeoff press that arrived late, or a
+   * slow one that still holds the buttons (WebKit), would otherwise be followed by the landing too soon. A narrow
+   * margin (2026-11-14, src/game/scripted-jump-timing.test.ts): with 8 a takeoff 35 frames late lands too soon after
+   * it, with 12 the slow mouse lands too late.
+   */
+  FRAMES_AFTER_RELEASE: 10,
   TELEMARK_AFTER_LANDING_FRAMES: 7,
   /** How long each scripted press holds its button down. */
   PRESS_HOLD_MS: 60,
