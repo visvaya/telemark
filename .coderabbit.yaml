@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Pull request review settings. Defaults apply to everything not listed here.
+language: en-US
+tone_instructions: >-
+  Plain, short English. No emoji and no ASCII art; state the problem, its effect and the fix.
+chat:
+  art: false
+reviews:
+  profile: chill
+  # The pull request description is the author's text; the summary goes to the walkthrough comment.
+  high_level_summary_in_walkthrough: true
+  poem: false
+  in_progress_fortune: false
+  # One maintainer: no reviewer suggestions.
+  suggested_reviewers: false
+  # `CodeRabbit` status: pending while the review runs, success when it ends, is skipped or rate limited,
+  # failure when the review stops on an error.
+  commit_status: true
+  fail_commit_status: true
+  pre_merge_checks:
+    # The project has no docstring rule; the check only adds a warning to every pull request.
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: >-
+        Conventional Commits: type(scope): subject, with type one of feat, fix, docs, style, refactor, perf,
+        test, build, ci, chore, revert and an optional scope of lower-case letters, digits, dots and hyphens;
+        the subject in the imperative mood, at most 72 characters. The squash merge turns the title into the
+        commit on master. feat only for a new possibility for the player (a screen, a mode, an option).
+    custom_checks:
+      - name: Checks stated
+        mode: warning
+        instructions: >-
+          Pass when the pull request description names the checks that were run and states what was not
+          checked or not run (a section saying nothing was left out counts). Fail when it claims checks passed
+          without naming them.
+  auto_review:
+    # Keep reviewing every push: a paused review still reports a green status.
+    auto_pause_after_reviewed_commits: 0
+  # The gate runs these on every pull request with the project's pinned versions and configs (oxlint with
+  # type-aware rules, ruff for tools/, gitleaks, actionlint with shellcheck, zizmor); the copies here would
+  # repeat its findings. There is no Biome or ESLint config.
+  tools:
+    oxc:
+      enabled: false
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+    ruff:
+      enabled: false
+    gitleaks:
+      enabled: false
+    actionlint:
+      enabled: false
+    zizmor:
+      enabled: false
+  # Generated or frozen files: their diffs are reviewed through the change that produced them.
+  path_filters:
+    - "!**/pnpm-lock.yaml"
+    - "!**/__snapshots__/**"
+    - "!src/sim/data/pose-table.ts"
+    - "!tools/font/*.build.sha256"
+  path_instructions:
+    - path: "**"
+      instructions: >-
+        Project rules: the repository never contains files of the original game (Dsj.exe, Dsj.dat, .rpl
+        replays) or anything derived from them (traces, listings, extracted data); the game reads the
+        player's own copy locally. No em dash (U+2014) or emoji in code, comments or documents; code,
+        comments, commits and documentation in English, the game's interface in Polish. Lean code: reuse
+        existing helpers, no option or abstraction without a current user. No classes except React error
+        boundaries and Error subclasses. Constants carry their unit in the name (_M, _PX, _S, _M_PER_S).
+        A pull request that changes the game raises the version in package.json. Prefix comments on problems
+        this pull request did not cause with "Pre-existing:". Do not comment on what the gate already
+        enforces: formatting (oxfmt), lint (oxlint, type-aware), types (tsc strict), dead code (knip),
+        duplication (jscpd), coverage floors, bundle and size budgets (check:dist), links in documents
+        (check-doc-links), em dashes and emoji, the version check.
+    - path: "src/sim/**"
+      instructions: >-
+        A port of the original game's physics, not a design: a change must follow the original's code and
+        keep the golden tests frame for frame. Determinism bit for bit on every device: transcendental
+        functions only from deterministic-math.ts, assignments rounded to float32 (f32), the BorlandRandom
+        generator, a fixed step of 1/70 s; no clock, no Math.random, no browser objects. stepFrame copies the
+        frame state and the routines write to that copy, as the original writes its memory.
+    - path: "src/{render,audio,ui,game}/**"
+      instructions: >-
+        Presentation reads the simulation state and never changes it. Outside src/sim no function modifies an
+        object it received as a parameter: return a new value.
+    - path: "src/{ui,render}/**"
+      instructions: >-
+        Interface text only in src/text/ui-text.ts (Polish). Accessible markup; the content security policy in
+        public/_headers applies.
+    - path: "src/storage/**"
+      instructions: >-
+        One save with schemaVersion; a new setting gets its default when an older save is read.
+knowledge_base:
+  # What the bot learns here stays in this repository.
+  learnings:
+    scope: local
