@@ -161,16 +161,16 @@ test("a sum equal to its budget passes", () => {
 
 test("the first visit counts every file the browser gets: text compressed, images as stored", () => {
   const sizes = measureDist(CLEAN_LISTING);
-  // Ten required files of 100 gzip bytes each: the headers file is never served, the four icons count 300 each.
-  assert.equal(sizes.offlineTransferBytes, 108_000 + 5 * 100 + 4 * 300);
+  // Eleven required files of 100 gzip bytes each: the headers file is never served, the four icons count 300 each.
+  assert.equal(sizes.offlineTransferBytes, 108_000 + 6 * 100 + 4 * 300);
 });
 
 test("the summary gives the file count and every sum against its budget", () => {
   assert.equal(
     formatDistSummary(CLEAN_LISTING, DIST_BUDGETS),
-    `12 files; JavaScript gzip 100000 of ${DIST_BUDGETS.JS_GZIP_BUDGET_BYTES} bytes; ` +
+    `13 files; JavaScript gzip 100000 of ${DIST_BUDGETS.JS_GZIP_BUDGET_BYTES} bytes; ` +
       `CSS gzip 8000 of ${DIST_BUDGETS.CSS_GZIP_BUDGET_BYTES} bytes; ` +
       `service worker gzip 100 of ${DIST_BUDGETS.SERVICE_WORKER_GZIP_BUDGET_BYTES} bytes; ` +
-      `icons 1200 of ${DIST_BUDGETS.ICONS_BUDGET_BYTES} bytes; first visit transfers 109700 bytes`,
+      `icons 1200 of ${DIST_BUDGETS.ICONS_BUDGET_BYTES} bytes; first visit transfers 109800 bytes`,
   );
 });

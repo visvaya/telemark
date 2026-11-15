@@ -41,7 +41,7 @@ export const DIST_BUDGETS = {
 };
 
 // What the build produces, by exact name: the page, what makes it installable and usable without a network,
-// the host's headers file and the licence of the fonts. Fonts themselves are inside the stylesheet, so a font
+// the host's headers file, the rules for crawlers and the licence of the fonts. Fonts themselves are inside the stylesheet, so a font
 // file is unexpected. Every one of these must be there.
 export const REQUIRED_PATHS = [
   "index.html",
@@ -53,6 +53,7 @@ export const REQUIRED_PATHS = [
   "icons/icon-512.png",
   "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png",
+  "robots.txt",
   "licenses/silkscreen-ofl.txt",
 ];
 
