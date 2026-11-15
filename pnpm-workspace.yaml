@@ -7,10 +7,10 @@
 trustPolicy: no-downgrade
 minimumReleaseAge: 4320
 
-# Install refuses a Node older than engines.node in package.json: 26.12.1 fixed CVE-2026-111497 (Brotli
-# decoder). Without this pnpm only reads the field. It applies to dependencies too; none of the installed ones
-# excludes Node 26.
-engineStrict: true
+# No engineStrict: the install refuses a Node older than engines.node in package.json (26.12.1 fixed
+# CVE-2026-111497, Brotli decoder) through the preinstall script, scripts/check-node.mjs. engineStrict would
+# refuse the dependency bot as well, whose updater runs an older Node and skips install scripts; with it on,
+# every npm update job failed with ERR_PNPM_UNSUPPORTED_ENGINE.
 
 # pnpm 12 records its own resolved version in a leading YAML document of pnpm-lock.yaml when packageManager
 # pins it. GitHub's dependency graph reads only that first document, so it saw none of the project's packages
