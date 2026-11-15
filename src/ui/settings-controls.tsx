@@ -9,6 +9,7 @@ import {
 } from "../game/sensitivity";
 import type { SceneryChoice, Settings, WeatherChoice } from "../storage/save-data";
 import { UI_TEXT } from "../text/ui-text";
+import { fullscreenSwitch } from "./fullscreen-switch";
 import type { Steering } from "./how-to-jump-text";
 import { useMediaQuery } from "./use-media-query";
 
@@ -29,8 +30,8 @@ const T = UI_TEXT.settings;
 /** The display mode a browser reports for its own full screen (F11) as well as for the page's. */
 const FULLSCREEN_QUERY = "(display-mode: fullscreen)";
 
-/** Whether the page fills the screen, and whether that is the page's own full screen, which it can leave. */
-function useFullscreen(): { on: boolean; own: boolean } {
+/** Whether the page has its own full screen, which it can leave, and whether a full screen of any kind is reported. */
+function useFullscreen(): { own: boolean; reported: boolean } {
   const [own, setOwn] = useState(() => document.fullscreenElement !== null);
   useEffect(() => {
     const onChange = () => setOwn(document.fullscreenElement !== null);
@@ -38,7 +39,37 @@ function useFullscreen(): { on: boolean; own: boolean } {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
   const reported = useMediaQuery(FULLSCREEN_QUERY);
-  return { on: own || reported, own };
+  return { own, reported };
+}
+
+/** The full-screen switch, and the note shown when the full screen is the browser's and only its key leaves it. */
+function FullscreenControl({ touch }: { touch: boolean }) {
+  const { own, reported } = useFullscreen();
+  const [note, setNote] = useState(false);
+  const shown = fullscreenSwitch({ enabled: document.fullscreenEnabled, touch, own, reported });
+  if (shown === "hidden") return null;
+  const toggle = () => {
+    // A page can leave only the full screen it asked for itself.
+    if (reported && !own) {
+      setNote(true);
+      return;
+    }
+    setNote(false);
+    const request = own ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    request.catch(() => undefined);
+  };
+  return (
+    <>
+      <button type="button" className="pixel-button" aria-pressed={shown === "on"} onClick={toggle}>
+        {shown === "on" ? T.fullscreenOn : T.fullscreenOff}
+      </button>
+      {note && shown === "on" && (
+        <p className="note" role="status">
+          {T.browserFullscreen}
+        </p>
+      )}
+    </>
+  );
 }
 
 interface Props {
@@ -64,22 +95,10 @@ export function SettingsControls({
   tiltOn,
   onToggleTilt,
 }: Props) {
-  const fullscreen = useFullscreen();
-  const [fullscreenNote, setFullscreenNote] = useState(false);
   const sensitivity = sensitivityFor(settings.sensitivity, controls);
   const changeSensitivity = (by: -1 | 1) => {
     const level = stepSensitivity(sensitivity, by);
     if (level !== sensitivity) onSettings({ sensitivity: withSensitivity(settings.sensitivity, controls, level) });
-  };
-  const toggleFullscreen = () => {
-    // A page can leave only the full screen it asked for itself.
-    if (fullscreen.on && !fullscreen.own) {
-      setFullscreenNote(true);
-      return;
-    }
-    setFullscreenNote(false);
-    const request = fullscreen.own ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-    request.catch(() => undefined);
   };
   return (
     <>
@@ -146,16 +165,7 @@ export function SettingsControls({
       >
         {settings.hillHints ? T.hintsOn : T.hintsOff}
       </button>
-      {document.fullscreenEnabled && (
-        <button type="button" className="pixel-button" aria-pressed={fullscreen.on} onClick={toggleFullscreen}>
-          {fullscreen.on ? T.fullscreenOn : T.fullscreenOff}
-        </button>
-      )}
-      {fullscreenNote && fullscreen.on && (
-        <p className="note" role="status">
-          {T.browserFullscreen}
-        </p>
-      )}
+      <FullscreenControl touch={touch} />
       {steering && touch && canVibrate() && (
         <button
           type="button"
