@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/visvaya/telemark.git"
   },
-  "version": "0.25.20",
+  "version": "0.25.21",
   "type": "module",
   "scripts": {
     "preinstall": "node scripts/check-node.mjs",
