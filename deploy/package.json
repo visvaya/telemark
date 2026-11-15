@@ -8,7 +8,7 @@
     "preinstall": "node ../scripts/check-node.mjs"
   },
   "devDependencies": {
-    "wrangler": "4.153.0"
+    "wrangler": "4.158.0"
   },
   "packageManager": "pnpm@12.14.0",
   "engines": {
