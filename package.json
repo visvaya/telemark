@@ -7,9 +7,10 @@
     "type": "git",
     "url": "git+https://github.com/visvaya/telemark.git"
   },
-  "version": "0.25.17",
+  "version": "0.25.18",
   "type": "module",
   "scripts": {
+    "preinstall": "node scripts/check-node.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/write-release.mjs",
     "build:single": "tsc --noEmit && vite build && node scripts/write-release.mjs && node scripts/build-single-file.mjs",

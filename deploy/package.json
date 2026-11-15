@@ -4,6 +4,9 @@
   "description": "The pinned tool that publishes the built game. Installed only by the deployment jobs, from this directory's own lockfile.",
   "license": "GPL-3.0-or-later",
   "type": "module",
+  "scripts": {
+    "preinstall": "node ../scripts/check-node.mjs"
+  },
   "devDependencies": {
     "wrangler": "4.153.0"
   },
