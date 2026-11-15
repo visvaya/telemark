@@ -27,6 +27,10 @@ test.describe("the controls behind the pause button", () => {
       // The first button has the focus as the controls open; it counts without waiting for the focus to come
       // round again, which takes a browser with a window of its own more presses than there are to spare.
       if (i > 0) await page.keyboard.press("Tab");
+      // The open menu scrolls when it does not fit, and Firefox (with Playwright 1.65) gives a scrolling box a stop
+      // of its own after its last button. The box is the menu itself, on top of everything, so it is not a control
+      // underneath and not one of the buttons counted here.
+      if (await page.evaluate(() => document.activeElement?.matches(".game-toolbar") === true)) continue;
       const focus = await focusReport(page);
       if (focus.onBody) continue;
       visited.add(focus.name);
