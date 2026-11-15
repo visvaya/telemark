@@ -351,7 +351,7 @@ export function JumpScreen(props: Props) {
       <button
         type="button"
         className="pause-button"
-        aria-label={JUMP_TEXT.pause}
+        aria-label={touch ? JUMP_TEXT.pause : JUMP_TEXT.pauseKeyName}
         aria-expanded={menu.menuOpen}
         inert={menu.menuOpen}
         ref={pauseButtonRef}
