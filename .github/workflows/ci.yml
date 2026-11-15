@@ -284,11 +284,12 @@ jobs:
 
   # The required check for the package: green only when checks and build passed and every browser job passed, or
   # the browser jobs were skipped because build found that the pull request cannot change what the browser gets.
-  # A failed, cancelled or otherwise skipped job leaves it red.
+  # A failed, cancelled or otherwise skipped job leaves it red. It runs even in a cancelled run: a required check
+  # that is skipped counts as passed.
   web:
     name: web
     needs: [checks, build, browser]
-    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    if: ${{ always() && github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -378,7 +379,9 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: node scripts/check-version.mjs --base HEAD^1 --title "$PR_TITLE"
+      # The secret scan and the character scan run even when the title or the version check has failed.
       - name: No secrets in the git history
+        if: ${{ !cancelled() }}
         run: |
           archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           curl -sSfL -o "$RUNNER_TEMP/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
@@ -405,6 +408,7 @@ jobs:
           # Offline: the audits that query the GitHub API are skipped, so the step needs no token.
           "$RUNNER_TEMP/zizmor/bin/zizmor" --persona pedantic --offline .github/workflows .github/dependabot.yml
       - name: No em dashes or emoji in tracked files
+        if: ${{ !cancelled() }}
         env:
           LC_ALL: C.UTF-8
         run: |
