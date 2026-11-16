@@ -90,8 +90,8 @@ test("the start page is fetched from the root, every other file from its own pat
   assert.equal(urlOfPath("icons/index.html"), "/icons/index.html");
 });
 
-test("the worker keeps every file the browser can ask for, and neither the headers file nor itself", () => {
-  const files = [...INPUT, file("release.json", "{}"), file("sw.js", "worker")];
+test("the worker keeps every file the game can ask for, and not the headers file, robots.txt or itself", () => {
+  const files = [...INPUT, file("release.json", "{}"), file("sw.js", "worker"), file("robots.txt", "User-agent: *")];
   assert.deepEqual(
     precacheOf(files).map((entry) => entry.url),
     [

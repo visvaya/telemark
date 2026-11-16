@@ -15,12 +15,14 @@ export const RELEASE_FILES = {
   SERVICE_WORKER: "sw.js",
   HEADERS: "_headers",
   START_PAGE: "index.html",
+  ROBOTS: "robots.txt",
 };
 
 // Written by the release step itself, so they are not part of what identifies the content.
 const GENERATED_PATHS = new Set([RELEASE_FILES.RELEASE_JSON, RELEASE_FILES.SERVICE_WORKER]);
-// Not kept by the service worker: the host never serves `_headers`, and a worker does not cache itself.
-const NOT_PRECACHED_PATHS = new Set([RELEASE_FILES.HEADERS, RELEASE_FILES.SERVICE_WORKER]);
+// Not kept by the service worker: the host never serves `_headers`, a worker does not cache itself, and only
+// crawlers read robots.txt, from the network.
+const NOT_PRECACHED_PATHS = new Set([RELEASE_FILES.HEADERS, RELEASE_FILES.SERVICE_WORKER, RELEASE_FILES.ROBOTS]);
 
 // The one place in the worker's source that the release is written into.
 export const RELEASE_PLACEHOLDER = "self.TELEMARK_RELEASE_PLACEHOLDER";
