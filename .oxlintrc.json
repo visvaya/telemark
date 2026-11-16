@@ -18,7 +18,10 @@
     "unicorn/no-array-reverse": "error",
     "unicorn/no-array-sort": "error",
     "typescript/prefer-readonly": "error",
+    // A new object per element is how state is updated here; the lists are short (6 findings on 2026-11-16).
     "oxc/no-map-spread": "off",
+    // Re-export by name only: a module that re-exports everything hides what it exposes.
+    "oxc/no-barrel-file": ["error", { "threshold": 0 }],
 
     "eqeqeq": "error",
     "max-depth": ["error", 4],
@@ -63,6 +66,7 @@
     "import/no-self-import": "error",
     "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
 
+    // The automatic JSX runtime imports what it needs.
     "react/react-in-jsx-scope": "off",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
@@ -71,6 +75,9 @@
     "react/jsx-no-useless-fragment": "error",
     "react/no-array-index-key": "error",
     "react/jsx-no-literals": ["error", { "allowedStrings": ["-", "+"] }],
+    // role="status" on a live line, role="group" on a set of buttons and role="img" on a drawn picture have no
+    // fitting tag: <output> belongs to forms, <fieldset> needs a legend, an SVG or a canvas is not an <img>
+    // (20 findings).
     "jsx-a11y/prefer-tag-over-role": "off",
 
     "vitest/no-focused-tests": "error",
@@ -80,12 +87,20 @@
   },
   "overrides": [
     {
+      // The simulation is a port: its routines keep the original's shape, so a change needs the golden traces.
       "files": ["src/sim/**"],
       "rules": {
+        // Without `props`: a step copies the frame state and the routines write into that copy, as the original
+        // writes its memory (pose.ts, jump-logic.ts).
         "no-param-reassign": "error",
+        // landClean mirrors one routine of the original (complexity 37).
         "complexity": ["error", 40],
+        // INV_LN2 in deterministic-math.ts is written out to the last digit the polynomial needs.
         "oxc/approx-constant": "off",
+        // Fixed-size lookup tables in deterministic-math.ts, indexed by a constant or by a value the code has just bounded.
         "typescript/no-non-null-assertion": "off",
+        // `?? 0` on fixed-length tuples in pose.ts and jump-logic.ts (16 findings); removing them is a change
+        // of the port.
         "typescript/no-unnecessary-condition": "off",
         "no-restricted-imports": [
           "error",
@@ -102,18 +117,27 @@
                   "react",
                   "react-dom"
                 ],
-                "message": "The simulation is self-contained: nothing outside src/sim may influence it."
+                "message": "The simulation is self-contained: pass the value in from the caller instead of importing it."
               }
             ]
           }
         ],
         "no-restricted-globals": [
           "error",
-          { "name": "Date", "message": "The simulation must not read the clock." },
-          { "name": "performance", "message": "The simulation must not read the clock." },
-          { "name": "window", "message": "The simulation must not depend on the browser." },
-          { "name": "document", "message": "The simulation must not depend on the browser." },
-          { "name": "navigator", "message": "The simulation must not depend on the browser." }
+          { "name": "Date", "message": "The simulation must not read the clock: count fixed steps of 1/70 s." },
+          { "name": "performance", "message": "The simulation must not read the clock: count fixed steps of 1/70 s." },
+          {
+            "name": "window",
+            "message": "The simulation must not depend on the browser: take the value as a parameter."
+          },
+          {
+            "name": "document",
+            "message": "The simulation must not depend on the browser: take the value as a parameter."
+          },
+          {
+            "name": "navigator",
+            "message": "The simulation must not depend on the browser: take the value as a parameter."
+          }
         ],
         "no-restricted-properties": [
           "error",
@@ -181,6 +205,7 @@
       }
     },
     {
+      // The deterministic functions themselves, and the tests that compare them with the engine's.
       "files": ["src/sim/**/*.test.ts", "src/sim/test-support/**", "src/sim/deterministic-math.ts"],
       "rules": {
         "no-restricted-properties": "off"
@@ -195,11 +220,14 @@
         "e2e/**/*.spec.ts",
         "e2e/**/*.perf.ts"
       ],
+      // A describe block or a browser journey is one function by nature (75 findings).
       "rules": {
         "max-lines-per-function": "off"
       }
     },
     {
+      // Browser steps run one after another on purpose (151 awaits in loops); small helpers stay next to the
+      // test that reads them (13 findings).
       "files": ["e2e/**"],
       "rules": {
         "no-await-in-loop": "off",
@@ -207,18 +235,21 @@
       }
     },
     {
+      // The script tests run one case after another against the same server, worker or process (18 findings).
       "files": ["scripts/**/*.test.mjs"],
       "rules": {
         "no-await-in-loop": "off"
       }
     },
     {
+      // Scripts are command-line tools and report on the console; tests print what they measured.
       "files": ["**/*.test.ts", "scripts/**"],
       "rules": {
         "no-console": "off"
       }
     },
     {
+      // Plain JavaScript without type annotations: parsed JSON and process output are untyped there.
       "files": ["scripts/**"],
       "rules": {
         "typescript/no-unsafe-argument": "off",
@@ -229,6 +260,7 @@
       }
     },
     {
+      // Vite, Vitest, Playwright and knip read their configuration from the default export.
       "files": ["*.config.ts"],
       "rules": {
         "import/no-default-export": "off"
