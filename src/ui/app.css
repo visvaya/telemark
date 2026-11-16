@@ -32,6 +32,18 @@
   --podium-gold: #f8d038;
   --podium-silver: #c8ccdc;
   --podium-bronze: #e09858;
+  /* Controls drawn on the screens: their fill, frame, frame when off, and the dark edge of small pieces. */
+  --control-bg: #000000;
+  --control-frame: #787884;
+  --control-frame-off: #3c3c46;
+  --edge-dark: #000000;
+  --swatch-outline: #484850;
+  --swatch-chosen: #eaeaae;
+  --touch-pressed: #1c2c64;
+  --title-shadow: #6a3c00;
+  /* Black over the picture of the jump: the note under it and the toolbar while the menu is open. */
+  --note-bg: rgb(0 0 0 / 75%);
+  --menu-toolbar-bg: rgb(0 0 0 / 88%);
   /* Sizes of the screens' font, whole multiples of its 8 pixels to the em: choices, screen titles, the game's title. */
   --screen-item-px: 16px;
   --screen-heading-px: 24px;
@@ -124,7 +136,7 @@ body,
   font-size: clamp(36px, 10vw, 64px);
   line-height: 1.1;
   color: var(--accent);
-  text-shadow: 3px 3px 0 #6a3c00;
+  text-shadow: 3px 3px 0 var(--title-shadow);
   font-weight: 400;
 }
 
@@ -207,7 +219,7 @@ h2 {
   font-weight: 400;
   line-height: 1.2;
   color: var(--accent);
-  text-shadow: 2px 2px 0 #6a3c00;
+  text-shadow: 2px 2px 0 var(--title-shadow);
 }
 
 .hill-section {
@@ -351,8 +363,8 @@ h2 {
   padding: 0 10px;
   font: inherit;
   color: var(--text);
-  background: #000000;
-  border: 3px solid #787884;
+  background: var(--control-bg);
+  border: 3px solid var(--control-frame);
   border-radius: 0;
 }
 
@@ -364,7 +376,7 @@ h2 {
 
 .settings-rule input[type="number"]:disabled {
   color: var(--muted);
-  border-color: #3c3c46;
+  border-color: var(--control-frame-off);
 }
 
 /* Under the text of its box, which starts after the box and the gap. */
@@ -390,8 +402,8 @@ h2 {
   width: 28px;
   height: 28px;
   margin: 0;
-  background: #000000;
-  border: 3px solid #787884;
+  background: var(--control-bg);
+  border: 3px solid var(--control-frame);
   cursor: pointer;
 }
 
@@ -476,12 +488,12 @@ h2 {
 
 .replay-bar input::-webkit-slider-runnable-track {
   height: 6px;
-  background: #787884;
+  background: var(--control-frame);
 }
 
 .replay-bar input::-moz-range-track {
   height: 6px;
-  background: #787884;
+  background: var(--control-frame);
 }
 
 .replay-bar input::-webkit-slider-thumb {
@@ -490,7 +502,7 @@ h2 {
   height: 30px;
   margin-top: -12px;
   background: var(--accent);
-  border: 3px solid #000000;
+  border: 3px solid var(--edge-dark);
   border-radius: 0;
 }
 
@@ -499,7 +511,7 @@ h2 {
   width: 18px;
   height: 30px;
   background: var(--accent);
-  border: 3px solid #000000;
+  border: 3px solid var(--edge-dark);
   border-radius: 0;
 }
 
@@ -580,13 +592,13 @@ h2 {
   box-sizing: border-box;
   width: clamp(24px, 6.4vmin, 30px);
   height: clamp(24px, 6.4vmin, 30px);
-  border: 3px solid #000000;
-  outline: 1px solid #484850;
+  border: 3px solid var(--edge-dark);
+  outline: 1px solid var(--swatch-outline);
   cursor: pointer;
 }
 
 .swatch:has(input:checked) {
-  border-color: #eaeaae;
+  border-color: var(--swatch-chosen);
 }
 
 /* The radio button sits hidden inside the swatch. :focus-within, not :focus-visible on the input: one engine
@@ -627,7 +639,7 @@ h2 {
 .flag-icon {
   display: inline-block;
   flex: none;
-  outline: 2px solid #000000;
+  outline: 2px solid var(--edge-dark);
 }
 
 /* Longer text in the pixel font: smaller, with generous leading and a readable line length. */
@@ -784,7 +796,7 @@ h2 {
 
 .small-button {
   font-size: clamp(14px, 3.8vw, 18px);
-  border-color: #787884;
+  border-color: var(--control-frame);
 }
 
 .file-label {
@@ -888,8 +900,8 @@ h2 {
 
 .game-toolbar .pixel-button {
   font-size: clamp(16px, 4.4vw, 20px);
-  background: #000000;
-  border-color: #787884;
+  background: var(--control-bg);
+  border-color: var(--control-frame);
 }
 
 .record {
@@ -922,7 +934,7 @@ h2 {
   align-self: stretch;
   justify-self: stretch;
   border: 3px solid var(--accent);
-  background: #000000;
+  background: var(--control-bg);
   color: var(--accent);
   font-family: inherit;
   touch-action: none;
@@ -937,7 +949,7 @@ h2 {
 }
 
 .touch-pad:active {
-  background: #1c2c64;
+  background: var(--touch-pressed);
 }
 
 .touch-pad-key {
@@ -969,7 +981,7 @@ h2 {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border: 3px solid #787884;
+  border: 3px solid var(--control-frame);
   color: var(--text);
   cursor: pointer;
 }
@@ -996,7 +1008,7 @@ h2 {
   font-size: 13px;
   line-height: 1.4;
   color: var(--text);
-  background: rgb(0 0 0 / 75%);
+  background: var(--note-bg);
   pointer-events: none;
 }
 
@@ -1046,7 +1058,7 @@ h2 {
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  background: rgb(0 0 0 / 88%);
+  background: var(--menu-toolbar-bg);
 }
 
 .game.menu-open .game-toolbar > :first-child {
@@ -1111,8 +1123,8 @@ h2 {
   /* A label that takes two lines keeps both in the middle. */
   text-align: center;
   font-size: clamp(16px, 4.4vw, 20px);
-  background: #000000;
-  border-color: #787884;
+  background: var(--control-bg);
+  border-color: var(--control-frame);
 }
 
 .settings-list .stepper .stepper-value {
@@ -1293,7 +1305,7 @@ h2 {
   top: calc(max(8px, var(--safe-top)) + 6px);
   left: calc(max(8px, var(--safe-left)) + 6px);
   z-index: 1;
-  background: rgb(0 0 0 / 55%);
+  background: var(--overlay-bg);
 }
 
 @media (orientation: portrait) {
