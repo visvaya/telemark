@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/visvaya/telemark.git"
   },
-  "version": "0.25.20",
+  "version": "0.25.21",
   "type": "module",
   "scripts": {
     "preinstall": "node scripts/check-node.mjs",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.65.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
     "@types/node": "26.6.6",
