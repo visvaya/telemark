@@ -5,6 +5,10 @@
 // Budgets, about 15% above the sizes measured after `pnpm build`. Tighten them when the package shrinks;
 // raise one only together with the change that explains the growth.
 //
+// The host serves brotli to browsers that ask for it, compressed on the fly, and it is no smaller than gzip:
+// on 2026-11-16 the main bundle came as 171634 bytes of brotli and 170721 bytes of gzip. So gzip measures
+// what players download.
+//
 // JavaScript and CSS are the bundles under assets/, gzip (zlib default level), measured on 2026-10-12:
 // JavaScript 102179 bytes, CSS 15170 bytes. The stylesheet carries the fonts: before that it was 8512 bytes
 // and the browser fetched a font file of 8404 bytes next to it, so the two together were 16916 bytes.
